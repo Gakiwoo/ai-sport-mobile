@@ -10,14 +10,9 @@
  */
 
 import { Pose } from '../../types';
+import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
-
-// ── 反馈类型 ──
-export interface FormFeedback {
-  type: 'warning' | 'error' | 'success';
-  message: string;
-}
 
 // ── 跳远阶段 ──
 type JumpPhase = 'idle' | 'ready' | 'crouch' | 'takeoff' | 'airborne' | 'landing' | 'stable';
@@ -77,6 +72,7 @@ export class StandingLongJumpCounter extends ExerciseCounter {
   private readonly LANDING_FEEDBACK_FRAMES_30FPS = 5;    // 落地反馈等待帧数
   private readonly MIN_DISTANCE_PX = 20;           // 最小有效位移像素
   private readonly STABLE_VARIANCE_THRESHOLD = 5;  // 方差阈值（判定稳定站立）
+  private readonly STABLE_TO_READY_FRAMES_30FPS = 45; // stable 后自动回到 ready 的帧数（~1.5s）
 
   // ── 用户身高（可通过 setter 设置）──
   private _userHeightCm = 170;
@@ -223,7 +219,10 @@ export class StandingLongJumpCounter extends ExerciseCounter {
         this.handleLanding(smoothKneeAngle, smoothAnkleX, smoothAnkleY);
         break;
       case 'stable':
-        // 等待下一次跳跃
+        // 帧计数器替代 setTimeout：稳定展示后自动回到 ready
+        if (this.phaseFrameCount >= this.framesAt30Fps(this.STABLE_TO_READY_FRAMES_30FPS)) {
+          this.transitionTo('ready');
+        }
         break;
     }
 
@@ -327,14 +326,6 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     this.crouchMaxDepth = 0;
     this.crouchKneeMin = 180;
     this.peakDistancePx = 0;
-
-    // 标定有效则进入 ready 状态等待下一跳
-    setTimeout(() => {
-      if (this.phase === 'stable') {
-        this.phase = 'ready';
-        this.lastState = 'ready';
-      }
-    }, 1500);
   }
 
   private recalculatePixelsPerCm(): void {
@@ -344,7 +335,7 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     this.calibration.pixelsPerCm = this.calibration.torsoLengthPx / expectedTorsoCm;
   }
 
-  getFeedback(_pose?: Pose): FormFeedback | null {
+  getFeedback(_pose?: Pose): ExerciseFeedback | null {
     switch (this.phase) {
       case 'ready':
         return null; // 等待中，不需要反馈
@@ -404,7 +395,7 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     }
   }
 
-  private assessLanding(): FormFeedback | null {
+  private assessLanding(): ExerciseFeedback | null {
     // 检查是否双脚落地（用起跳和落地的水平距离差异判断）
     if (this.phaseFrameCount < this.framesAt30Fps(this.LANDING_FEEDBACK_FRAMES_30FPS)) {
       return null; // 还在落地过程中

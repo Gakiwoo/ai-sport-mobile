@@ -1,16 +1,13 @@
-import { useCallback, useState } from 'react';
-import { ExerciseType, Pose } from '../types';
+import { useCallback } from 'react';
+import { ExerciseType, Pose, ExerciseFeedback } from '../types';
 import PoseDetectionService from '../services/PoseDetectionService';
 
-export interface FormFeedback {
-  type: 'warning' | 'error' | 'success';
-  message: string;
-}
+export type { ExerciseFeedback };
+// 向后兼容：保留 FormFeedback 别名（WorkoutScreen 等处使用了此名称）
+export type FormFeedback = ExerciseFeedback;
 
 export function useExerciseFeedback() {
-  const [feedback, setFeedback] = useState<FormFeedback | null>(null);
-
-  const checkSquatsForm = useCallback((pose: Pose): FormFeedback | null => {
+  const checkSquatsForm = useCallback((pose: Pose): ExerciseFeedback | null => {
     // Check back angle to detect if user is bending back excessively
     const leftShoulder = PoseDetectionService.getKeypoint(pose, 'left_shoulder');
     const rightShoulder = PoseDetectionService.getKeypoint(pose, 'right_shoulder');
@@ -59,7 +56,7 @@ export function useExerciseFeedback() {
     return null;
   }, []);
 
-  const checkJumpForm = useCallback((pose: Pose): FormFeedback | null => {
+  const checkJumpForm = useCallback((pose: Pose): ExerciseFeedback | null => {
     // 原地纵跳摸高专用姿态反馈（不依赖 counter 状态）
     const leftShoulder = PoseDetectionService.getKeypoint(pose, 'left_shoulder');
     const rightShoulder = PoseDetectionService.getKeypoint(pose, 'right_shoulder');
@@ -148,7 +145,7 @@ export function useExerciseFeedback() {
     return null;
   }, []);
 
-  const checkLongJumpForm = useCallback((pose: Pose): FormFeedback | null => {
+  const checkLongJumpForm = useCallback((pose: Pose): ExerciseFeedback | null => {
     // 立定跳远专用姿态反馈（不依赖 counter 状态）
     const leftShoulder = PoseDetectionService.getKeypoint(pose, 'left_shoulder');
     const rightShoulder = PoseDetectionService.getKeypoint(pose, 'right_shoulder');
@@ -214,7 +211,7 @@ export function useExerciseFeedback() {
     return null;
   }, []);
 
-  const checkSitUpForm = useCallback((pose: Pose): FormFeedback | null => {
+  const checkSitUpForm = useCallback((pose: Pose): ExerciseFeedback | null => {
     // 仰卧起坐专用姿态反馈（不依赖 counter 状态）
     const leftShoulder = PoseDetectionService.getKeypoint(pose, 'left_shoulder');
     const rightShoulder = PoseDetectionService.getKeypoint(pose, 'right_shoulder');
@@ -311,7 +308,7 @@ export function useExerciseFeedback() {
     return null;
   }, []);
 
-  const getFeedback = useCallback((pose: Pose, exerciseType: ExerciseType): FormFeedback | null => {
+  const getFeedback = useCallback((pose: Pose, exerciseType: ExerciseType): ExerciseFeedback | null => {
     switch (exerciseType) {
       case 'squats':
         return checkSquatsForm(pose);
@@ -326,5 +323,5 @@ export function useExerciseFeedback() {
     }
   }, [checkSquatsForm, checkJumpForm, checkLongJumpForm, checkSitUpForm]);
 
-  return { feedback, setFeedback, getFeedback };
+  return { getFeedback };
 }

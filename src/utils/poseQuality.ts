@@ -91,10 +91,14 @@ export function analyzePoseQuality(pose: Pose | null | undefined): PoseQualityRe
 
   const xs = visibleCore.map((kp) => kp.x);
   const ys = visibleCore.map((kp) => kp.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
+  // 显式循环避免 spread 操作符潜在的栈溢出风险
+  let minX = xs[0], maxX = xs[0], minY = ys[0], maxY = ys[0];
+  for (let i = 1; i < xs.length; i++) {
+    if (xs[i] < minX) minX = xs[i];
+    if (xs[i] > maxX) maxX = xs[i];
+    if (ys[i] < minY) minY = ys[i];
+    if (ys[i] > maxY) maxY = ys[i];
+  }
   const bodyHeightRatio = (maxY - minY) / frameHeight;
   const edgeMarginX = frameWidth * EDGE_MARGIN_RATIO;
   const edgeMarginY = frameHeight * EDGE_MARGIN_RATIO;

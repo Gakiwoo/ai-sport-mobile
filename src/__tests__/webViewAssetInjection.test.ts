@@ -3,6 +3,7 @@ import {
   buildBlobAppendScript,
   buildBlobBeginScript,
   buildBlobCommitScript,
+  buildWebViewCleanupScript,
   splitBase64IntoChunks,
 } from '../utils/webViewAssetInjection';
 
@@ -23,5 +24,15 @@ describe('webViewAssetInjection', () => {
       'window.__appendBlobChunk("pose.js","abc/+=");true;'
     );
     expect(buildBlobCommitScript('pose.js')).toBe('window.__commitBlob("pose.js");true;');
+  });
+
+  it('builds a cleanup script with safe undefined checks for timers', () => {
+    const script = buildWebViewCleanupScript();
+
+    expect(script).toContain('typeof sendIntervalId !== "undefined"');
+    expect(script).toContain('clearInterval(sendIntervalId)');
+    expect(script).toContain('typeof animFrameId !== "undefined"');
+    expect(script).toContain('cancelAnimationFrame(animFrameId)');
+    expect(script.endsWith('true;')).toBe(true);
   });
 });

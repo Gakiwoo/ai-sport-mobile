@@ -18,11 +18,11 @@
     "@react-native-community/slider": "5.1.2",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/stack": "^6.4.1",
-    "expo": "~55.0.18",
+    "expo": "~55.0.23",
     "expo-av": "~16.0.0",
-    "expo-camera": "~55.0.16",
-    "expo-linking": "~55.0.14",
-    "expo-status-bar": "~55.0.5",
+    "expo-camera": "~55.0.18",
+    "expo-linking": "~55.0.15",
+    "expo-status-bar": "~55.0.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
@@ -31,8 +31,7 @@
     "react-native-screens": "~4.23.0",
     "react-native-svg": "15.15.3",
     "react-native-web": "~0.21.0",
-    "react-native-webview": "13.16.0",
-    "ssh2": "^1.17.0"
+    "react-native-webview": "13.16.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
@@ -52,6 +51,9 @@
     "typescript-eslint": "^8.59.0"
   },
   "private": true,
+  "overrides": {
+    "postcss": "^8.5.10"
+  },
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {

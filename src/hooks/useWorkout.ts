@@ -32,6 +32,10 @@ export function useWorkout(exerciseType: ExerciseType) {
   const [counter] = useState<ExerciseCounter>(() => createCounter(exerciseType));
   const startTimeRef = useRef<number | null>(null);
   const prevCountRef = useRef(0);
+  const isActiveRef = useRef(false);
+
+  // 保持 isActiveRef 同步，供 processFrame 使用
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
   const setFrameInterval = useCallback((intervalMs: number) => {
     counter.setFrameInterval(intervalMs);
@@ -55,7 +59,7 @@ export function useWorkout(exerciseType: ExerciseType) {
   }, [isActive, mode, targetDuration]);
 
   const processFrame = useCallback((pose: Pose) => {
-    if (isActive) {
+    if (isActiveRef.current) {
       counter.processFrame(pose);
       const newCount = counter.getCount();
       if (newCount !== prevCountRef.current) {
@@ -63,7 +67,7 @@ export function useWorkout(exerciseType: ExerciseType) {
         setCount(newCount);
       }
     }
-  }, [isActive, counter]);
+  }, [counter]);
 
   const start = useCallback(() => {
     counter.reset();
@@ -97,8 +101,8 @@ export function useWorkout(exerciseType: ExerciseType) {
 
     setIsSaving(true);
     try {
-      await StorageService.saveWorkout(session);
-      return { session, saved: true };
+      const saved = await StorageService.saveWorkout(session);
+      return { session, saved };
     } catch (error) {
       console.error('保存训练记录失败:', error);
       return { session, saved: false };

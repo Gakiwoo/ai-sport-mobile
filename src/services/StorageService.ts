@@ -6,13 +6,19 @@ const MAX_RECENT_WORKOUTS = 10;
 const MAX_STORED_WORKOUTS = 1000;
 
 class StorageService {
-  async saveWorkout(session: WorkoutSession): Promise<void> {
-    const history = await this.getWorkoutHistory();
-    history.push(session);
-    const trimmedHistory = history
-      .sort((a, b) => a.timestamp - b.timestamp)
-      .slice(-MAX_STORED_WORKOUTS);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+  async saveWorkout(session: WorkoutSession): Promise<boolean> {
+    try {
+      const history = await this.getWorkoutHistory();
+      history.push(session);
+      const trimmedHistory = history
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .slice(-MAX_STORED_WORKOUTS);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+      return true;
+    } catch (error) {
+      console.error('Error saving workout session:', error);
+      return false;
+    }
   }
 
   async getWorkoutHistory(): Promise<WorkoutSession[]> {

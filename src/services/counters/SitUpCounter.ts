@@ -22,14 +22,9 @@
  */
 
 import { Pose } from '../../types';
+import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
-
-// ── 反馈类型 ──
-export interface SitUpFeedback {
-  type: 'warning' | 'error' | 'success';
-  message: string;
-}
 
 // ── 仰卧起坐阶段 ──
 type SitUpPhase = 'idle' | 'lying' | 'rising' | 'up' | 'returning' | 'done';
@@ -408,7 +403,7 @@ export class SitUpCounter extends ExerciseCounter {
     return this.lastFoul;
   }
 
-  getFeedback(_pose?: Pose): SitUpFeedback | null {
+  getFeedback(_pose?: Pose): ExerciseFeedback | null {
     switch (this.phase) {
       case 'idle':
         return {

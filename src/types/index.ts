@@ -3,6 +3,12 @@ export type ExerciseType = 'jump_rope' | 'jumping_jacks' | 'squats' | 'standing_
 /** 训练模式：定数（目标次数）或定时（目标时长） */
 export type WorkoutMode = 'count' | 'timed';
 
+/** 动作反馈（全局统一类型，所有 Counter 共用） */
+export interface ExerciseFeedback {
+  type: 'warning' | 'error' | 'success';
+  message: string;
+}
+
 export interface Keypoint {
   x: number;
   y: number;

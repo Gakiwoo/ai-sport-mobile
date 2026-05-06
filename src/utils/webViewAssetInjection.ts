@@ -27,3 +27,12 @@ export function buildBlobAppendScript(filename: string, chunk: string): string {
 export function buildBlobCommitScript(filename: string): string {
   return `window.__commitBlob(${jsLiteral(filename)});true;`;
 }
+
+export function buildWebViewCleanupScript(): string {
+  return [
+    '(function(){',
+    'if(typeof sendIntervalId !== "undefined" && sendIntervalId) clearInterval(sendIntervalId);',
+    'if(typeof animFrameId !== "undefined" && animFrameId) cancelAnimationFrame(animFrameId);',
+    '})();true;',
+  ].join('');
+}

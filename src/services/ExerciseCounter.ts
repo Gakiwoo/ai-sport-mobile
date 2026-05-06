@@ -1,11 +1,8 @@
-import { Pose } from '../types';
+import { Pose, ExerciseFeedback } from '../types';
 import PoseDetectionService from './PoseDetectionService';
 
-// ── 反馈接口（所有 Counter 的 getFeedback 返回此类型）──
-export interface CounterFeedback {
-  type: 'warning' | 'error' | 'success';
-  message: string;
-}
+// 向后兼容别名，防止外部代码引用 CounterFeedback 时报错
+export type CounterFeedback = ExerciseFeedback;
 
 export abstract class ExerciseCounter {
   protected count = 0;
@@ -51,7 +48,7 @@ export abstract class ExerciseCounter {
   }
 
   /** 获取实时动作反馈（指导用户改善动作质量） */
-  getFeedback(_pose?: Pose): CounterFeedback | null {
+  getFeedback(_pose?: Pose): ExerciseFeedback | null {
     return null;
   }
 

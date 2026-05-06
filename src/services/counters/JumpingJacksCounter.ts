@@ -16,14 +16,9 @@
  */
 
 import { Pose } from '../../types';
+import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
-
-// ── 反馈类型 ──
-export interface JackFeedback {
-  type: 'warning' | 'error' | 'success';
-  message: string;
-}
 
 // ── 开合跳阶段 ──
 type JackPhase = 'idle' | 'closed' | 'opening' | 'open' | 'closing';
@@ -290,7 +285,7 @@ export class JumpingJacksCounter extends ExerciseCounter {
     return this.calibrated;
   }
 
-  getFeedback(_pose?: Pose): JackFeedback | null {
+  getFeedback(_pose?: Pose): ExerciseFeedback | null {
     switch (this.phase) {
       case 'idle':
         return {

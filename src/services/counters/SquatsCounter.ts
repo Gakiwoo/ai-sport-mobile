@@ -17,14 +17,9 @@
  */
 
 import { Pose } from '../../types';
+import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
-
-// ── 反馈类型 ──
-export interface SquatFeedback {
-  type: 'warning' | 'error' | 'success';
-  message: string;
-}
 
 // ── 深蹲阶段 ──
 type SquatPhase = 'idle' | 'standing' | 'descending' | 'bottom' | 'ascending';
@@ -343,7 +338,7 @@ export class SquatsCounter extends ExerciseCounter {
     return this.lastFoul;
   }
 
-  getFeedback(_pose?: Pose): SquatFeedback | null {
+  getFeedback(_pose?: Pose): ExerciseFeedback | null {
     switch (this.phase) {
       case 'idle':
         return {

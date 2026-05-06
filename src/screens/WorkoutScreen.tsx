@@ -129,10 +129,11 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
     if (isActive && mode === 'count' && count > 0 && count >= targetCount && !hasShownCompletionRef.current) {
       hasShownCompletionRef.current = true;
       playSuccess();
+      const stopFn = handleStopRef.current;
       Alert.alert(
         '🎉 恭喜完成！',
         `已达成目标 ${targetCount} 次！`,
-        [{ text: '继续', style: 'cancel' }, { text: '停止', onPress: handleStop }]
+        [{ text: '继续', style: 'cancel' }, { text: '停止', onPress: () => stopFn() }]
       );
     }
   }, [count, targetCount, isActive, mode, playSuccess]);

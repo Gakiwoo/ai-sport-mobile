@@ -68,12 +68,20 @@ export class SlidingWindow {
 
   min(): number {
     if (this.buffer.length === 0) return 0;
-    return Math.min(...this.buffer);
+    let result = this.buffer[0];
+    for (let i = 1; i < this.buffer.length; i++) {
+      if (this.buffer[i] < result) result = this.buffer[i];
+    }
+    return result;
   }
 
   max(): number {
     if (this.buffer.length === 0) return 0;
-    return Math.max(...this.buffer);
+    let result = this.buffer[0];
+    for (let i = 1; i < this.buffer.length; i++) {
+      if (this.buffer[i] > result) result = this.buffer[i];
+    }
+    return result;
   }
 
   last(): number | undefined {

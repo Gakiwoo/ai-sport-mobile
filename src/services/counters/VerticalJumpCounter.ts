@@ -11,14 +11,9 @@
  */
 
 import { Pose } from '../../types';
+import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
-
-// ── 反馈类型 ──
-export interface FormFeedback {
-  type: 'warning' | 'error' | 'success';
-  message: string;
-}
 
 // ── 纵跳阶段 ──
 type JumpPhase = 'idle' | 'ready' | 'crouch' | 'takeoff' | 'airborne' | 'landing' | 'stable';
@@ -80,8 +75,9 @@ export class VerticalJumpCounter extends ExerciseCounter {
   private readonly CROUCH_TO_TAKEOFF_FRAMES_30FPS = 4;    // 下蹲后起跳确认帧数
   private readonly TAKEOFF_TIMEOUT_FRAMES_30FPS = 12;     // 起跳阶段超时帧数
   private readonly LANDING_FEEDBACK_FRAMES_30FPS = 4;     // 落地反馈等待帧数
-  private readonly MIN_JUMP_HEIGHT_PX = 8;          // 最小有效腾空高度像素
+  private readonly MIN_JUMP_HEIGHT_PX = 8;           // 最小有效腾空高度像素
   private readonly STABLE_VARIANCE_THRESHOLD = 5;   // 方差阈值（判定稳定站立）
+  private readonly STABLE_TO_READY_FRAMES_30FPS = 30; // stable 后自动回到 ready 的帧数（~1s）
 
   // ── 用户身高 ──
   private _userHeightCm = 170;
@@ -236,6 +232,10 @@ export class VerticalJumpCounter extends ExerciseCounter {
         this.handleLanding(smoothKneeAngle, smoothAnkleY, smoothHipY);
         break;
       case 'stable':
+        // 帧计数器替代 setTimeout：稳定展示后自动回到 ready
+        if (this.phaseFrameCount >= this.framesAt30Fps(this.STABLE_TO_READY_FRAMES_30FPS)) {
+          this.transitionTo('ready');
+        }
         break;
     }
   }
@@ -359,14 +359,6 @@ export class VerticalJumpCounter extends ExerciseCounter {
 
     // 更新基准（落地位置可能略有偏移）
     this.calibration.baselineAnkleY = this.landingAnkleY;
-
-    // 1 秒后自动回到 ready 状态
-    setTimeout(() => {
-      if (this.phase === 'stable') {
-        this.phase = 'ready';
-        this.lastState = 'ready';
-      }
-    }, 1000);
   }
 
   private recalculatePixelsPerCm(): void {
@@ -376,7 +368,7 @@ export class VerticalJumpCounter extends ExerciseCounter {
     this.calibration.pixelsPerCm = this.calibration.torsoLengthPx / expectedTorsoCm;
   }
 
-  getFeedback(_pose?: Pose): FormFeedback | null {
+  getFeedback(_pose?: Pose): ExerciseFeedback | null {
     switch (this.phase) {
       case 'ready':
         return null;

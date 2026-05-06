@@ -26,14 +26,9 @@
  */
 
 import { Pose } from '../../types';
+import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
-
-// ── 反馈类型 ──
-export interface JumpRopeFeedback {
-  type: 'warning' | 'error' | 'success';
-  message: string;
-}
 
 // ── 跳绳阶段 ──
 type RopePhase = 'idle' | 'detecting' | 'jumping' | 'resting';
@@ -232,7 +227,9 @@ export class JumpRopeCounter extends ExerciseCounter {
     // 检测手腕是否有周期性运动（甩绳意图）
     if (this.wristDistHistory.size >= this.framesAt30Fps(20)) {
       const variance = this.wristDistHistory.variance();
-      const normalizedVar = variance / (this.shoulderWidth * this.shoulderWidth + 0.001);
+      const normalizedVar = this.shoulderWidth > 0.01
+        ? variance / (this.shoulderWidth * this.shoulderWidth)
+        : Infinity;
       // 手腕距离方差显著 → 可能在甩绳
       if (normalizedVar > 0.02 && this.calibrated) {
         this.transitionTo('detecting');
@@ -302,7 +299,9 @@ export class JumpRopeCounter extends ExerciseCounter {
     if (this.hipYHistory.isFull && this.wristDistHistory.isFull) {
       const hipVariance = this.hipYHistory.variance();
       const wristVariance = this.wristDistHistory.variance();
-      const normalizedWristVar = wristVariance / (this.shoulderWidth * this.shoulderWidth + 0.001);
+      const normalizedWristVar = this.shoulderWidth > 0.01
+        ? wristVariance / (this.shoulderWidth * this.shoulderWidth)
+        : Infinity;
 
       if (hipVariance < 0.5 && normalizedWristVar < 0.01) {
         // 检测到稳定 → 进入休息
@@ -326,7 +325,9 @@ export class JumpRopeCounter extends ExerciseCounter {
     // 检测是否又开始跳绳
     if (this.wristDistHistory.isFull) {
       const variance = this.wristDistHistory.variance();
-      const normalizedVar = variance / (this.shoulderWidth * this.shoulderWidth + 0.001);
+      const normalizedVar = this.shoulderWidth > 0.01
+        ? variance / (this.shoulderWidth * this.shoulderWidth)
+        : Infinity;
       if (normalizedVar > 0.02) {
         this.transitionTo('detecting');
       }
@@ -426,7 +427,7 @@ export class JumpRopeCounter extends ExerciseCounter {
     return this.calibrated;
   }
 
-  getFeedback(_pose?: Pose): JumpRopeFeedback | null {
+  getFeedback(_pose?: Pose): ExerciseFeedback | null {
     switch (this.phase) {
       case 'idle':
         if (!this.calibrated) {

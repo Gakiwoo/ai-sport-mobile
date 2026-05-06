@@ -69,6 +69,15 @@ class MediaPipeAssetService {
   /** 内存 base64 缓存：避免每次进入训练页重复读磁盘 + atob 解码 */
   private base64Cache: Map<string, string> = new Map();
   private ensurePromise: Promise<string> | null = null;
+  /** 缓存有效状态（最近一次检查结果），用于快速判断是否需要下载 */
+  private _isCachedResult: boolean | null = null;
+
+  /**
+   * 快速检查 MediaPipe 文件是否已缓存（同步，基于上次检查结果）
+   */
+  isCachedQuick(): boolean {
+    return this._isCachedResult === true;
+  }
 
   /**
    * 确保所有 MediaPipe 文件已缓存到本地
@@ -236,32 +245,42 @@ class MediaPipeAssetService {
   private async isCacheValid(): Promise<boolean> {
     try {
       const versionInfo = await getInfoAsync(VERSION_FILE);
-      if (!versionInfo.exists) return false;
+      if (!versionInfo.exists) {
+        this._isCachedResult = false;
+        return false;
+      }
 
       const version = await readAsStringAsync(VERSION_FILE);
-      if (version !== CACHE_VERSION) return false;
+      if (version !== CACHE_VERSION) {
+        this._isCachedResult = false;
+        return false;
+      }
 
-      return isMediaPipeCacheComplete({
+      const complete = isMediaPipeCacheComplete({
         expectedFiles: MEDIAPIPE_FILES,
         expectedVersion: CACHE_VERSION,
         version,
         files: await this.getCachedAssetInfo(),
       });
+      this._isCachedResult = complete;
+      return complete;
     } catch {
+      this._isCachedResult = false;
       return false;
     }
   }
 
   private async getCachedAssetInfo(): Promise<MediaPipeCachedAsset[]> {
-    const files: MediaPipeCachedAsset[] = [];
-    for (const file of MEDIAPIPE_FILES) {
-      const info = await getInfoAsync(CACHE_DIR + file);
-      files.push({
-        name: file,
-        size: info.exists && typeof info.size === 'number' ? info.size : 0,
-      });
-    }
-    return files;
+    const results = await Promise.all(
+      MEDIAPIPE_FILES.map(async (file) => {
+        const info = await getInfoAsync(CACHE_DIR + file);
+        return {
+          name: file,
+          size: info.exists && typeof info.size === 'number' ? info.size : 0,
+        };
+      })
+    );
+    return results;
   }
 
   private async downloadAllFromCdn(

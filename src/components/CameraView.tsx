@@ -8,6 +8,7 @@ import {
   buildBlobAppendScript,
   buildBlobBeginScript,
   buildBlobCommitScript,
+  buildWebViewCleanupScript,
   splitBase64IntoChunks,
 } from '../utils/webViewAssetInjection';
 import { createAdaptivePoseRuntime } from '../utils/adaptivePoseRuntime';
@@ -33,7 +34,7 @@ interface CameraViewProps {
 //   v3: RN 侧通过 MediaPipeAssetService 缓存文件 → 注入为 blob: URL
 //       - blob: URL 与页面同源，无 CORS 问题
 //       - 首次从 gakiwoo.com 下载后永久缓存，零网络依赖
-//       - CDN 仅作为缓存不存在时的最终回退
+//       - CDN 仅作为缓存不存在时的最终回挡
 //
 // 关键约束：
 //   - baseUrl 必须是 https://localhost（安全上下文，getUserMedia 需要）
@@ -41,6 +42,7 @@ interface CameraViewProps {
 //   - blob: URL 是唯一能在 https://localhost 页面中加载本地数据的方式
 //
 // JS 全部使用 var + 字符串拼接（避免 EAS 构建环境模板字符串解析问题）
+// ⚡ 模块级常量：只在模块加载时解析一次，避免每次渲染重新构建
 const MEDIAPIPE_HTML = `
 <!DOCTYPE html>
 <html>
@@ -484,6 +486,12 @@ const MEDIAPIPE_HTML = `
     });
 
     // init() 由 RN 侧在注入完 blob 数据后调用
+
+    // ── 组件卸载时清理 ──
+    window.addEventListener('beforeunload', function() {
+      if (sendIntervalId) clearInterval(sendIntervalId);
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+    });
   </script>
 </body>
 </html>
@@ -536,15 +544,16 @@ export default function CameraView({
     onActivePoseIntervalChange?.(throttleMs);
   }, [maxAdaptiveIntervalMs, onActivePoseIntervalChange, throttleMs]);
 
+  // 超时仅在 WebView onLoadEnd 后启动，避免权限申请阶段误超时
   const startTimeout = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
-        console.warn('[CameraView] Initialization timeout (120s)');
-        setErrorMessage('初始化超时，请检查网络连接后重试。可能原因：CDN 被墙或网络不稳定。');
+        console.warn('[CameraView] Initialization timeout (30s)');
+        setErrorMessage('初始化超时，请检查网络连接后重试。可能原因：模型文件未正确缓存或WebView初始化失败。');
         setCameraState('error');
       }
-    }, 120000);
+    }, 30000);
   }, []);
 
   const rejectPendingBlobAcks = useCallback((reason: string) => {
@@ -672,7 +681,8 @@ export default function CameraView({
       // 确保本地缓存可用
       setCameraState('loading');
       setLoadingDetail('准备 AI 模型...');
-      startTimeout();
+      // 超时在 handleLoadEnd（WebView 加载完成）后启动，此处仅记录开始时间
+      // 避免权限申请和缓存下载阶段误超时
 
       try {
         await mediaPipeAssetService.ensureCached((message) => {
@@ -693,6 +703,8 @@ export default function CameraView({
 
     return () => {
       isMountedRef.current = false;
+      // 通知 WebView 清理定时器和动画帧
+      webViewRef.current?.injectJavaScript(buildWebViewCleanupScript());
       rejectPendingBlobAcks('CameraView unmounted');
       mediaPipeAssetService.clearMemoryCache();
       if (timeoutRef.current) {
@@ -709,16 +721,19 @@ export default function CameraView({
     }
   }, [cameraState, injectRuntimeControls]);
 
-  // WebView 加载完成后注入本地文件
+  // WebView 加载完成后注入本地文件 + 开始超时计时
   const handleLoadEnd = useCallback(() => {
     if (injectionDoneRef.current) return; // 避免重复注入
+
+    // WebView 已加载，开始超时计时（30s 内 WebView 必须完成初始化）
+    startTimeout();
 
     // 先发送控制参数
     injectRuntimeControls();
 
     // 注入本地缓存的 MediaPipe 文件
     injectLocalFiles();
-  }, [injectLocalFiles, injectRuntimeControls]);
+  }, [injectLocalFiles, injectRuntimeControls, startTimeout]);
 
   const handleMessage = useCallback((event: WebViewMessageEvent) => {
     try {
