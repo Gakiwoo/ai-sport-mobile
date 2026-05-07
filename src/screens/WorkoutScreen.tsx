@@ -1,15 +1,15 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Modal, StatusBar, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ExerciseType, Pose, WorkoutMode } from '../types';
+import { ExerciseType, Pose } from '../types';
 import { WorkoutScreenProps } from '../types/navigation';
 import CameraView from '../components/CameraView';
-import { useWorkout } from '../hooks/useWorkout';
 import { useExerciseFeedback, FormFeedback } from '../hooks/useExerciseFeedback';
 import { useSound } from '../hooks/useSound';
 import { EXERCISE_NAMES, DEFAULT_TARGETS, DEFAULT_DURATIONS } from '../constants/exerciseConfig';
 import { getExerciseRuntimeProfile } from '../utils/exerciseRuntime';
 import { analyzePoseQuality, PoseQualityResult } from '../utils/poseQuality';
+import { useWorkout } from '../hooks/useWorkout';
 
 function formatCountdown(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -25,20 +25,21 @@ function getElapsedSeconds(startTime: number | null): number {
 export default function WorkoutScreen({ route }: WorkoutScreenProps) {
   const { exerciseType } = route.params;
   const insets = useSafeAreaInsets();
+
   const {
     isActive,
     count,
     mode,
     targetCount,
-    setTargetCount,
     targetDuration,
-    setTargetDuration,
     isSaving,
     timeUp,
     processFrame,
     start,
     stop,
     switchMode,
+    setTargetCount,
+    setTargetDuration,
     setFrameInterval,
   } = useWorkout(exerciseType);
 
@@ -97,7 +98,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
     };
   }, []);
 
-  // Countdown pulse animation when time is up
   useEffect(() => {
     if (countdownLoopRef.current) {
       countdownLoopRef.current.stop();
@@ -124,7 +124,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
     }
   }, [timeUp, countdownAnim]);
 
-  // Check for target completion (count mode only)
   useEffect(() => {
     if (isActive && mode === 'count' && count > 0 && count >= targetCount && !hasShownCompletionRef.current) {
       hasShownCompletionRef.current = true;
@@ -138,7 +137,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
     }
   }, [count, targetCount, isActive, mode, playSuccess]);
 
-  // Auto-stop on timeUp (timed mode) — 使用 ref 避免 handleStop 闭包问题
   useEffect(() => {
     if (timeUp && isActive) {
       handleStopRef.current();
@@ -216,7 +214,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
       );
     }
   };
-  // 保持 ref 同步，供 useEffect 中的 timeUp 自动停止使用
   handleStopRef.current = handleStop;
 
   const handleSetTarget = () => {
@@ -270,7 +267,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
         enablePreviewPose={!isActive}
       />
       <View style={[styles.overlay, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]} pointerEvents="box-none">
-        {/* ── 顶部栏 ── */}
         <View style={styles.topRow}>
           <View style={styles.namePill}>
             <Text style={styles.exerciseName}>{EXERCISE_NAMES[exerciseType]}</Text>
@@ -289,7 +285,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
           )}
         </View>
 
-        {/* ── 模式切换（仅非活跃状态显示） ── */}
         {!isActive && (
           <View style={styles.modeSwitcher}>
             <TouchableOpacity
@@ -307,7 +302,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
           </View>
         )}
 
-        {/* ── 计数区 ── */}
         <View style={styles.centerContent}>
           {isActive && isTimed && (
             <Animated.View style={{ opacity: countdownAnim }}>
@@ -360,7 +354,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
           )}
         </View>
 
-        {/* ── 底部控制按钮 ── */}
         <View style={styles.controls}>
           {!isActive ? (
             <TouchableOpacity
@@ -393,7 +386,6 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
         </View>
       </View>
 
-      {/* ── 目标设置弹窗 ── */}
       <Modal
         visible={showTargetModal}
         transparent={true}
@@ -495,7 +487,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  // ── 顶部栏 ──
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -533,7 +524,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // ── 模式切换 ──
   modeSwitcher: {
     flexDirection: 'row',
     backgroundColor: 'rgba(0,0,0,0.42)',
@@ -562,7 +552,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // ── 计时区（定时模式） ──
   timerValue: {
     fontSize: 42,
     fontWeight: '700',
@@ -576,7 +565,6 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
   },
 
-  // ── 计数区 ──
   centerContent: {
     alignItems: 'center',
   },
@@ -670,7 +658,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // ── 底部控制按钮 ──
   controls: {
     alignItems: 'center',
   },
@@ -711,7 +698,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // ── 弹窗 ──
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',

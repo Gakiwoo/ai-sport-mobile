@@ -1,7 +1,6 @@
 import { Pose, ExerciseFeedback } from '../types';
 import PoseDetectionService from './PoseDetectionService';
 
-// 向后兼容别名，防止外部代码引用 CounterFeedback 时报错
 export type CounterFeedback = ExerciseFeedback;
 
 export abstract class ExerciseCounter {

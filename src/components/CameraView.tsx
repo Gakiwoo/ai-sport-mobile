@@ -1,24 +1,15 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, ScrollView } from 'react-native';
-import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import { WebView } from 'react-native-webview';
 import { Camera } from 'expo-camera';
 import { Pose } from '../types';
-import { mediaPipeAssetService } from '../services/MediaPipeAssetService';
-import {
-  buildBlobAppendScript,
-  buildBlobBeginScript,
-  buildBlobCommitScript,
-  buildWebViewCleanupScript,
-  splitBase64IntoChunks,
-} from '../utils/webViewAssetInjection';
+import { useWebViewMessageHandler } from '../hooks/useWebViewMessageHandler';
 import { createAdaptivePoseRuntime } from '../utils/adaptivePoseRuntime';
 
 interface CameraViewProps {
   onPoseDetected: (pose: Pose) => void;
   isActive: boolean;
-  /** 发送帧率间隔（ms），默认 100。跳绳建议 80，深蹲/仰卧起坐建议 120 */
   throttleMs?: number;
-  /** 非训练状态下的低频姿态预览，用于站位/光线提示 */
   previewThrottleMs?: number;
   enablePreviewPose?: boolean;
   maxAdaptiveIntervalMs?: number;
@@ -26,23 +17,6 @@ interface CameraViewProps {
   onActivePoseIntervalChange?: (intervalMs: number) => void;
 }
 
-// ── WebView 内嵌 HTML：MediaPipe Pose + Camera ──
-//
-// 架构演进（v3）：
-//   v1: 静态 <script src="CDN"> → CDN 失败无容错
-//   v2: 动态 createElement('script') + CDN 回退 → 国内 CDN 全挂
-//   v3: RN 侧通过 MediaPipeAssetService 缓存文件 → 注入为 blob: URL
-//       - blob: URL 与页面同源，无 CORS 问题
-//       - 首次从 gakiwoo.com 下载后永久缓存，零网络依赖
-//       - CDN 仅作为缓存不存在时的最终回挡
-//
-// 关键约束：
-//   - baseUrl 必须是 https://localhost（安全上下文，getUserMedia 需要）
-//   - 不能用 file:// URL 加载资源（https→file CORS 阻止）
-//   - blob: URL 是唯一能在 https://localhost 页面中加载本地数据的方式
-//
-// JS 全部使用 var + 字符串拼接（避免 EAS 构建环境模板字符串解析问题）
-// ⚡ 模块级常量：只在模块加载时解析一次，避免每次渲染重新构建
 const MEDIAPIPE_HTML = `
 <!DOCTYPE html>
 <html>
@@ -94,7 +68,6 @@ const MEDIAPIPE_HTML = `
     var isWorkoutActive = false;
     var isPreviewEnabled = true;
 
-    // blob: URL 注册表（由 RN 注入的本地文件数据创建）
     var blobRegistry = {};
 
     function post(type, data) {
@@ -120,7 +93,6 @@ const MEDIAPIPE_HTML = `
       post('log', 'Registered blob: ' + filename + ' (' + bytes.length + ' bytes)');
     }
 
-    // ── 由 RN 调用：分块注册 blob URL ──
     window.__beginBlob = function(filename, mimeType) {
       pendingBlobChunks[filename] = {
         mimeType: mimeType || 'application/octet-stream',
@@ -168,7 +140,6 @@ const MEDIAPIPE_HTML = `
       return true;
     };
 
-    // ── 由 RN 调用：注入并执行 pose.js ──
     window.__evalPoseJs = function(base64Data) {
       try {
         var jsCode = atob(base64Data);
@@ -303,7 +274,6 @@ const MEDIAPIPE_HTML = `
       animFrameId = requestAnimationFrame(processFrame);
     }
 
-    // ── CDN 回退加载（仅在本地缓存不可用时使用） ──
     var CDN_BASES = [
       'https://gakiwoo.com/static/mediapipe/pose/',
       'https://registry.npmmirror.com/@mediapipe/pose/0.5.1675469404/files/',
@@ -327,7 +297,6 @@ const MEDIAPIPE_HTML = `
     }
 
     async function initFromLocal() {
-      // 使用 RN 注入的 blob: URL 初始化
       if (typeof Pose === 'undefined') {
         throw new Error('Pose class not loaded - pose.js was not injected');
       }
@@ -359,7 +328,6 @@ const MEDIAPIPE_HTML = `
     }
 
     async function initFromCdn() {
-      // CDN 回退：逐个尝试
       var activeCdnBase = null;
       for (var i = 0; i < CDN_BASES.length; i++) {
         var cdnBase = CDN_BASES[i];
@@ -407,19 +375,15 @@ const MEDIAPIPE_HTML = `
         post('log', 'Starting MediaPipe initialization...');
         post('log', 'Blob registry has ' + Object.keys(blobRegistry).length + ' files');
 
-        // 优先使用本地 blob URL（如果 RN 已注入）
         if (Object.keys(blobRegistry).length > 0 && typeof Pose !== 'undefined') {
           await initFromLocal();
         } else if (typeof Pose !== 'undefined') {
-          // pose.js 已注入但 blob 不全，仍尝试本地
           await initFromLocal();
         } else {
-          // pose.js 未注入 → 回退到 CDN
           post('log', 'Local blobs not available, falling back to CDN');
           await initFromCdn();
         }
 
-        // 检查安全上下文
         if (!navigator.mediaDevices) {
           throw new Error('navigator.mediaDevices is undefined (not a secure context)');
         }
@@ -437,7 +401,6 @@ const MEDIAPIPE_HTML = `
       }
     }
 
-    // ── 姿态数据发送（仅在 shouldSendPose 时发送） ──
     var sendIntervalId = null;
     function startSendInterval() {
       if (sendIntervalId) clearInterval(sendIntervalId);
@@ -452,7 +415,6 @@ const MEDIAPIPE_HTML = `
     }
     startSendInterval();
 
-    // ── 接收 RN 控制消息 ──
     window.addEventListener('message', function(event) {
       try {
         var msg = JSON.parse(event.data);
@@ -485,9 +447,6 @@ const MEDIAPIPE_HTML = `
       } catch (e) {}
     });
 
-    // init() 由 RN 侧在注入完 blob 数据后调用
-
-    // ── 组件卸载时清理 ──
     window.addEventListener('beforeunload', function() {
       if (sendIntervalId) clearInterval(sendIntervalId);
       if (animFrameId) cancelAnimationFrame(animFrameId);
@@ -496,15 +455,6 @@ const MEDIAPIPE_HTML = `
 </body>
 </html>
 `;
-
-type CameraState = 'idle' | 'loading' | 'ready' | 'error';
-type BlobAckWaiter = {
-  resolve: () => void;
-  reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
-};
-
-const BLOB_ACK_TIMEOUT_MS = 15000;
 
 export default function CameraView({
   onPoseDetected,
@@ -516,23 +466,27 @@ export default function CameraView({
   modelComplexity = 1,
   onActivePoseIntervalChange,
 }: CameraViewProps) {
-  const [cameraState, setCameraState] = useState<CameraState>('idle');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [loadingDetail, setLoadingDetail] = useState<string>('准备中...');
-  const webViewRef = useRef<WebView>(null);
-  const isMountedRef = useRef(true);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cameraStateRef = useRef<CameraState>('idle');
-  const injectionDoneRef = useRef(false);
-  const blobAckWaitersRef = useRef<Map<string, BlobAckWaiter>>(new Map());
-  const activeIntervalRef = useRef(throttleMs);
   const adaptiveRuntimeRef = useRef(createAdaptivePoseRuntime({
     baseIntervalMs: throttleMs,
     minIntervalMs: Math.min(60, throttleMs),
     maxIntervalMs: maxAdaptiveIntervalMs,
   }));
 
-  useEffect(() => { cameraStateRef.current = cameraState; }, [cameraState]);
+  const {
+    cameraState,
+    errorMessage,
+    loadingDetail,
+    handleMessage,
+    handleReload,
+    injectBlobFile,
+    injectRuntimeControls,
+    rejectPendingBlobAcks,
+    webViewRef,
+  } = useWebViewMessageHandler({
+    onPoseDetected,
+    onAdaptiveIntervalChange: onActivePoseIntervalChange,
+    adaptiveRuntimeRef,
+  });
 
   useEffect(() => {
     adaptiveRuntimeRef.current.reset({
@@ -540,269 +494,60 @@ export default function CameraView({
       minIntervalMs: Math.min(60, throttleMs),
       maxIntervalMs: maxAdaptiveIntervalMs,
     });
-    activeIntervalRef.current = throttleMs;
     onActivePoseIntervalChange?.(throttleMs);
   }, [maxAdaptiveIntervalMs, onActivePoseIntervalChange, throttleMs]);
 
-  // 超时仅在 WebView onLoadEnd 后启动，避免权限申请阶段误超时
-  const startTimeout = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) {
-        console.warn('[CameraView] Initialization timeout (30s)');
-        setErrorMessage('初始化超时，请检查网络连接后重试。可能原因：模型文件未正确缓存或WebView初始化失败。');
-        setCameraState('error');
-      }
-    }, 30000);
-  }, []);
-
-  const rejectPendingBlobAcks = useCallback((reason: string) => {
-    blobAckWaitersRef.current.forEach((waiter) => {
-      clearTimeout(waiter.timer);
-      waiter.reject(new Error(reason));
-    });
-    blobAckWaitersRef.current.clear();
-  }, []);
-
-  const waitForBlobAck = useCallback((filename: string): Promise<void> => {
-    const previous = blobAckWaitersRef.current.get(filename);
-    if (previous) {
-      clearTimeout(previous.timer);
-      previous.reject(new Error(`Superseded blob transfer: ${filename}`));
-    }
-
-    return new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        blobAckWaitersRef.current.delete(filename);
-        reject(new Error(`Timed out waiting for blob ack: ${filename}`));
-      }, BLOB_ACK_TIMEOUT_MS);
-
-      blobAckWaitersRef.current.set(filename, { resolve, reject, timer });
-    });
-  }, []);
-
-  const injectBlobFile = useCallback(async (
-    webView: WebView,
-    filename: string,
-    base64: string,
-    mimeType: string,
-  ): Promise<void> => {
-    const ackPromise = waitForBlobAck(filename);
-    webView.injectJavaScript(buildBlobBeginScript(filename, mimeType));
-    for (const chunk of splitBase64IntoChunks(base64)) {
-      webView.injectJavaScript(buildBlobAppendScript(filename, chunk));
-    }
-    webView.injectJavaScript(buildBlobCommitScript(filename));
-    await ackPromise;
-  }, [waitForBlobAck]);
-
-  const injectRuntimeControls = useCallback(() => {
-    webViewRef.current?.injectJavaScript(
-      'window.postMessage(JSON.stringify({type:"setModelConfig",modelComplexity:' + modelComplexity + '}), "*");' +
-      'window.postMessage(JSON.stringify({type:"setThrottle",interval:' + activeIntervalRef.current + '}), "*");' +
-      'window.postMessage(JSON.stringify({type:"setPreviewThrottle",interval:' + previewThrottleMs + '}), "*");' +
-      'window.postMessage(JSON.stringify({type:"setActive",active:' + (isActive ? 'true' : 'false') + ',preview:' + (enablePreviewPose ? 'true' : 'false') + '}), "*");'
-    );
-  }, [enablePreviewPose, isActive, modelComplexity, previewThrottleMs]);
-
-  const applyAdaptiveInterval = useCallback((nextInterval: number) => {
-    if (nextInterval === activeIntervalRef.current) return;
-    activeIntervalRef.current = nextInterval;
-    onActivePoseIntervalChange?.(nextInterval);
-    if (webViewRef.current && cameraStateRef.current === 'ready') {
-      webViewRef.current.injectJavaScript(
-        'window.postMessage(JSON.stringify({type:"setThrottle",interval:' + nextInterval + '}), "*");true;'
-      );
-    }
-  }, [onActivePoseIntervalChange]);
-
-  // ── 注入本地缓存的 MediaPipe 文件到 WebView ──
-  const injectLocalFiles = useCallback(async () => {
-    const webView = webViewRef.current;
-    if (!webView) return;
-
-    try {
-      const files = mediaPipeAssetService.getFiles();
-
-      for (const filename of files) {
-        if (filename === 'pose.js') continue;
-        const base64 = await mediaPipeAssetService.getFileBase64(filename);
-        const mimeType = mediaPipeAssetService.getMimeType(filename);
-        await injectBlobFile(webView, filename, base64, mimeType);
-      }
-
-      // 注入 pose.js（通过 eval 执行）
-      try {
-        const poseJsBase64 = await mediaPipeAssetService.getFileBase64('pose.js');
-        webView.injectJavaScript(
-          'window.__evalPoseJs(' + JSON.stringify(poseJsBase64) + ');true;'
-        );
-      } catch (err) {
-        console.warn('[CameraView] Failed to inject pose.js:', err);
-        throw err;
-      }
-
-      // 通知 WebView 开始初始化
-      webView.injectJavaScript('init();true;');
-      injectionDoneRef.current = true;
-    } catch (err) {
-      console.warn('[CameraView] Local injection failed, falling back to CDN:', err);
-      rejectPendingBlobAcks('Local MediaPipe injection failed');
-      // 本地注入失败 → 回退到 CDN 加载
-      webView.injectJavaScript('init();true;');
-      injectionDoneRef.current = true;
-    } finally {
-      mediaPipeAssetService.clearMemoryCache();
-    }
-  }, [injectBlobFile, rejectPendingBlobAcks]);
-
-  // 组件挂载时：请求权限 → 准备缓存 → 显示 WebView
   useEffect(() => {
-    isMountedRef.current = true;
-
     async function requestPermissionAndStart() {
       if (Platform.OS === 'android') {
         try {
           const { status } = await Camera.requestCameraPermissionsAsync();
           if (status !== 'granted') {
-            if (isMountedRef.current) {
-              setErrorMessage('相机权限被拒绝，请在设置中授予权限');
-              setCameraState('error');
-            }
             return;
           }
         } catch (err) {
           console.warn('[CameraView] Permission request error:', err);
         }
       }
-
-      if (!isMountedRef.current) return;
-
-      // 确保本地缓存可用
-      setCameraState('loading');
-      setLoadingDetail('准备 AI 模型...');
-      // 超时在 handleLoadEnd（WebView 加载完成）后启动，此处仅记录开始时间
-      // 避免权限申请和缓存下载阶段误超时
-
-      try {
-        await mediaPipeAssetService.ensureCached((message) => {
-          if (isMountedRef.current) {
-            setLoadingDetail(message);
-          }
-        });
-      } catch (err) {
-        console.warn('[CameraView] Cache preparation failed:', err);
-        // 缓存准备失败 → 仍然显示 WebView（会回退到 CDN）
-        if (isMountedRef.current) {
-          setLoadingDetail('本地缓存失败，尝试在线加载...');
-        }
-      }
     }
 
     requestPermissionAndStart();
+  }, []);
 
-    return () => {
-      isMountedRef.current = false;
-      // 通知 WebView 清理定时器和动画帧
-      webViewRef.current?.injectJavaScript(buildWebViewCleanupScript());
-      rejectPendingBlobAcks('CameraView unmounted');
-      mediaPipeAssetService.clearMemoryCache();
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-    };
-  }, [rejectPendingBlobAcks, startTimeout]);
-
-  // 同步运行参数到 WebView
   useEffect(() => {
     if (webViewRef.current && cameraState === 'ready') {
-      injectRuntimeControls();
+      injectRuntimeControls(webViewRef.current, {
+        isActive,
+        modelComplexity,
+        throttleMs,
+        previewThrottleMs,
+        enablePreviewPose,
+      });
     }
-  }, [cameraState, injectRuntimeControls]);
+  }, [cameraState, injectRuntimeControls, isActive, modelComplexity, previewThrottleMs, throttleMs, enablePreviewPose, webViewRef]);
 
-  // WebView 加载完成后注入本地文件 + 开始超时计时
   const handleLoadEnd = useCallback(() => {
-    if (injectionDoneRef.current) return; // 避免重复注入
+    if (!webViewRef.current) return;
 
-    // WebView 已加载，开始超时计时（30s 内 WebView 必须完成初始化）
-    startTimeout();
+    const webView = webViewRef.current;
 
-    // 先发送控制参数
-    injectRuntimeControls();
+    const injectLocalFiles = async () => {
+      await injectBlobFile(webView);
+    };
 
-    // 注入本地缓存的 MediaPipe 文件
-    injectLocalFiles();
-  }, [injectLocalFiles, injectRuntimeControls, startTimeout]);
-
-  const handleMessage = useCallback((event: WebViewMessageEvent) => {
-    try {
-      const message = JSON.parse(event.nativeEvent.data);
-      switch (message.type) {
-        case 'blobAck': {
-          const filename = String(message.data?.filename || '');
-          const waiter = blobAckWaitersRef.current.get(filename);
-          if (waiter) {
-            blobAckWaitersRef.current.delete(filename);
-            clearTimeout(waiter.timer);
-            if (message.data?.ok) {
-              waiter.resolve();
-            } else {
-              waiter.reject(new Error(String(message.data?.error || `Blob transfer failed: ${filename}`)));
-            }
-          }
-          break;
-        }
-        case 'pose':
-          if (message.data) {
-            onPoseDetected(message.data);
-          }
-          break;
-        case 'perf': {
-          const inferenceMs = Number(message.data?.inferenceMs);
-          const sampleIsActive = Boolean(message.data?.isActive);
-          if (Number.isFinite(inferenceMs)) {
-            const nextInterval = adaptiveRuntimeRef.current.recordSample({
-              inferenceMs,
-              isActive: sampleIsActive,
-            });
-            applyAdaptiveInterval(nextInterval);
-          }
-          break;
-        }
-        case 'ready':
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-          mediaPipeAssetService.clearMemoryCache();
-          if (isMountedRef.current) setCameraState('ready');
-          break;
-        case 'error':
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-          mediaPipeAssetService.clearMemoryCache();
-          console.warn('[CameraView] MediaPipe error:', message.data);
-          if (isMountedRef.current) {
-            setErrorMessage(String(message.data || '未知错误'));
-            setCameraState('error');
-          }
-          break;
-        case 'cdnStatus':
-          if (isMountedRef.current && cameraStateRef.current === 'loading') {
-            setLoadingDetail(String(message.data || ''));
-          }
-          break;
-        case 'log':
-          console.log('[CameraView]', message.data);
-          break;
+    const injectionDone = { current: false };
+    
+    setTimeout(async () => {
+      if (injectionDone.current) return;
+      injectionDone.current = true;
+      
+      try {
+        await injectLocalFiles();
+      } catch (err) {
+        console.warn('[CameraView] Local injection failed:', err);
       }
-    } catch (err) {
-      // 忽略非 JSON 消息
-    }
-  }, [applyAdaptiveInterval, onPoseDetected]);
+    }, 100);
+  }, [injectBlobFile]);
 
   const handleOpenSettings = () => {
     if (Platform.OS === 'ios') {
@@ -810,15 +555,6 @@ export default function CameraView({
     } else {
       Linking.openSettings();
     }
-  };
-
-  const handleReload = () => {
-    setErrorMessage('');
-    setLoadingDetail('重新加载中...');
-    setCameraState('loading');
-    injectionDoneRef.current = false;
-    startTimeout();
-    webViewRef.current?.reload();
   };
 
   const canShowWebView = cameraState !== 'idle';
