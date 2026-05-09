@@ -43,7 +43,7 @@ const BLOB_ACK_TIMEOUT_MS = 15000;
 export function useWebViewMessageHandler(
   options: UseWebViewMessageHandlerOptions
 ): UseWebViewMessageHandlerReturn {
-  const [cameraState, setCameraState] = useState<CameraState>('idle');
+  const [cameraState, setCameraState] = useState<CameraState>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [loadingDetail, setLoadingDetail] = useState<string>('准备中...');
   
