@@ -376,8 +376,7 @@ const MEDIAPIPE_HTML = `
         post('log', 'Blob registry has ' + Object.keys(blobRegistry).length + ' files');
 
         if (Object.keys(blobRegistry).length > 0 && typeof Pose !== 'undefined') {
-          await initFromLocal();
-        } else if (typeof Pose !== 'undefined') {
+          post('log', 'Local blobs available, using local cache');
           await initFromLocal();
         } else {
           post('log', 'Local blobs not available, falling back to CDN');
@@ -471,6 +470,7 @@ export default function CameraView({
     minIntervalMs: Math.min(60, throttleMs),
     maxIntervalMs: maxAdaptiveIntervalMs,
   }));
+  const injectionDoneRef = useRef(false);
 
   const {
     cameraState,
@@ -535,11 +535,10 @@ export default function CameraView({
       await injectBlobFile(webView);
     };
 
-    const injectionDone = { current: false };
     
     setTimeout(async () => {
-      if (injectionDone.current) return;
-      injectionDone.current = true;
+      if (injectionDoneRef.current) return;
+      injectionDoneRef.current = true;
       
       try {
         await injectLocalFiles();

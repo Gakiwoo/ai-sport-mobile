@@ -38,7 +38,7 @@ interface UseWebViewMessageHandlerReturn {
   webViewRef: React.RefObject<any>;
 }
 
-const BLOB_ACK_TIMEOUT_MS = 15000;
+const BLOB_ACK_TIMEOUT_MS = 30000;
 
 export function useWebViewMessageHandler(
   options: UseWebViewMessageHandlerOptions
@@ -108,7 +108,11 @@ export function useWebViewMessageHandler(
     } catch (err) {
       console.warn('[CameraView] Local injection failed, falling back to CDN:', err);
       rejectPendingBlobAcks('Local MediaPipe injection failed');
-      webView.injectJavaScript('init();true;');
+      try {
+        webView.injectJavaScript('init();true;');
+      } catch {
+        // WebView 可能在卸载过程中，忽略 inject 异常
+      }
       injectionDoneRef.current = true;
     } finally {
       mediaPipeAssetService.clearMemoryCache();
@@ -253,7 +257,11 @@ export function useWebViewMessageHandler(
     return () => {
       isMountedRef.current = false;
       if (webViewRef.current) {
-        webViewRef.current.injectJavaScript(buildWebViewCleanupScript());
+        try {
+          webViewRef.current.injectJavaScript(buildWebViewCleanupScript());
+        } catch {
+          // WebView 可能在卸载过程中已销毁，忽略 inject 异常
+        }
       }
       rejectPendingBlobAcks('Hook unmounted');
       mediaPipeAssetService.clearMemoryCache();

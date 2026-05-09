@@ -89,9 +89,15 @@ class MediaPipeAssetService {
       return this.ensurePromise;
     }
 
-    this.ensurePromise = this.ensureCachedInternal(onProgress).finally(() => {
-      this.ensurePromise = null;
-    });
+    const promise = this.ensureCachedInternal(onProgress);
+    this.ensurePromise = promise;
+
+    // 使用 identity-check 确保只清理自身 promise，避免并发重试时误清
+    promise.then(
+      () => { if (this.ensurePromise === promise) this.ensurePromise = null; },
+      () => { if (this.ensurePromise === promise) this.ensurePromise = null; },
+    );
+
     return this.ensurePromise;
   }
 
@@ -288,16 +294,15 @@ class MediaPipeAssetService {
     onFileProgress: (fileIdx: number, total: number) => void
   ): Promise<void> {
     const total = MEDIAPIPE_FILES.length;
-    let completed = 0;
 
-    await runWithConcurrency(MEDIAPIPE_FILES, DOWNLOAD_CONCURRENCY, async (filename) => {
+    await runWithConcurrency(MEDIAPIPE_FILES, DOWNLOAD_CONCURRENCY, async (filename, index) => {
       if (await this.isCachedFileUsable(filename)) {
-        onFileProgress(completed++, total);
+        onFileProgress(index, total);
         return;
       }
 
       await this.downloadFileWithRetry(cdnBase, filename);
-      onFileProgress(completed++, total);
+      onFileProgress(index, total);
     });
   }
 
