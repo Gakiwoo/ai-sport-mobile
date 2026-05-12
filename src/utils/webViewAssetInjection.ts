@@ -1,4 +1,6 @@
 export const DEFAULT_BLOB_CHUNK_SIZE = 64 * 1024;
+/** base64 长度低于此阈值时采用一次性注入（而非分块传输） */
+export const ONE_SHOT_BLOB_THRESHOLD = 500 * 1024; // 500KB base64 ≈ 375KB 二进制
 
 function jsLiteral(value: string): string {
   return JSON.stringify(value);
@@ -26,6 +28,11 @@ export function buildBlobAppendScript(filename: string, chunk: string): string {
 
 export function buildBlobCommitScript(filename: string): string {
   return `window.__commitBlob(${jsLiteral(filename)});true;`;
+}
+
+/** 一次性注入（不分块）：整体 base64 → WebView 内直接注册 blob */
+export function buildRegisterBlobScript(filename: string, base64: string, mimeType: string): string {
+  return `window.__registerBlob(${jsLiteral(filename)},${jsLiteral(base64)},${jsLiteral(mimeType)});true;`;
 }
 
 export function buildWebViewCleanupScript(): string {

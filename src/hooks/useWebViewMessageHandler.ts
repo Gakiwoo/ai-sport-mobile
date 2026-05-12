@@ -4,8 +4,10 @@ import {
   buildBlobAppendScript,
   buildBlobBeginScript,
   buildBlobCommitScript,
+  buildRegisterBlobScript,
   buildWebViewCleanupScript,
   splitBase64IntoChunks,
+  ONE_SHOT_BLOB_THRESHOLD,
 } from '../utils/webViewAssetInjection';
 import { mediaPipeAssetService } from '../services/MediaPipeAssetService';
 
@@ -86,11 +88,20 @@ export function useWebViewMessageHandler(
         const mimeType = mediaPipeAssetService.getMimeType(filename);
         
         const ackPromise = waitForBlobAck(filename);
-        webView.injectJavaScript(buildBlobBeginScript(filename, mimeType));
-        for (const chunk of splitBase64IntoChunks(base64)) {
-          webView.injectJavaScript(buildBlobAppendScript(filename, chunk));
+
+        // 小文件一次性注入，大文件增大分块减少 injectJavaScript 调用次数
+        if (base64.length < ONE_SHOT_BLOB_THRESHOLD) {
+          // 小于 500KB base64 的 JS/小文件 → 一键注册 blob
+          webView.injectJavaScript(buildRegisterBlobScript(filename, base64, mimeType));
+        } else {
+          // .wasm / .tflite 等大文件 → 512KB 分块（原来是 64KB）
+          webView.injectJavaScript(buildBlobBeginScript(filename, mimeType));
+          for (const chunk of splitBase64IntoChunks(base64, 512 * 1024)) {
+            webView.injectJavaScript(buildBlobAppendScript(filename, chunk));
+          }
+          webView.injectJavaScript(buildBlobCommitScript(filename));
         }
-        webView.injectJavaScript(buildBlobCommitScript(filename));
+
         await ackPromise;
       }
 
