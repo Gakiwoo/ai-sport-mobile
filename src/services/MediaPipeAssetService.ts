@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   MediaPipeCachedAsset,
+  MediaPipeManifest,
   createMediaPipeManifest,
   isMediaPipeCacheComplete,
 } from '../utils/mediaPipeManifest';
@@ -262,14 +263,39 @@ class MediaPipeAssetService {
         return false;
       }
 
-      const complete = isMediaPipeCacheComplete({
+      // 首先检查基本完整性（文件存在且非空）
+      const cachedFiles = await this.getCachedAssetInfo();
+      const basicPass = isMediaPipeCacheComplete({
         expectedFiles: MEDIAPIPE_FILES,
         expectedVersion: CACHE_VERSION,
         version,
-        files: await this.getCachedAssetInfo(),
+        files: cachedFiles,
       });
-      this._isCachedResult = complete;
-      return complete;
+      if (!basicPass) {
+        this._isCachedResult = false;
+        return false;
+      }
+
+      // 如果有 manifest 文件，进一步验证文件大小是否匹配
+      const manifestInfo = await getInfoAsync(MANIFEST_FILE);
+      if (manifestInfo.exists) {
+        const manifestContent = await readAsStringAsync(MANIFEST_FILE);
+        const manifest: MediaPipeManifest = JSON.parse(manifestContent);
+        if (manifest.version === version && manifest.files.length === MEDIAPIPE_FILES.length) {
+          const manifestSizes = new Map(manifest.files.map((f) => [f.name, f.size]));
+          const allSizesMatch = cachedFiles.every((f) => {
+            const expectedSize = manifestSizes.get(f.name);
+            return expectedSize !== undefined && f.size === expectedSize;
+          });
+          if (!allSizesMatch) {
+            this._isCachedResult = false;
+            return false;
+          }
+        }
+      }
+
+      this._isCachedResult = true;
+      return true;
     } catch {
       this._isCachedResult = false;
       return false;

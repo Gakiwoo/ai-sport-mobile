@@ -31,3 +31,6 @@ Thumbs.db
 .claude/
 .trae/
 .uploads/
+
+# Local APK builds (download artifacts)
+AI Sport APK/

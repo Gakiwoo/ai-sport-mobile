@@ -29,6 +29,7 @@ interface UseWebViewMessageHandlerReturn {
   cameraState: CameraState;
   errorMessage: string;
   loadingDetail: string;
+  injectionDoneRef: React.MutableRefObject<boolean>;
   handleLoadEnd: (injectionDoneRef: React.MutableRefObject<boolean>, injectLocalFiles: () => Promise<void>) => void;
   handleMessage: (event: WebViewMessageEvent) => void;
   handleReload: () => void;
@@ -276,6 +277,7 @@ export function useWebViewMessageHandler(
     cameraState,
     errorMessage,
     loadingDetail,
+    injectionDoneRef,
     handleLoadEnd,
     handleMessage,
     handleReload,

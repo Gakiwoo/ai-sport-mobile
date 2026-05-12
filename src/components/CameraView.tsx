@@ -377,7 +377,13 @@ const MEDIAPIPE_HTML = `
 
         if (Object.keys(blobRegistry).length > 0 && typeof Pose !== 'undefined') {
           post('log', 'Local blobs available, using local cache');
-          await initFromLocal();
+          try {
+            await initFromLocal();
+          } catch (e) {
+            post('log', 'Local init failed: ' + String(e) + ' — falling back to CDN');
+            // 本地缓存损坏时回退到 CDN
+            await initFromCdn();
+          }
         } else {
           post('log', 'Local blobs not available, falling back to CDN');
           await initFromCdn();
@@ -470,12 +476,12 @@ export default function CameraView({
     minIntervalMs: Math.min(60, throttleMs),
     maxIntervalMs: maxAdaptiveIntervalMs,
   }));
-  const injectionDoneRef = useRef(false);
 
   const {
     cameraState,
     errorMessage,
     loadingDetail,
+    injectionDoneRef,
     handleMessage,
     handleReload,
     injectBlobFile,
