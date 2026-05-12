@@ -139,12 +139,8 @@ export class SitUpCounter extends ExerciseCounter {
         .some(kp => (kp.score || 0) < minScore)) return;
 
     // ── 计算中值 ──
-    const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
     const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
-    const hipMidX = (leftHip.x + rightHip.x) / 2;
     const hipMidY = (leftHip.y + rightHip.y) / 2;
-    const kneeMidX = (leftKnee.x + rightKnee.x) / 2;
-    const kneeMidY = (leftKnee.y + rightKnee.y) / 2;
     const ankleMidY = (leftAnkle.y + rightAnkle.y) / 2;
 
     // ── 核心角度：肩-髋-膝 (trunk angle) ──

@@ -486,7 +486,6 @@ export default function CameraView({
     handleReload,
     injectBlobFile,
     injectRuntimeControls,
-    rejectPendingBlobAcks,
     webViewRef,
   } = useWebViewMessageHandler({
     onPoseDetected,

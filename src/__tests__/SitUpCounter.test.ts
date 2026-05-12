@@ -1,5 +1,5 @@
 import { SitUpCounter } from '../services/counters/SitUpCounter';
-import { buildPose, lyingPose, sittingUpPose, standingPose, lowConfidencePose, missingKeypointPose } from './testHelpers';
+import { lyingPose, sittingUpPose, lowConfidencePose, missingKeypointPose } from './testHelpers';
 
 describe('SitUpCounter', () => {
   let counter: SitUpCounter;

@@ -18,10 +18,6 @@ const KEYPOINT_NAMES = [
   'left_knee', 'right_knee', 'left_ankle', 'right_ankle',
 ] as const;
 
-// ── 参考分辨率（与 CameraView 中 480×360 对应） ──
-const W = 480;
-const H = 360;
-
 /** 从部分关键点构建完整 Pose（缺失关键点自动补零分） */
 export function buildPose(overrides: Partial<Record<string, { x: number; y: number; score?: number }>>): Pose {
   const keypoints: Keypoint[] = KEYPOINT_NAMES.map(name => {

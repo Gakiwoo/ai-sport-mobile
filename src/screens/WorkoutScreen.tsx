@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Modal, StatusBar, Platform, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ExerciseType, Pose } from '../types';
+import { Pose } from '../types';
 import { WorkoutScreenProps } from '../types/navigation';
 import CameraView from '../components/CameraView';
 import { useExerciseFeedback, FormFeedback } from '../hooks/useExerciseFeedback';

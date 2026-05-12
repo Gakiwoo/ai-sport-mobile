@@ -22,7 +22,6 @@ describe('KalmanFilter1D', () => {
   it('应平滑噪声信号', () => {
     const kf = new KalmanFilter1D(0.008, 0.06);
     kf.reset(100);
-    const clean = 100;
     const noisy = [98, 103, 97, 105, 100, 102, 96, 104, 99, 101];
     const outputs: number[] = [];
     for (const v of noisy) {

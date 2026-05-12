@@ -1,6 +1,6 @@
 import { Pose } from '../types';
 import { JumpRopeCounter } from '../services/counters/JumpRopeCounter';
-import { standingPose, airbornePose, lowConfidencePose, missingKeypointPose, buildPose } from './testHelpers';
+import { standingPose, lowConfidencePose, missingKeypointPose, buildPose } from './testHelpers';
 
 /** 跳绳甩绳姿态 — 手腕在肩上方运动 */
 function ropeSwingPose(): Pose {

@@ -271,7 +271,7 @@ export class VerticalJumpCounter extends ExerciseCounter {
     }
   }
 
-  private handleTakeoff(ankleY: number, hipY: number): void {
+  private handleTakeoff(ankleY: number, _hipY: number): void {
     // 脚踝Y显著上升 → 进入腾空
     // 使用起跳瞬间作为参考（而非蹲底），更准确反映腾空高度
     const ankleRise = this.takeoffAnkleY - ankleY;
