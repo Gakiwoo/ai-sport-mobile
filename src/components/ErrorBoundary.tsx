@@ -39,14 +39,14 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const errorReport = this.createErrorReport(error, errorInfo);
-    
+
     console.error('ErrorBoundary caught:', error, errorInfo);
     console.error('Error Report:', JSON.stringify(errorReport, null, 2));
-    
+
     this.setState({ error, errorInfo });
-    
+
     this.logErrorToStorage(errorReport);
-    
+
     this.props.onError?.(error, errorInfo);
   }
 
@@ -70,16 +70,16 @@ class ErrorBoundary extends Component<Props, State> {
     try {
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const ERROR_LOG_KEY = '@error_log';
-      
+
       const existingLogs = await AsyncStorage.getItem(ERROR_LOG_KEY);
       const logs: ErrorReport[] = existingLogs ? JSON.parse(existingLogs) : [];
-      
+
       logs.push(report);
-      
+
       if (logs.length > 50) {
         logs.splice(0, logs.length - 50);
       }
-      
+
       await AsyncStorage.setItem(ERROR_LOG_KEY, JSON.stringify(logs));
     } catch (err) {
       console.error('Failed to log error to storage:', err);
@@ -92,7 +92,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   handleReload = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    
+
     const { Platform } = require('react-native');
     if (Platform.OS === 'web') {
       window.location.reload();
@@ -110,41 +110,35 @@ class ErrorBoundary extends Component<Props, State> {
           <View style={styles.iconContainer}>
             <Text style={styles.icon}>⚠️</Text>
           </View>
-          
+
           <Text style={styles.title}>应用遇到问题</Text>
-          
-          <Text style={styles.message}>
-            {this.state.error?.message || '发生了未知错误'}
-          </Text>
+
+          <Text style={styles.message}>{this.state.error?.message || '发生了未知错误'}</Text>
 
           {__DEV__ && this.state.error?.stack && (
             <View style={styles.stackContainer}>
               <Text style={styles.stackTitle}>错误堆栈:</Text>
-              <Text style={styles.stackText}>
-                {this.state.error.stack.substring(0, 500)}
-              </Text>
+              <Text style={styles.stackText}>{this.state.error.stack.substring(0, 500)}</Text>
             </View>
           )}
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-              style={[styles.button, styles.primaryButton]} 
+            <TouchableOpacity
+              style={[styles.button, styles.primaryButton]}
               onPress={this.handleReload}
             >
               <Text style={styles.primaryButtonText}>重新加载</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.button, styles.secondaryButton]} 
+
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
               onPress={this.handleRetry}
             >
               <Text style={styles.secondaryButtonText}>重试</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.hint}>
-            如果问题持续存在，请联系我们或检查网络连接
-          </Text>
+          <Text style={styles.hint}>如果问题持续存在，请联系我们或检查网络连接</Text>
         </View>
       );
     }
@@ -157,7 +151,7 @@ export function useGlobalErrorHandler(): void {
   React.useEffect(() => {
     if (Platform.OS !== 'web') {
       const originalHandler = ErrorUtils.getGlobalHandler?.() || global.onerror;
-      
+
       const customHandler = (error: Error, isFatal?: boolean) => {
         const errorReport: ErrorReport = {
           timestamp: new Date().toISOString(),
@@ -170,13 +164,13 @@ export function useGlobalErrorHandler(): void {
             stack: error.stack,
           },
         };
-        
+
         console.error('Global Error:', errorReport);
-        
+
         if (originalHandler) {
           return originalHandler(error, isFatal);
         }
-        
+
         return false;
       };
 
@@ -197,7 +191,7 @@ export async function getErrorLogs(): Promise<ErrorReport[]> {
   try {
     const AsyncStorage = require('@react-native-async-storage/async-storage').default;
     const ERROR_LOG_KEY = '@error_log';
-    
+
     const logs = await AsyncStorage.getItem(ERROR_LOG_KEY);
     return logs ? JSON.parse(logs) : [];
   } catch (err) {
@@ -210,7 +204,7 @@ export async function clearErrorLogs(): Promise<void> {
   try {
     const AsyncStorage = require('@react-native-async-storage/async-storage').default;
     const ERROR_LOG_KEY = '@error_log';
-    
+
     await AsyncStorage.removeItem(ERROR_LOG_KEY);
   } catch (err) {
     console.error('Failed to clear error logs:', err);

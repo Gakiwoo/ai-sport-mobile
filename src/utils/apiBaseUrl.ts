@@ -12,11 +12,7 @@ function normalizeBaseUrl(url: string): string {
   return url.trim().replace(/\/+$/, '');
 }
 
-export function resolveApiBaseUrl({
-  isDev,
-  platformOS,
-  envUrl,
-}: ResolveApiBaseUrlOptions): string {
+export function resolveApiBaseUrl({ isDev, platformOS, envUrl }: ResolveApiBaseUrlOptions): string {
   const overrideUrl = envUrl ? normalizeBaseUrl(envUrl) : '';
   if (overrideUrl) {
     return overrideUrl;

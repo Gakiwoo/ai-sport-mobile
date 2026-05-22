@@ -120,7 +120,9 @@ export default function AnalyticsScreen(_props: AnalyticsScreenProps) {
         </View>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>⏱ 累计用时</Text>
-          <Text style={[styles.statValue, styles.statValueDuration]}>{formatDuration(analytics.totalDuration)}</Text>
+          <Text style={[styles.statValue, styles.statValueDuration]}>
+            {formatDuration(analytics.totalDuration)}
+          </Text>
         </View>
       </View>
 

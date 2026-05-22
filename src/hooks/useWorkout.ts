@@ -8,6 +8,7 @@ import { StandingLongJumpCounter } from '../services/counters/StandingLongJumpCo
 import { VerticalJumpCounter } from '../services/counters/VerticalJumpCounter';
 import { SitUpCounter } from '../services/counters/SitUpCounter';
 import StorageService from '../services/StorageService';
+import { performanceMonitor } from '../services/PerformanceMonitor';
 import { DEFAULT_TARGETS, DEFAULT_DURATIONS } from '../constants/exerciseConfig';
 import { getExerciseRuntimeProfile } from '../utils/exerciseRuntime';
 
@@ -35,11 +36,16 @@ export function useWorkout(exerciseType: ExerciseType) {
   const isActiveRef = useRef(false);
 
   // 保持 isActiveRef 同步，供 processFrame 使用
-  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
 
-  const setFrameInterval = useCallback((intervalMs: number) => {
-    counter.setFrameInterval(intervalMs);
-  }, [counter]);
+  const setFrameInterval = useCallback(
+    (intervalMs: number) => {
+      counter.setFrameInterval(intervalMs);
+    },
+    [counter],
+  );
 
   useEffect(() => {
     setFrameInterval(getExerciseRuntimeProfile(exerciseType).activePoseIntervalMs);
@@ -58,16 +64,19 @@ export function useWorkout(exerciseType: ExerciseType) {
     return () => clearInterval(timer);
   }, [isActive, mode, targetDuration]);
 
-  const processFrame = useCallback((pose: Pose) => {
-    if (isActiveRef.current) {
-      counter.processFrame(pose);
-      const newCount = counter.getCount();
-      if (newCount !== prevCountRef.current) {
-        prevCountRef.current = newCount;
-        setCount(newCount);
+  const processFrame = useCallback(
+    (pose: Pose) => {
+      if (isActiveRef.current) {
+        counter.processFrame(pose);
+        const newCount = counter.getCount();
+        if (newCount !== prevCountRef.current) {
+          prevCountRef.current = newCount;
+          setCount(newCount);
+        }
       }
-    }
-  }, [counter]);
+    },
+    [counter],
+  );
 
   const start = useCallback(() => {
     counter.reset();
@@ -76,9 +85,13 @@ export function useWorkout(exerciseType: ExerciseType) {
     setIsActive(true);
     setTimeUp(false);
     startTimeRef.current = Date.now();
+    performanceMonitor.start();
   }, [counter]);
 
-  const stop = useCallback(async (): Promise<{ session: WorkoutSession | null; saved: boolean }> => {
+  const stop = useCallback(async (): Promise<{
+    session: WorkoutSession | null;
+    saved: boolean;
+  }> => {
     setIsActive(false);
 
     const finalCount = counter.getCount();
@@ -108,13 +121,17 @@ export function useWorkout(exerciseType: ExerciseType) {
       return { session, saved: false };
     } finally {
       setIsSaving(false);
+      performanceMonitor.stop(); // 保存性能报告
     }
   }, [counter, exerciseType, mode, targetDuration]);
 
-  const switchMode = useCallback((newMode: WorkoutMode) => {
-    if (isActive) return;
-    setMode(newMode);
-  }, [isActive]);
+  const switchMode = useCallback(
+    (newMode: WorkoutMode) => {
+      if (isActive) return;
+      setMode(newMode);
+    },
+    [isActive],
+  );
 
   return {
     isActive,
@@ -136,11 +153,17 @@ export function useWorkout(exerciseType: ExerciseType) {
 
 function createCounter(type: ExerciseType): ExerciseCounter {
   switch (type) {
-    case 'jump_rope': return new JumpRopeCounter();
-    case 'jumping_jacks': return new JumpingJacksCounter();
-    case 'squats': return new SquatsCounter();
-    case 'standing_long_jump': return new StandingLongJumpCounter();
-    case 'vertical_jump': return new VerticalJumpCounter();
-    case 'sit_ups': return new SitUpCounter();
+    case 'jump_rope':
+      return new JumpRopeCounter();
+    case 'jumping_jacks':
+      return new JumpingJacksCounter();
+    case 'squats':
+      return new SquatsCounter();
+    case 'standing_long_jump':
+      return new StandingLongJumpCounter();
+    case 'vertical_jump':
+      return new VerticalJumpCounter();
+    case 'sit_ups':
+      return new SitUpCounter();
   }
 }

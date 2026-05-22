@@ -1,11 +1,5 @@
 import React from 'react';
-import Svg, {
-  Circle,
-  Ellipse,
-  Rect,
-  Path,
-  Line,
-} from 'react-native-svg';
+import Svg, { Circle, Ellipse, Rect, Path, Line } from 'react-native-svg';
 import { ExerciseType } from '../types';
 
 /**
@@ -38,7 +32,13 @@ export default function ExerciseIllustration({
         <Rect x={14} y={68} width={10} height={18} rx={5} fill="#FF9500" />
         <Path d="M72 58 L98 72" stroke="#007AFF" strokeWidth={7} strokeLinecap="round" />
         <Rect x={96} y={68} width={10} height={18} rx={5} fill="#FF9500" />
-        <Path d="M55 40 Q60 44 65 40" stroke="#1C1C1E" strokeWidth={2} strokeLinecap="round" fill="none" />
+        <Path
+          d="M55 40 Q60 44 65 40"
+          stroke="#1C1C1E"
+          strokeWidth={2}
+          strokeLinecap="round"
+          fill="none"
+        />
         <Circle cx={55} cy={35} r={2} fill="#1C1C1E" />
         <Circle cx={65} cy={35} r={2} fill="#1C1C1E" />
       </Svg>
@@ -61,11 +61,29 @@ export default function ExerciseIllustration({
         <Circle cx={106} cy={40} r={4} fill="#FF9500" />
         <Circle cx={60} cy={44} r={14} fill="#FFD4B8" />
         <Path d="M47 40 Q50 26 60 24 Q70 26 73 40" fill="#1C1C1E" />
-        <Path d="M54 48 Q60 54 66 48" stroke="#1C1C1E" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+        <Path
+          d="M54 48 Q60 54 66 48"
+          stroke="#1C1C1E"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          fill="none"
+        />
         <Circle cx={54} cy={42} r={2.5} fill="#1C1C1E" />
         <Circle cx={66} cy={42} r={2.5} fill="#1C1C1E" />
-        <Path d="M8 58 L2 52 M8 52 L2 46" stroke="#34C759" strokeWidth={2} strokeLinecap="round" opacity={0.6} />
-        <Path d="M112 58 L118 52 M112 52 L118 46" stroke="#34C759" strokeWidth={2} strokeLinecap="round" opacity={0.6} />
+        <Path
+          d="M8 58 L2 52 M8 52 L2 46"
+          stroke="#34C759"
+          strokeWidth={2}
+          strokeLinecap="round"
+          opacity={0.6}
+        />
+        <Path
+          d="M112 58 L118 52 M112 52 L118 46"
+          stroke="#34C759"
+          strokeWidth={2}
+          strokeLinecap="round"
+          opacity={0.6}
+        />
       </Svg>
     ),
 
@@ -73,7 +91,16 @@ export default function ExerciseIllustration({
     squats: (
       <Svg viewBox="0 0 120 140" fill="none" width={size} height={size}>
         <Ellipse cx={60} cy={130} rx={30} ry={5} fill="#FFE8D0" />
-        <Line x1={24} y1={124} x2={96} y2={124} stroke="#FF9500" strokeWidth={2.5} strokeLinecap="round" strokeDasharray="5 4" />
+        <Line
+          x1={24}
+          y1={124}
+          x2={96}
+          y2={124}
+          stroke="#FF9500"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeDasharray="5 4"
+        />
         <Ellipse cx={36} cy={122} rx={12} ry={5} fill="#1C1C1E" />
         <Ellipse cx={84} cy={122} rx={12} ry={5} fill="#1C1C1E" />
         <Path d="M36 120 L40 96" stroke="#1C1C1E" strokeWidth={10} strokeLinecap="round" />
@@ -89,7 +116,13 @@ export default function ExerciseIllustration({
         <Circle cx={100} cy={64} r={6} fill="#FFD4B8" />
         <Circle cx={60} cy={42} r={14} fill="#FFD4B8" />
         <Path d="M47 38 Q50 24 60 22 Q70 24 73 38" fill="#1C1C1E" />
-        <Path d="M55 46 Q60 50 65 46" stroke="#1C1C1E" strokeWidth={2} strokeLinecap="round" fill="none" />
+        <Path
+          d="M55 46 Q60 50 65 46"
+          stroke="#1C1C1E"
+          strokeWidth={2}
+          strokeLinecap="round"
+          fill="none"
+        />
         <Circle cx={55} cy={40} r={2.5} fill="#1C1C1E" />
         <Circle cx={65} cy={40} r={2.5} fill="#1C1C1E" />
         <Path d="M52 36 L57 34" stroke="#1C1C1E" strokeWidth={2} strokeLinecap="round" />
@@ -101,10 +134,30 @@ export default function ExerciseIllustration({
     standing_long_jump: (
       <Svg viewBox="0 0 120 140" fill="none" width={size} height={size}>
         <Rect x={8} y={110} width={6} height={20} rx={3} fill="#AF52DE" opacity={0.4} />
-        <Line x1={8} y1={126} x2={112} y2={126} stroke="#E5E5EA" strokeWidth={2.5} strokeLinecap="round" />
+        <Line
+          x1={8}
+          y1={126}
+          x2={112}
+          y2={126}
+          stroke="#E5E5EA"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+        />
         <Rect x={106} y={110} width={6} height={20} rx={3} fill="#AF52DE" opacity={0.4} />
-        <Path d="M28 110 Q66 50 104 108" stroke="#AF52DE" strokeWidth={2.5} strokeDasharray="5 4" strokeLinecap="round" />
-        <Path d="M98 102 L104 108 L97 112" stroke="#AF52DE" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        <Path
+          d="M28 110 Q66 50 104 108"
+          stroke="#AF52DE"
+          strokeWidth={2.5}
+          strokeDasharray="5 4"
+          strokeLinecap="round"
+        />
+        <Path
+          d="M98 102 L104 108 L97 112"
+          stroke="#AF52DE"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         <Ellipse cx={24} cy={122} rx={9} ry={4} fill="#1C1C1E" />
         <Path d="M24 120 L30 98" stroke="#1C1C1E" strokeWidth={9} strokeLinecap="round" />
         <Path d="M30 98 L36 80" stroke="#1C1C1E" strokeWidth={9} strokeLinecap="round" />
@@ -117,7 +170,13 @@ export default function ExerciseIllustration({
         <Path d="M40 42 Q43 28 52 26 Q62 28 65 42" fill="#1C1C1E" />
         <Circle cx={48} cy={44} r={2.5} fill="#1C1C1E" />
         <Circle cx={57} cy={44} r={2.5} fill="#1C1C1E" />
-        <Path d="M48 50 Q52 54 57 50" stroke="#1C1C1E" strokeWidth={2} strokeLinecap="round" fill="none" />
+        <Path
+          d="M48 50 Q52 54 57 50"
+          stroke="#1C1C1E"
+          strokeWidth={2}
+          strokeLinecap="round"
+          fill="none"
+        />
       </Svg>
     ),
 
@@ -125,12 +184,48 @@ export default function ExerciseIllustration({
     vertical_jump: (
       <Svg viewBox="0 0 120 140" fill="none" width={size} height={size}>
         <Ellipse cx={60} cy={130} rx={28} ry={5} fill="#FFE0DF" />
-        <Path d="M92 100 L92 34" stroke="#FF3B30" strokeWidth={3} strokeLinecap="round" opacity={0.2} />
-        <Path d="M92 100 L92 34" stroke="#FF3B30" strokeWidth={2} strokeLinecap="round" opacity={0.5} />
-        <Path d="M86 42 L92 34 L98 42" stroke="#FF3B30" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M14 54 L22 54" stroke="#FF3B30" strokeWidth={2.5} strokeLinecap="round" opacity={0.5} />
-        <Path d="M10 64 L20 64" stroke="#FF3B30" strokeWidth={2} strokeLinecap="round" opacity={0.35} />
-        <Path d="M14 74 L22 74" stroke="#FF3B30" strokeWidth={1.5} strokeLinecap="round" opacity={0.25} />
+        <Path
+          d="M92 100 L92 34"
+          stroke="#FF3B30"
+          strokeWidth={3}
+          strokeLinecap="round"
+          opacity={0.2}
+        />
+        <Path
+          d="M92 100 L92 34"
+          stroke="#FF3B30"
+          strokeWidth={2}
+          strokeLinecap="round"
+          opacity={0.5}
+        />
+        <Path
+          d="M86 42 L92 34 L98 42"
+          stroke="#FF3B30"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M14 54 L22 54"
+          stroke="#FF3B30"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          opacity={0.5}
+        />
+        <Path
+          d="M10 64 L20 64"
+          stroke="#FF3B30"
+          strokeWidth={2}
+          strokeLinecap="round"
+          opacity={0.35}
+        />
+        <Path
+          d="M14 74 L22 74"
+          stroke="#FF3B30"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          opacity={0.25}
+        />
         <Ellipse cx={50} cy={122} rx={9} ry={5} fill="#1C1C1E" />
         <Ellipse cx={70} cy={122} rx={9} ry={5} fill="#1C1C1E" />
         <Path d="M50 120 L48 96" stroke="#1C1C1E" strokeWidth={9} strokeLinecap="round" />
@@ -142,7 +237,13 @@ export default function ExerciseIllustration({
         <Circle cx={76} cy={42} r={7} fill="#FFD4B8" />
         <Circle cx={60} cy={46} r={14} fill="#FFD4B8" />
         <Path d="M47 42 Q50 28 60 26 Q70 28 73 42" fill="#1C1C1E" />
-        <Path d="M53 52 Q60 58 67 52" stroke="#1C1C1E" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+        <Path
+          d="M53 52 Q60 58 67 52"
+          stroke="#1C1C1E"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          fill="none"
+        />
         <Circle cx={53} cy={44} r={2.5} fill="#1C1C1E" />
         <Circle cx={67} cy={44} r={2.5} fill="#1C1C1E" />
         <Ellipse cx={50} cy={49} rx={4} ry={2.5} fill="#FFB3A7" opacity={0.6} />
@@ -168,15 +269,33 @@ export default function ExerciseIllustration({
         <Circle cx={30} cy={52} r={14} fill="#FFD4B8" />
         <Path d="M17 48 Q20 34 30 32 Q40 34 43 48" fill="#1C1C1E" />
         {/* 脸 */}
-        <Path d="M25 56 Q30 60 35 56" stroke="#1C1C1E" strokeWidth={2} strokeLinecap="round" fill="none" />
+        <Path
+          d="M25 56 Q30 60 35 56"
+          stroke="#1C1C1E"
+          strokeWidth={2}
+          strokeLinecap="round"
+          fill="none"
+        />
         <Circle cx={25} cy={50} r={2.5} fill="#1C1C1E" />
         <Circle cx={35} cy={50} r={2.5} fill="#1C1C1E" />
         {/* 手臂（交叉在胸前） */}
         <Path d="M36 68 L48 66" stroke="#1C1C1E" strokeWidth={8} strokeLinecap="round" />
         <Path d="M48 66 L56 70" stroke="#1C1C1E" strokeWidth={7} strokeLinecap="round" />
         {/* 运动线条 */}
-        <Path d="M20 68 L12 64" stroke="#0A8F85" strokeWidth={2} strokeLinecap="round" opacity={0.4} />
-        <Path d="M18 58 L10 56" stroke="#0A8F85" strokeWidth={1.5} strokeLinecap="round" opacity={0.3} />
+        <Path
+          d="M20 68 L12 64"
+          stroke="#0A8F85"
+          strokeWidth={2}
+          strokeLinecap="round"
+          opacity={0.4}
+        />
+        <Path
+          d="M18 58 L10 56"
+          stroke="#0A8F85"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          opacity={0.3}
+        />
       </Svg>
     ),
   };

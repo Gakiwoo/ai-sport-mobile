@@ -20,10 +20,10 @@ export function useSound() {
           playsInSilentModeIOS: true,
           staysActiveInBackground: false,
         });
-        const { sound } = await Audio.Sound.createAsync(
-          SOUND_ASSET,
-          { shouldPlay: false, volume: 0.8 }
-        );
+        const { sound } = await Audio.Sound.createAsync(SOUND_ASSET, {
+          shouldPlay: false,
+          volume: 0.8,
+        });
         if (mounted) {
           soundRef.current = sound;
           isLoadedRef.current = true;

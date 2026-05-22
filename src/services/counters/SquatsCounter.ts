@@ -29,9 +29,9 @@ type FoulType = 'shallow_squat' | 'back_lean' | 'knee_valgus' | 'too_fast';
 
 export class SquatsCounter extends ExerciseCounter {
   // ── 滤波器 ──
-  private kneeAngleFilter = new KalmanFilter1D(0.008, 0.06);  // 膝盖角度滤波
-  private backAngleFilter = new KalmanFilter1D(0.01, 0.08);    // 背部角度滤波
-  private hipYFilter = new KalmanFilter1D(0.005, 0.03);       // 髋部 Y 滤波
+  private kneeAngleFilter = new KalmanFilter1D(0.008, 0.06); // 膝盖角度滤波
+  private backAngleFilter = new KalmanFilter1D(0.01, 0.08); // 背部角度滤波
+  private hipYFilter = new KalmanFilter1D(0.005, 0.03); // 髋部 Y 滤波
 
   // ── 历史窗口 ──
   private kneeAngleHistory = new SlidingWindow(20);
@@ -43,17 +43,17 @@ export class SquatsCounter extends ExerciseCounter {
   private lastPhase: SquatPhase = 'idle';
 
   // ── 动作参数 ──
-  private standingKneeAngle = 175;       // 站立时的膝盖角度基线
-  private minKneeAngleInCycle = 180;     // 本次下蹲最小膝盖角度
-  private backAngleAtBottom = 90;        // 蹲底时的背部角度
-  private hipBaselineY = 0;              // 髋部 Y 基线
+  private standingKneeAngle = 175; // 站立时的膝盖角度基线
+  private minKneeAngleInCycle = 180; // 本次下蹲最小膝盖角度
+  private backAngleAtBottom = 90; // 蹲底时的背部角度
+  private hipBaselineY = 0; // 髋部 Y 基线
   private baselineWindow = new SlidingWindow(30);
 
   // ── 判定阈值 ──
-  private readonly DOWN_ANGLE = 100;            // 膝盖角 < 此值 → 蹲到底
-  private readonly UP_ANGLE = 155;              // 膝盖角 > 此值 → 站起来
-  private readonly MIN_SQUAT_ANGLE = 110;       // 有效深蹲最大角度（蹲得不够深）
-  private readonly BACK_LEAN_THRESHOLD = 60;    // 背部角度 < 此值 → 过度前倾
+  private readonly DOWN_ANGLE = 100; // 膝盖角 < 此值 → 蹲到底
+  private readonly UP_ANGLE = 155; // 膝盖角 > 此值 → 站起来
+  private readonly MIN_SQUAT_ANGLE = 110; // 有效深蹲最大角度（蹲得不够深）
+  private readonly BACK_LEAN_THRESHOLD = 60; // 背部角度 < 此值 → 过度前倾
   private readonly CONFIRM_FRAMES_DOWN_30FPS = 4;
   private readonly CONFIRM_FRAMES_UP_30FPS = 4;
   private readonly MIN_CYCLE_FRAMES_30FPS = 15;
@@ -66,7 +66,7 @@ export class SquatsCounter extends ExerciseCounter {
   private currentKneeAngle = 175;
 
   // ── 膝盖内扣检测 ──
-  private kneeTrackingAngle = 0;  // 膝盖追踪角（正面看膝盖朝向）
+  private kneeTrackingAngle = 0; // 膝盖追踪角（正面看膝盖朝向）
 
   reset(): void {
     super.reset();
@@ -114,13 +114,32 @@ export class SquatsCounter extends ExerciseCounter {
     const leftAnkle = this.getKeypoint(pose, 'left_ankle');
     const rightAnkle = this.getKeypoint(pose, 'right_ankle');
 
-    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip ||
-        !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) return;
+    if (
+      !leftShoulder ||
+      !rightShoulder ||
+      !leftHip ||
+      !rightHip ||
+      !leftKnee ||
+      !rightKnee ||
+      !leftAnkle ||
+      !rightAnkle
+    )
+      return;
 
     const minScore = 0.3;
-    if ([leftShoulder, rightShoulder, leftHip, rightHip,
-         leftKnee, rightKnee, leftAnkle, rightAnkle]
-        .some(kp => (kp.score || 0) < minScore)) return;
+    if (
+      [
+        leftShoulder,
+        rightShoulder,
+        leftHip,
+        rightHip,
+        leftKnee,
+        rightKnee,
+        leftAnkle,
+        rightAnkle,
+      ].some((kp) => (kp.score || 0) < minScore)
+    )
+      return;
 
     // ── 计算中值 ──
     const hipMidY = (leftHip.y + rightHip.y) / 2;
@@ -137,10 +156,7 @@ export class SquatsCounter extends ExerciseCounter {
 
     // ── 背部角度（肩-髋-垂直线）
     // 用髋部到肩部的向量与垂直方向的夹角
-    const backAngle = this.calculateBackAngle(
-      shoulderMidX, shoulderMidY,
-      hipMidX, hipMidY
-    );
+    const backAngle = this.calculateBackAngle(shoulderMidX, shoulderMidY, hipMidX, hipMidY);
 
     // ── 膝盖内扣检测（正面拍摄时有效）──
     // 膝盖X应该在脚踝X的外侧（或对齐），如果膝盖X在内侧则为内扣
@@ -307,12 +323,14 @@ export class SquatsCounter extends ExerciseCounter {
   // 返回肩-髋连线与垂直方向的夹角（度）
   // 90° = 站直，< 90° = 前倾
   private calculateBackAngle(
-    sx: number, sy: number,   // shoulder mid
-    hx: number, hy: number,   // hip mid
+    sx: number,
+    sy: number, // shoulder mid
+    hx: number,
+    hy: number, // hip mid
   ): number {
     const dx = sx - hx;
-    const dy = hy - sy;  // 注意 Y 轴反转
-    const angle = Math.atan2(Math.abs(dx), dy) * 180 / Math.PI;
+    const dy = hy - sy; // 注意 Y 轴反转
+    const angle = (Math.atan2(Math.abs(dx), dy) * 180) / Math.PI;
     return angle;
   }
 

@@ -9,12 +9,7 @@ interface BarChartProps {
   title?: string;
 }
 
-export default function BarChart({
-  data,
-  width = 300,
-  height = 200,
-  title,
-}: BarChartProps) {
+export default function BarChart({ data, width = 300, height = 200, title }: BarChartProps) {
   if (data.length === 0) {
     return (
       <View style={styles.container}>
@@ -57,13 +52,7 @@ export default function BarChart({
               >
                 {item.label}
               </SvgText>
-              <SvgText
-                x={x + barWidth / 2}
-                y={y - 5}
-                fontSize={10}
-                fill="#333"
-                textAnchor="middle"
-              >
+              <SvgText x={x + barWidth / 2} y={y - 5} fontSize={10} fill="#333" textAnchor="middle">
                 {item.value}
               </SvgText>
             </React.Fragment>

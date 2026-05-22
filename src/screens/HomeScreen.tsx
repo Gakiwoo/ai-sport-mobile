@@ -14,14 +14,15 @@ import { HomeScreenProps } from '../types/navigation';
 import { EXERCISE_CONFIGS } from '../constants/exerciseConfig';
 import { ExerciseType } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { t } from '../i18n';
 import ExerciseIllustration from '../components/ExerciseIllustration';
 
 // ── 布局常量 ──
 const SCREEN_W = Dimensions.get('window').width;
-const MAIN_PAD = 16;        // 左右内边距
-const GAP = 12;             // 卡片间距
+const MAIN_PAD = 16; // 左右内边距
+const GAP = 12; // 卡片间距
 const CARD_W = (SCREEN_W - MAIN_PAD * 2 - GAP) / 2;
-const CARD_H = CARD_W * 1.25;   // 4:5 纵向比例
+const CARD_H = CARD_W * 1.25; // 4:5 纵向比例
 const ILLUSTRATION_SIZE = CARD_W * 0.62;
 
 // ── 与桌面版 cardThemes 对齐 ──
@@ -67,7 +68,7 @@ function ExerciseCard({
   onPress,
   index,
 }: {
-  exercise: typeof EXERCISE_CONFIGS[0];
+  exercise: (typeof EXERCISE_CONFIGS)[0];
   onPress: () => void;
   index: number;
 }) {
@@ -97,11 +98,13 @@ function ExerciseCard({
         onPressOut={pressOut}
         activeOpacity={1}
       >
-        <View style={[
-          styles.card,
-          index % 2 === 1 && styles.cardOdd,
-          index >= 2 && styles.cardNotFirstRow,
-        ]}>
+        <View
+          style={[
+            styles.card,
+            index % 2 === 1 && styles.cardOdd,
+            index >= 2 && styles.cardNotFirstRow,
+          ]}
+        >
           {/* 渐变背景层（用两色 linearGradient 模拟） */}
           <View style={[styles.cardGradient, { backgroundColor: theme.colors[0] }]}>
             <View style={[styles.cardGradientBottom, { backgroundColor: theme.colors[1] }]} />
@@ -110,14 +113,9 @@ function ExerciseCard({
           {/* 内容层 */}
           <View style={styles.cardInner}>
             {/* 名称标签 — 顶部居中 */}
-            <View
-              style={[
-                styles.exerciseLabel,
-                { backgroundColor: theme.labelBg },
-              ]}
-            >
+            <View style={[styles.exerciseLabel, { backgroundColor: theme.labelBg }]}>
               <Text style={[styles.exerciseName, { color: theme.accent }]}>
-                {exercise.name}
+                {t(`exercise.${exercise.type}`)}
               </Text>
             </View>
 
@@ -194,9 +192,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             key={exercise.type}
             exercise={exercise}
             index={i}
-            onPress={() =>
-              navigation.navigate('Workout', { exerciseType: exercise.type })
-            }
+            onPress={() => navigation.navigate('Workout', { exerciseType: exercise.type })}
           />
         ))}
       </ScrollView>

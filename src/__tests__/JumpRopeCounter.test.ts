@@ -5,19 +5,19 @@ import { standingPose, lowConfidencePose, missingKeypointPose, buildPose } from 
 /** 跳绳甩绳姿态 — 手腕在肩上方运动 */
 function ropeSwingPose(): Pose {
   return buildPose({
-    nose:           { x: 0.50, y: 0.10, score: 0.9 },
-    left_shoulder:  { x: 0.35, y: 0.25, score: 0.9 },
+    nose: { x: 0.5, y: 0.1, score: 0.9 },
+    left_shoulder: { x: 0.35, y: 0.25, score: 0.9 },
     right_shoulder: { x: 0.65, y: 0.25, score: 0.9 },
-    left_elbow:     { x: 0.28, y: 0.20, score: 0.9 },
-    right_elbow:    { x: 0.72, y: 0.20, score: 0.9 },
-    left_wrist:     { x: 0.25, y: 0.10, score: 0.9 },  // 手腕举过头顶
-    right_wrist:    { x: 0.75, y: 0.10, score: 0.9 },
-    left_hip:       { x: 0.40, y: 0.55, score: 0.9 },
-    right_hip:      { x: 0.60, y: 0.55, score: 0.9 },
-    left_knee:      { x: 0.40, y: 0.72, score: 0.9 },
-    right_knee:     { x: 0.60, y: 0.72, score: 0.9 },
-    left_ankle:     { x: 0.40, y: 0.90, score: 0.9 },
-    right_ankle:    { x: 0.60, y: 0.90, score: 0.9 },
+    left_elbow: { x: 0.28, y: 0.2, score: 0.9 },
+    right_elbow: { x: 0.72, y: 0.2, score: 0.9 },
+    left_wrist: { x: 0.25, y: 0.1, score: 0.9 }, // 手腕举过头顶
+    right_wrist: { x: 0.75, y: 0.1, score: 0.9 },
+    left_hip: { x: 0.4, y: 0.55, score: 0.9 },
+    right_hip: { x: 0.6, y: 0.55, score: 0.9 },
+    left_knee: { x: 0.4, y: 0.72, score: 0.9 },
+    right_knee: { x: 0.6, y: 0.72, score: 0.9 },
+    left_ankle: { x: 0.4, y: 0.9, score: 0.9 },
+    right_ankle: { x: 0.6, y: 0.9, score: 0.9 },
   });
 }
 
@@ -88,6 +88,7 @@ describe('JumpRopeCounter', () => {
       expect(counter.getCount()).toBe(0);
       expect(counter.getPhase()).toBe('idle');
       expect(counter.isCalibrated()).toBe(false);
+      expect(counter.getConsecutiveJumps()).toBe(0);
     });
   });
 
@@ -97,5 +98,34 @@ describe('JumpRopeCounter', () => {
       expect(fb).not.toBeNull();
       expect(fb!.type).toBe('warning');
     });
+
+    it('标定后 idle 阶段应返回准备提示', () => {
+      for (let i = 0; i < 35; i++) {
+        counter.processFrame(standingPose());
+      }
+      const fb = counter.getFeedback();
+      expect(fb).not.toBeNull();
+      expect(fb!.message).toContain('准备跳绳');
+    });
+  });
+});
+
+describe('JumpRopeCounter — 边界值', () => {
+  let counter: JumpRopeCounter;
+
+  beforeEach(() => {
+    counter = new JumpRopeCounter();
+  });
+
+  it('未标定时 isCalibrated 为 false', () => {
+    expect(counter.isCalibrated()).toBe(false);
+  });
+
+  it('大量低置信度帧后不应报错', () => {
+    for (let i = 0; i < 500; i++) {
+      counter.processFrame(lowConfidencePose());
+    }
+    expect(counter.getCount()).toBe(0);
+    expect(counter.getPhase()).toBe('idle');
   });
 });

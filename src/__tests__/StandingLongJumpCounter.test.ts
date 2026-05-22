@@ -1,23 +1,30 @@
 import { Pose } from '../types';
 import { StandingLongJumpCounter } from '../services/counters/StandingLongJumpCounter';
-import { standingPose, squatBottomPose, airbornePose, lowConfidencePose, missingKeypointPose, buildPose } from './testHelpers';
+import {
+  standingPose,
+  squatBottomPose,
+  airbornePose,
+  lowConfidencePose,
+  missingKeypointPose,
+  buildPose,
+} from './testHelpers';
 
 /** 落地姿态 — 脚踝X右移（模拟跳远落地） */
 function landingPose(): Pose {
   return buildPose({
-    nose:           { x: 0.60, y: 0.20, score: 0.9 },
-    left_shoulder:  { x: 0.45, y: 0.28, score: 0.9 },
+    nose: { x: 0.6, y: 0.2, score: 0.9 },
+    left_shoulder: { x: 0.45, y: 0.28, score: 0.9 },
     right_shoulder: { x: 0.75, y: 0.28, score: 0.9 },
-    left_elbow:     { x: 0.40, y: 0.38, score: 0.9 },
-    right_elbow:    { x: 0.80, y: 0.38, score: 0.9 },
-    left_wrist:     { x: 0.38, y: 0.48, score: 0.9 },
-    right_wrist:    { x: 0.82, y: 0.48, score: 0.9 },
-    left_hip:       { x: 0.50, y: 0.55, score: 0.9 },
-    right_hip:      { x: 0.70, y: 0.55, score: 0.9 },
-    left_knee:      { x: 0.50, y: 0.72, score: 0.9 },
-    right_knee:     { x: 0.70, y: 0.72, score: 0.9 },
-    left_ankle:     { x: 0.50, y: 0.90, score: 0.9 },
-    right_ankle:    { x: 0.70, y: 0.90, score: 0.9 },
+    left_elbow: { x: 0.4, y: 0.38, score: 0.9 },
+    right_elbow: { x: 0.8, y: 0.38, score: 0.9 },
+    left_wrist: { x: 0.38, y: 0.48, score: 0.9 },
+    right_wrist: { x: 0.82, y: 0.48, score: 0.9 },
+    left_hip: { x: 0.5, y: 0.55, score: 0.9 },
+    right_hip: { x: 0.7, y: 0.55, score: 0.9 },
+    left_knee: { x: 0.5, y: 0.72, score: 0.9 },
+    right_knee: { x: 0.7, y: 0.72, score: 0.9 },
+    left_ankle: { x: 0.5, y: 0.9, score: 0.9 },
+    right_ankle: { x: 0.7, y: 0.9, score: 0.9 },
   });
 }
 

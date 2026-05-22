@@ -8,6 +8,7 @@ node_modules/
 .env.*
 eas-build-*/
 dist/
+coverage/
 npm-debug.*
 
 # MediaPipe binary assets (deployed to gakiwoo.com CDN)

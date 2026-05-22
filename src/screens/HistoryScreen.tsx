@@ -19,7 +19,11 @@ export default function HistoryScreen(_props: HistoryScreenProps) {
 
   const formatDate = (timestamp: number): string => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    return (
+      date.toLocaleDateString('zh-CN') +
+      ' ' +
+      date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    );
   };
 
   return (
@@ -31,22 +35,24 @@ export default function HistoryScreen(_props: HistoryScreenProps) {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.exerciseName}>{EXERCISE_NAMES[item.exerciseType]}</Text>
-              <View style={[
-                styles.modeTag,
-                (item.mode as WorkoutMode) === 'timed' && styles.modeTagTimed,
-              ]}>
+              <View
+                style={[
+                  styles.modeTag,
+                  (item.mode as WorkoutMode) === 'timed' && styles.modeTagTimed,
+                ]}
+              >
                 <Text style={styles.modeTagText}>
                   {(item.mode as WorkoutMode) === 'timed' ? '⏰ 定时' : '🎯 定数'}
                 </Text>
               </View>
             </View>
-            <Text style={styles.count}>次数: {item.count}  ·  用时: {item.duration}s</Text>
+            <Text style={styles.count}>
+              次数: {item.count} · 用时: {item.duration}s
+            </Text>
             <Text style={styles.date}>{formatDate(item.timestamp)}</Text>
           </View>
         )}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>暂无训练记录</Text>
-        }
+        ListEmptyComponent={<Text style={styles.emptyText}>暂无训练记录</Text>}
       />
     </View>
   );

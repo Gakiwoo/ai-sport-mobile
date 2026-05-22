@@ -25,20 +25,20 @@ type JackPhase = 'idle' | 'closed' | 'opening' | 'open' | 'closing';
 
 export class JumpingJacksCounter extends ExerciseCounter {
   // ── 滤波器 ──
-  private armAngleFilter = new KalmanFilter1D(0.01, 0.08);    // 手臂角度滤波
-  private legSpreadFilter = new KalmanFilter1D(0.008, 0.06);  // 腿部张开比例滤波
-  private hipYFilter = new KalmanFilter1D(0.005, 0.03);       // 髋部 Y 滤波
+  private armAngleFilter = new KalmanFilter1D(0.01, 0.08); // 手臂角度滤波
+  private legSpreadFilter = new KalmanFilter1D(0.008, 0.06); // 腿部张开比例滤波
+  private hipYFilter = new KalmanFilter1D(0.005, 0.03); // 髋部 Y 滤波
 
   // ── 自适应标定 ──
   private baselineWindow = new SlidingWindow(30);
-  private shoulderWidth = 0;           // 肩宽基线
-  private hipWidth = 0;                // 髋宽基线
-  private baseLegSpread = 0;           // 站立时腿部基础张开比例
+  private shoulderWidth = 0; // 肩宽基线
+  private hipWidth = 0; // 髋宽基线
+  private baseLegSpread = 0; // 站立时腿部基础张开比例
   private calibrated = false;
 
   // ── 阈值（自适应）──
-  private armThreshold = 120;          // 手臂角度阈值
-  private legThreshold = 1.4;          // 腿部张开倍数阈值（相对基线）
+  private armThreshold = 120; // 手臂角度阈值
+  private legThreshold = 1.4; // 腿部张开倍数阈值（相对基线）
 
   // ── 状态机 ──
   private phase: JackPhase = 'idle';
@@ -46,8 +46,8 @@ export class JumpingJacksCounter extends ExerciseCounter {
   private lastPhase: JackPhase = 'idle';
 
   // ── 动作参数 ──
-  private maxArmAngleInCycle = 0;      // 本周期最大手臂角度
-  private maxLegSpreadInCycle = 0;     // 本周期最大腿部张开
+  private maxArmAngleInCycle = 0; // 本周期最大手臂角度
+  private maxLegSpreadInCycle = 0; // 本周期最大腿部张开
   private cycleStartFrame = 0;
 
   // ── 判定阈值 ──
@@ -104,13 +104,32 @@ export class JumpingJacksCounter extends ExerciseCounter {
     const leftAnkle = this.getKeypoint(pose, 'left_ankle');
     const rightAnkle = this.getKeypoint(pose, 'right_ankle');
 
-    if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist ||
-        !leftHip || !rightHip || !leftAnkle || !rightAnkle) return;
+    if (
+      !leftShoulder ||
+      !rightShoulder ||
+      !leftWrist ||
+      !rightWrist ||
+      !leftHip ||
+      !rightHip ||
+      !leftAnkle ||
+      !rightAnkle
+    )
+      return;
 
     const minScore = 0.3;
-    if ([leftShoulder, rightShoulder, leftWrist, rightWrist,
-         leftHip, rightHip, leftAnkle, rightAnkle]
-        .some(kp => (kp.score || 0) < minScore)) return;
+    if (
+      [
+        leftShoulder,
+        rightShoulder,
+        leftWrist,
+        rightWrist,
+        leftHip,
+        rightHip,
+        leftAnkle,
+        rightAnkle,
+      ].some((kp) => (kp.score || 0) < minScore)
+    )
+      return;
 
     // ── 计算信号 ──
 
@@ -260,7 +279,7 @@ export class JumpingJacksCounter extends ExerciseCounter {
   ): number | null {
     const a = Math.atan2(wrist.y - shoulder.y, wrist.x - shoulder.x);
     const b = Math.atan2(hip.y - shoulder.y, hip.x - shoulder.x);
-    let angle = Math.abs(a - b) * 180 / Math.PI;
+    let angle = (Math.abs(a - b) * 180) / Math.PI;
     if (angle > 180) angle = 360 - angle;
     return angle;
   }

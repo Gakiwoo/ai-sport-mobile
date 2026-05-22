@@ -12,22 +12,17 @@ const coreNames = [
   'right_ankle',
 ];
 
-function makePose(options: {
-  minX?: number;
-  maxX?: number;
-  minY?: number;
-  maxY?: number;
-  score?: number;
-  missing?: string[];
-} = {}): Pose {
-  const {
-    minX = 160,
-    maxX = 320,
-    minY = 40,
-    maxY = 330,
-    score = 0.9,
-    missing = [],
-  } = options;
+function makePose(
+  options: {
+    minX?: number;
+    maxX?: number;
+    minY?: number;
+    maxY?: number;
+    score?: number;
+    missing?: string[];
+  } = {},
+): Pose {
+  const { minX = 160, maxX = 320, minY = 40, maxY = 330, score = 0.9, missing = [] } = options;
   const points = [
     [minX, minY],
     [maxX, minY],

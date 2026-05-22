@@ -1,0 +1,126 @@
+/**
+ * 中文翻译
+ */
+const zh: Record<string, string | ((...args: any[]) => string)> = {
+  // ── 通用 ──
+  'app.name': 'AI运动助手',
+  'common.loading': '加载中...',
+  'common.error': '出错了',
+  'common.retry': '重试',
+  'common.back': '返回',
+  'common.save': '保存',
+  'common.cancel': '取消',
+  'common.confirm': '确认',
+  'common.done': '完成',
+
+  // ── 认证 ──
+  'auth.login': '登录',
+  'auth.register': '注册',
+  'auth.logout': '退出登录',
+  'auth.email': '邮箱',
+  'auth.password': '密码',
+  'auth.nickname': '昵称',
+  'auth.loginTitle': '欢迎回来',
+  'auth.registerTitle': '创建账号',
+  'auth.noAccount': '还没有账号？',
+  'auth.hasAccount': '已有账号？',
+  'auth.guestMode': '游客模式',
+  'auth.loginSuccess': '登录成功',
+  'auth.registerSuccess': '注册成功',
+
+  // ── 首页 ──
+  'home.title': 'AI运动助手',
+  'home.start': '开始训练',
+  'home.history': '训练历史',
+  'home.analytics': '数据分析',
+  'home.profile': '我的',
+  'home.selectExercise': '选择运动',
+
+  // ── 运动类型 ──
+  'exercise.jump_rope': '跳绳',
+  'exercise.jumping_jacks': '开合跳',
+  'exercise.squats': '深蹲',
+  'exercise.standing_long_jump': '立定跳远',
+  'exercise.vertical_jump': '原地纵跳',
+  'exercise.sit_ups': '仰卧起坐',
+
+  // ── 训练 ──
+  'workout.title': '运动训练',
+  'workout.countMode': '计数模式',
+  'workout.timedMode': '定时模式',
+  'workout.start': '开始',
+  'workout.stop': '结束',
+  'workout.pause': '暂停',
+  'workout.resume': '继续',
+  'workout.targetCount': (n: number) => `目标 ${n} 次`,
+  'workout.targetDuration': (n: number) => `目标 ${n} 秒`,
+  'workout.count': (n: number) => `${n} 次`,
+  'workout.duration': (n: number) => `${n} 秒`,
+  'workout.timeUp': '时间到！',
+  'workout.saving': '保存中...',
+  'workout.saved': '训练记录已保存',
+  'workout.result': '训练结果',
+  'workout.rate': (n: number) => `平均 ${n}/分钟`,
+  'workout.noData': '暂无训练数据',
+  'workout.cameraReady': '相机就绪，点击「开始」进行训练',
+  'workout.autoStart': '保持姿势，即将自动开始...',
+  'workout.feedback.good': '做得好！',
+  'workout.feedback.standUp': '请站直',
+  'workout.feedback.lieDown': '请躺下',
+  'workout.feedback.tooFast': '太快了，放慢速度',
+  'workout.feedback.tooSlow': '加油，加快速度',
+  'workout.feedback.squatDeeper': '蹲深一点',
+  'workout.feedback.shallowSquat': '蹲得太浅',
+
+  // ── 历史 ──
+  'history.title': '训练历史',
+  'history.empty': '暂无训练记录',
+  'history.date': (d: string) => d,
+  'history.exercise': (name: string) => name,
+  'history.totalCount': (n: number) => `共 ${n} 次`,
+  'history.totalDuration': (n: number) => `共 ${n} 分钟`,
+
+  // ── 分析 ──
+  'analytics.title': '数据分析',
+  'analytics.totalWorkouts': '总训练次数',
+  'analytics.totalReps': '总次数',
+  'analytics.averageReps': '平均次数',
+  'analytics.totalTime': '总时长',
+
+  // ── 个人 ──
+  'profile.title': '我的',
+  'profile.accountInfo': '账号信息',
+  'profile.email': '邮箱',
+  'profile.nickname': '昵称',
+  'profile.editNickname': '修改昵称',
+  'profile.registerTime': '注册时间',
+  'profile.security': '安全设置',
+  'profile.changePassword': '修改密码',
+  'profile.about': '关于',
+  'profile.privacyPolicy': '隐私政策',
+  'profile.version': '版本',
+  'profile.logout': '退出登录',
+  'profile.guestMode': '本地模式',
+  'profile.guestLogout': '退出本地模式',
+  'profile.confirmLogout': '确定要退出登录吗？',
+  'profile.confirmGuestLogout': '确定要退出本地训练模式吗？',
+  'profile.nicknameRequired': '昵称不能为空',
+  'profile.nicknameUpdated': '昵称已更新',
+  'profile.passwordChanged': '密码已修改，请重新登录',
+  'profile.currentPassword': '当前密码',
+  'profile.newPassword': '新密码（至少 6 位）',
+  'profile.confirmPassword': '确认新密码',
+  'profile.passwordMismatch': '两次密码不一致',
+  'profile.passwordTooShort': '新密码至少 6 位',
+  'profile.language': '语言',
+  'profile.lang.zh': '中文',
+  'profile.lang.en': 'English',
+
+  // ── 语言 ──
+  'lang.switchTo': '切换语言',
+  'lang.zh': '中文',
+  'lang.en': 'English',
+  'lang.current': '当前语言',
+};
+
+export default zh;

@@ -1,0 +1,313 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SkeletonOverlay 低分姿态不渲染骨架线 1`] = `
+<View
+  style={
+    {
+      "bottom": 0,
+      "left": 0,
+      "pointerEvents": "none",
+      "position": "absolute",
+      "right": 0,
+      "top": 0,
+    }
+  }
+>
+  <View
+    data-svg-mock="Svg"
+    style={
+      {
+        "bottom": 0,
+        "left": 0,
+        "position": "absolute",
+        "right": 0,
+        "top": 0,
+      }
+    }
+  />
+</View>
+`;
+
+exports[`SkeletonOverlay 完整姿态渲染不崩溃 1`] = `
+<View
+  style={
+    {
+      "bottom": 0,
+      "left": 0,
+      "pointerEvents": "none",
+      "position": "absolute",
+      "right": 0,
+      "top": 0,
+    }
+  }
+>
+  <View
+    data-svg-mock="Svg"
+    style={
+      {
+        "bottom": 0,
+        "left": 0,
+        "position": "absolute",
+        "right": 0,
+        "top": 0,
+      }
+    }
+  >
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={125}
+      x2={130}
+      y1={115}
+      y2={118}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={125}
+      x2={135}
+      y1={115}
+      y2={121}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={135}
+      x2={145}
+      y1={121}
+      y2={127}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={130}
+      x2={140}
+      y1={118}
+      y2={124}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={140}
+      x2={150}
+      y1={124}
+      y2={130}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={125}
+      x2={155}
+      y1={115}
+      y2={133}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={130}
+      x2={160}
+      y1={118}
+      y2={136}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={155}
+      x2={160}
+      y1={133}
+      y2={136}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={155}
+      x2={165}
+      y1={133}
+      y2={139}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={165}
+      x2={175}
+      y1={139}
+      y2={145}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={160}
+      x2={170}
+      y1={136}
+      y2={142}
+    />
+    <View
+      data-svg-mock="Line"
+      stroke="#00ff00"
+      strokeWidth="2"
+      x1={170}
+      x2={180}
+      y1={142}
+      y2={148}
+    />
+    <View
+      cx={100}
+      cy={100}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={105}
+      cy={103}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={110}
+      cy={106}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={115}
+      cy={109}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={120}
+      cy={112}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={125}
+      cy={115}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={130}
+      cy={118}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={135}
+      cy={121}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={140}
+      cy={124}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={145}
+      cy={127}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={150}
+      cy={130}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={155}
+      cy={133}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={160}
+      cy={136}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={165}
+      cy={139}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={170}
+      cy={142}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={175}
+      cy={145}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+    <View
+      cx={180}
+      cy={148}
+      data-svg-mock="Circle"
+      fill="#ff0000"
+      r="4"
+    />
+  </View>
+</View>
+`;
+
+exports[`SkeletonOverlay 空关键点不崩溃 1`] = `
+<View
+  style={
+    {
+      "bottom": 0,
+      "left": 0,
+      "pointerEvents": "none",
+      "position": "absolute",
+      "right": 0,
+      "top": 0,
+    }
+  }
+>
+  <View
+    data-svg-mock="Svg"
+    style={
+      {
+        "bottom": 0,
+        "left": 0,
+        "position": "absolute",
+        "right": 0,
+        "top": 0,
+      }
+    }
+  />
+</View>
+`;

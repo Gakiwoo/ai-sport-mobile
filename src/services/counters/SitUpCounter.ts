@@ -34,9 +34,9 @@ type FoulType = 'hip_lift' | 'incomplete_up' | 'incomplete_down' | 'too_fast';
 
 export class SitUpCounter extends ExerciseCounter {
   // ── 滤波器 ──
-  private trunkAngleFilter = new KalmanFilter1D(0.008, 0.06);  // 躯干角度滤波
-  private shoulderYFilter = new KalmanFilter1D(0.01, 0.08);    // 肩部Y滤波
-  private hipYFilter = new KalmanFilter1D(0.01, 0.05);         // 髋部Y滤波
+  private trunkAngleFilter = new KalmanFilter1D(0.008, 0.06); // 躯干角度滤波
+  private shoulderYFilter = new KalmanFilter1D(0.01, 0.08); // 肩部Y滤波
+  private hipYFilter = new KalmanFilter1D(0.01, 0.05); // 髋部Y滤波
 
   // ── 角度历史（用于变化速度计算和方向检测）──
   private angleHistory = new SlidingWindow(20);
@@ -47,38 +47,38 @@ export class SitUpCounter extends ExerciseCounter {
   private phase: SitUpPhase = 'idle';
   private phaseFrameCount = 0;
   private lastPhase: SitUpPhase = 'idle';
-  private directionChangeCount = 0;  // 方向变化计数（用于有效计数判定）
+  private directionChangeCount = 0; // 方向变化计数（用于有效计数判定）
 
   // ── 判定阈值 ──
   // 躯干角度：肩→髋→膝三点角度
   // 仰卧时 ≈ 150°~180°（接近平躺）
   // 坐起时 ≈ 50°~80°（躯干前倾，肘触膝）
-  private readonly LYING_ANGLE_MIN = 140;     // 角度 >= 此值 → 判定为仰卧
-  private readonly UP_ANGLE_MAX = 85;         // 角度 <= 此值 → 判定为坐起到位
-  private readonly CONFIRM_FRAMES_LYING_30FPS = 5;  // 连续 N 帧保持仰卧角度才确认
-  private readonly CONFIRM_FRAMES_UP_30FPS = 4;     // 连续 N 帧保持坐起角度才确认
-  private readonly MIN_CYCLE_FRAMES_30FPS = 12;     // 一次完整动作最少帧数（防抖，约 0.4s@30fps）
-  private readonly MAX_CYCLE_FRAMES_30FPS = 90;     // 一次完整动作最多帧数（约 3s@30fps）
+  private readonly LYING_ANGLE_MIN = 140; // 角度 >= 此值 → 判定为仰卧
+  private readonly UP_ANGLE_MAX = 85; // 角度 <= 此值 → 判定为坐起到位
+  private readonly CONFIRM_FRAMES_LYING_30FPS = 5; // 连续 N 帧保持仰卧角度才确认
+  private readonly CONFIRM_FRAMES_UP_30FPS = 4; // 连续 N 帧保持坐起角度才确认
+  private readonly MIN_CYCLE_FRAMES_30FPS = 12; // 一次完整动作最少帧数（防抖，约 0.4s@30fps）
+  private readonly MAX_CYCLE_FRAMES_30FPS = 90; // 一次完整动作最多帧数（约 3s@30fps）
 
   // ── 臀部离垫检测 ──
   private readonly HIP_LIFT_THRESHOLD = 0.03; // 臀部 Y 上升超过此比例判定离垫
-  private baselineHipY = 0;                  // 仰卧时的髋部 Y 基线
-  private baselineAnkleY = 0;                // 脚踝 Y 基线
+  private baselineHipY = 0; // 仰卧时的髋部 Y 基线
+  private baselineAnkleY = 0; // 脚踝 Y 基线
 
   // ── 动作统计 ──
-  private cycleStartFrame = 0;               // 当前周期起始帧
-  private foulCount = 0;                     // 犯规次数
-  private lastFoul: FoulType | null = null;  // 最近一次犯规
-  private currentTrunkAngle = 180;           // 当前躯干角度
-  private isInLyingBaseline = false;         // 是否已采集仰卧基线
+  private cycleStartFrame = 0; // 当前周期起始帧
+  private foulCount = 0; // 犯规次数
+  private lastFoul: FoulType | null = null; // 最近一次犯规
+  private currentTrunkAngle = 180; // 当前躯干角度
+  private isInLyingBaseline = false; // 是否已采集仰卧基线
 
   // ── 方向检测 ──
   private prevAngle = 180;
   private angleDirection: 'rising' | 'falling' | 'stable' = 'stable';
 
   // ── 速度追踪（自适应阈值）──
-  private recentCycles: number[] = [];       // 最近的周期帧数
-  private avgCycleFrames = this.framesAt30Fps(30);               // 平均周期帧数
+  private recentCycles: number[] = []; // 最近的周期帧数
+  private avgCycleFrames = this.framesAt30Fps(30); // 平均周期帧数
 
   protected onFrameIntervalChanged(): void {
     this.resizeTimingWindows();
@@ -130,13 +130,32 @@ export class SitUpCounter extends ExerciseCounter {
     const leftAnkle = this.getKeypoint(pose, 'left_ankle');
     const rightAnkle = this.getKeypoint(pose, 'right_ankle');
 
-    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip ||
-        !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) return;
+    if (
+      !leftShoulder ||
+      !rightShoulder ||
+      !leftHip ||
+      !rightHip ||
+      !leftKnee ||
+      !rightKnee ||
+      !leftAnkle ||
+      !rightAnkle
+    )
+      return;
 
     const minScore = 0.3;
-    if ([leftShoulder, rightShoulder, leftHip, rightHip,
-         leftKnee, rightKnee, leftAnkle, rightAnkle]
-        .some(kp => (kp.score || 0) < minScore)) return;
+    if (
+      [
+        leftShoulder,
+        rightShoulder,
+        leftHip,
+        rightHip,
+        leftKnee,
+        rightKnee,
+        leftAnkle,
+        rightAnkle,
+      ].some((kp) => (kp.score || 0) < minScore)
+    )
+      return;
 
     // ── 计算中值 ──
     const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
@@ -147,14 +166,20 @@ export class SitUpCounter extends ExerciseCounter {
     // 这个角度反映躯干前倾程度
     // 仰卧 ≈ 160°~180°，坐起 ≈ 40°~80°
     const leftTrunkAngle = this.calculateTrunkAngle(
-      leftShoulder.x, leftShoulder.y,
-      leftHip.x, leftHip.y,
-      leftKnee.x, leftKnee.y
+      leftShoulder.x,
+      leftShoulder.y,
+      leftHip.x,
+      leftHip.y,
+      leftKnee.x,
+      leftKnee.y,
     );
     const rightTrunkAngle = this.calculateTrunkAngle(
-      rightShoulder.x, rightShoulder.y,
-      rightHip.x, rightHip.y,
-      rightKnee.x, rightKnee.y
+      rightShoulder.x,
+      rightShoulder.y,
+      rightHip.x,
+      rightHip.y,
+      rightKnee.x,
+      rightKnee.y,
     );
 
     if (leftTrunkAngle === null || rightTrunkAngle === null) return;
@@ -218,7 +243,7 @@ export class SitUpCounter extends ExerciseCounter {
 
   // ── 状态处理 ──
 
-  private handleLying(angle: number, hipY: number): void {
+  private handleLying(angle: number, _hipY: number): void {
     // 保持仰卧姿态，等待开始起身
     if (angle < this.LYING_ANGLE_MIN - 20) {
       // 角度开始减小 → 开始起身
@@ -336,13 +361,16 @@ export class SitUpCounter extends ExerciseCounter {
   // ── 躯干角度计算（肩-髋-膝）──
   // 返回角度：仰卧时 ≈ 160°~180°，坐起时 ≈ 40°~80°
   private calculateTrunkAngle(
-    sx: number, sy: number,   // shoulder
-    hx: number, hy: number,   // hip (顶点)
-    kx: number, ky: number,   // knee
+    sx: number,
+    sy: number, // shoulder
+    hx: number,
+    hy: number, // hip (顶点)
+    kx: number,
+    ky: number, // knee
   ): number | null {
     const a = Math.atan2(sy - hy, sx - hx); // 肩→髋方向
     const b = Math.atan2(ky - hy, kx - hx); // 膝→髋方向
-    let angle = Math.abs(a - b) * 180 / Math.PI;
+    let angle = (Math.abs(a - b) * 180) / Math.PI;
     if (angle > 180) angle = 360 - angle;
     return angle;
   }
@@ -356,9 +384,9 @@ export class SitUpCounter extends ExerciseCounter {
     const diff = angle - recent[recent.length - directionLookback];
 
     if (diff > 3) {
-      this.angleDirection = 'rising';   // 角度增大 = 躺下
+      this.angleDirection = 'rising'; // 角度增大 = 躺下
     } else if (diff < -3) {
-      this.angleDirection = 'falling';  // 角度减小 = 坐起
+      this.angleDirection = 'falling'; // 角度减小 = 坐起
     } else {
       this.angleDirection = 'stable';
     }

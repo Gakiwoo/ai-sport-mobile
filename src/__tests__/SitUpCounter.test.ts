@@ -114,4 +114,33 @@ describe('SitUpCounter', () => {
       }
     });
   });
+
+  describe('边缘情况', () => {
+    it('重置后 getRate 归零', () => {
+      counter.reset();
+      expect(counter.getRate()).toBe(0);
+    });
+
+    it('大量帧不报错', () => {
+      for (let i = 0; i < 500; i++) {
+        counter.processFrame(lyingPose());
+      }
+      expect(counter.getCount()).toBe(0);
+    });
+
+    it('缺失关键点姿态不干扰状态机', () => {
+      // 先进入 lying
+      for (let i = 0; i < 30; i++) {
+        counter.processFrame(lyingPose());
+      }
+
+      // 插入缺失关键点帧
+      for (let i = 0; i < 20; i++) {
+        counter.processFrame(missingKeypointPose());
+      }
+
+      // 状态不应因缺失帧而改变
+      expect(counter.getCount()).toBe(0);
+    });
+  });
 });

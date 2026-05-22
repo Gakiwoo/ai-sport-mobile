@@ -27,15 +27,11 @@ export function useExerciseFeedback() {
     const hipMidX = (leftHip.x + rightHip.x) / 2;
 
     const torsoAngle = Math.abs(
-      Math.atan2(shoulderMidX - hipMidX, shoulderMidY - hipMidY) * 180 / Math.PI
+      (Math.atan2(shoulderMidX - hipMidX, shoulderMidY - hipMidY) * 180) / Math.PI,
     );
 
     // Check knee position relative to toe (knee should not go far past toes)
-    const leftKneeAngle = PoseDetectionService.calculateAngle(
-      leftShoulder,
-      leftKnee,
-      leftHip
-    );
+    const leftKneeAngle = PoseDetectionService.calculateAngle(leftShoulder, leftKnee, leftHip);
 
     // If back is leaning forward more than 45 degrees, warn user
     if (torsoAngle > 45) {
@@ -67,8 +63,16 @@ export function useExerciseFeedback() {
     const leftAnkle = PoseDetectionService.getKeypoint(pose, 'left_ankle');
     const rightAnkle = PoseDetectionService.getKeypoint(pose, 'right_ankle');
 
-    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip ||
-        !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) {
+    if (
+      !leftShoulder ||
+      !rightShoulder ||
+      !leftHip ||
+      !rightHip ||
+      !leftKnee ||
+      !rightKnee ||
+      !leftAnkle ||
+      !rightAnkle
+    ) {
       return null;
     }
 
@@ -79,7 +83,7 @@ export function useExerciseFeedback() {
     const hipMidY = (leftHip.y + rightHip.y) / 2;
 
     const torsoAngle = Math.abs(
-      Math.atan2(shoulderMidX - hipMidX, shoulderMidY - hipMidY) * 180 / Math.PI
+      (Math.atan2(shoulderMidX - hipMidX, shoulderMidY - hipMidY) * 180) / Math.PI,
     );
 
     if (torsoAngle > 30) {
@@ -156,8 +160,16 @@ export function useExerciseFeedback() {
     const leftAnkle = PoseDetectionService.getKeypoint(pose, 'left_ankle');
     const rightAnkle = PoseDetectionService.getKeypoint(pose, 'right_ankle');
 
-    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip ||
-        !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) {
+    if (
+      !leftShoulder ||
+      !rightShoulder ||
+      !leftHip ||
+      !rightHip ||
+      !leftKnee ||
+      !rightKnee ||
+      !leftAnkle ||
+      !rightAnkle
+    ) {
       return null;
     }
 
@@ -168,7 +180,7 @@ export function useExerciseFeedback() {
     const hipMidY = (leftHip.y + rightHip.y) / 2;
 
     const torsoAngle = Math.abs(
-      Math.atan2(shoulderMidX - hipMidX, shoulderMidY - hipMidY) * 180 / Math.PI
+      (Math.atan2(shoulderMidX - hipMidX, shoulderMidY - hipMidY) * 180) / Math.PI,
     );
 
     if (torsoAngle > 45) {
@@ -222,27 +234,54 @@ export function useExerciseFeedback() {
     const leftAnkle = PoseDetectionService.getKeypoint(pose, 'left_ankle');
     const rightAnkle = PoseDetectionService.getKeypoint(pose, 'right_ankle');
 
-    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip ||
-        !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) {
+    if (
+      !leftShoulder ||
+      !rightShoulder ||
+      !leftHip ||
+      !rightHip ||
+      !leftKnee ||
+      !rightKnee ||
+      !leftAnkle ||
+      !rightAnkle
+    ) {
       return null;
     }
 
-    const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
     const hipMidY = (leftHip.y + rightHip.y) / 2;
-    const kneeMidY = (leftKnee.y + rightKnee.y) / 2;
     const ankleMidY = (leftAnkle.y + rightAnkle.y) / 2;
 
     // ── 计算躯干角度（肩-髋-膝）──
-    const calcTrunkAngle = (sx: number, sy: number, hx: number, hy: number, kx: number, ky: number): number | null => {
+    const calcTrunkAngle = (
+      sx: number,
+      sy: number,
+      hx: number,
+      hy: number,
+      kx: number,
+      ky: number,
+    ): number | null => {
       const a = Math.atan2(sy - hy, sx - hx);
       const b = Math.atan2(ky - hy, kx - hx);
-      let angle = Math.abs(a - b) * 180 / Math.PI;
+      let angle = (Math.abs(a - b) * 180) / Math.PI;
       if (angle > 180) angle = 360 - angle;
       return angle;
     };
 
-    const leftTrunk = calcTrunkAngle(leftShoulder.x, leftShoulder.y, leftHip.x, leftHip.y, leftKnee.x, leftKnee.y);
-    const rightTrunk = calcTrunkAngle(rightShoulder.x, rightShoulder.y, rightHip.x, rightHip.y, rightKnee.x, rightKnee.y);
+    const leftTrunk = calcTrunkAngle(
+      leftShoulder.x,
+      leftShoulder.y,
+      leftHip.x,
+      leftHip.y,
+      leftKnee.x,
+      leftKnee.y,
+    );
+    const rightTrunk = calcTrunkAngle(
+      rightShoulder.x,
+      rightShoulder.y,
+      rightHip.x,
+      rightHip.y,
+      rightKnee.x,
+      rightKnee.y,
+    );
 
     if (leftTrunk === null || rightTrunk === null) return null;
     const trunkAngle = (leftTrunk + rightTrunk) / 2;
@@ -308,20 +347,23 @@ export function useExerciseFeedback() {
     return null;
   }, []);
 
-  const getFeedback = useCallback((pose: Pose, exerciseType: ExerciseType): ExerciseFeedback | null => {
-    switch (exerciseType) {
-      case 'squats':
-        return checkSquatsForm(pose);
-      case 'standing_long_jump':
-        return checkLongJumpForm(pose);
-      case 'vertical_jump':
-        return checkJumpForm(pose);
-      case 'sit_ups':
-        return checkSitUpForm(pose);
-      default:
-        return null;
-    }
-  }, [checkSquatsForm, checkJumpForm, checkLongJumpForm, checkSitUpForm]);
+  const getFeedback = useCallback(
+    (pose: Pose, exerciseType: ExerciseType): ExerciseFeedback | null => {
+      switch (exerciseType) {
+        case 'squats':
+          return checkSquatsForm(pose);
+        case 'standing_long_jump':
+          return checkLongJumpForm(pose);
+        case 'vertical_jump':
+          return checkJumpForm(pose);
+        case 'sit_ups':
+          return checkSitUpForm(pose);
+        default:
+          return null;
+      }
+    },
+    [checkSquatsForm, checkJumpForm, checkLongJumpForm, checkSitUpForm],
+  );
 
   return { getFeedback };
 }

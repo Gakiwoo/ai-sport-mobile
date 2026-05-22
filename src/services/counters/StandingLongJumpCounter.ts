@@ -20,11 +20,11 @@ type JumpPhase = 'idle' | 'ready' | 'crouch' | 'takeoff' | 'airborne' | 'landing
 // ── 标定结果 ──
 interface CalibrationResult {
   calibrated: boolean;
-  torsoLengthPx: number;     // 躯干像素长度
-  pixelsPerCm: number;        // 像素/厘米
-  shoulderWidthPx: number;    // 肩宽像素
-  userHeightCm: number;       // 用户身高（cm）
-  startAnkleX: number;        // 起跳脚踝 X（像素）
+  torsoLengthPx: number; // 躯干像素长度
+  pixelsPerCm: number; // 像素/厘米
+  shoulderWidthPx: number; // 肩宽像素
+  userHeightCm: number; // 用户身高（cm）
+  startAnkleX: number; // 起跳脚踝 X（像素）
 }
 
 export class StandingLongJumpCounter extends ExerciseCounter {
@@ -34,7 +34,7 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     torsoLengthPx: 0,
     pixelsPerCm: 0,
     shoulderWidthPx: 0,
-    userHeightCm: 170,  // 默认 170cm
+    userHeightCm: 170, // 默认 170cm
     startAnkleX: 0,
   };
   private stabilityWindow = new SlidingWindow(30);
@@ -51,27 +51,27 @@ export class StandingLongJumpCounter extends ExerciseCounter {
   private lastPhase: JumpPhase = 'idle';
 
   // ── 动作检测 ──
-  private crouchMaxDepth = 0;        // 下蹲最深处
-  private crouchKneeMin = 180;       // 蹲下时最小膝盖角度
-  private takeoffAnkleX = 0;        // 起跳瞬间脚踝 X
-  private takeoffAnkleY = 0;        // 起跳瞬间脚踝 Y
-  private maxAirborneY = 0;         // 腾空最高点（Y 最小值）
-  private landingAnkleX = 0;        // 落地脚踝 X
-  private landingAnkleY = 0;        // 落地脚踝 Y
-  private peakDistancePx = 0;       // 最大水平位移（像素）
-  private jumpDistanceCm = 0;       // 最终距离（厘米）
+  private crouchMaxDepth = 0; // 下蹲最深处
+  private crouchKneeMin = 180; // 蹲下时最小膝盖角度
+  private takeoffAnkleX = 0; // 起跳瞬间脚踝 X
+  private takeoffAnkleY = 0; // 起跳瞬间脚踝 Y
+  private maxAirborneY = 0; // 腾空最高点（Y 最小值）
+  private landingAnkleX = 0; // 落地脚踝 X
+  private landingAnkleY = 0; // 落地脚踝 Y
+  private peakDistancePx = 0; // 最大水平位移（像素）
+  private jumpDistanceCm = 0; // 最终距离（厘米）
 
   // ── 配置 ──
-  private readonly CROUCH_ANGLE_THRESHOLD = 100;   // 膝盖角 < 此值判定蹲下
-  private readonly TAKEOFF_ANGLE_THRESHOLD = 140;  // 膝盖角 > 此值判定起跳
-  private readonly AIRBORNE_Y_THRESHOLD = 15;      // 脚踝Y上升超过此像素判定腾空
-  private readonly LANDING_STABLE_FRAMES_30FPS = 15;     // 落地后需要稳定帧数
-  private readonly CALIBRATION_READY_FRAMES_30FPS = 25;  // 稳定校准确认帧数
-  private readonly CROUCH_TO_TAKEOFF_FRAMES_30FPS = 5;   // 下蹲后起跳确认帧数
-  private readonly TAKEOFF_TIMEOUT_FRAMES_30FPS = 15;    // 起跳阶段超时帧数
-  private readonly LANDING_FEEDBACK_FRAMES_30FPS = 5;    // 落地反馈等待帧数
-  private readonly MIN_DISTANCE_PX = 20;           // 最小有效位移像素
-  private readonly STABLE_VARIANCE_THRESHOLD = 5;  // 方差阈值（判定稳定站立）
+  private readonly CROUCH_ANGLE_THRESHOLD = 100; // 膝盖角 < 此值判定蹲下
+  private readonly TAKEOFF_ANGLE_THRESHOLD = 140; // 膝盖角 > 此值判定起跳
+  private readonly AIRBORNE_Y_THRESHOLD = 15; // 脚踝Y上升超过此像素判定腾空
+  private readonly LANDING_STABLE_FRAMES_30FPS = 15; // 落地后需要稳定帧数
+  private readonly CALIBRATION_READY_FRAMES_30FPS = 25; // 稳定校准确认帧数
+  private readonly CROUCH_TO_TAKEOFF_FRAMES_30FPS = 5; // 下蹲后起跳确认帧数
+  private readonly TAKEOFF_TIMEOUT_FRAMES_30FPS = 15; // 起跳阶段超时帧数
+  private readonly LANDING_FEEDBACK_FRAMES_30FPS = 5; // 落地反馈等待帧数
+  private readonly MIN_DISTANCE_PX = 20; // 最小有效位移像素
+  private readonly STABLE_VARIANCE_THRESHOLD = 5; // 方差阈值（判定稳定站立）
   private readonly STABLE_TO_READY_FRAMES_30FPS = 45; // stable 后自动回到 ready 的帧数（~1.5s）
 
   // ── 用户身高（可通过 setter 设置）──
@@ -147,13 +147,32 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     const leftAnkle = this.getKeypoint(pose, 'left_ankle');
     const rightAnkle = this.getKeypoint(pose, 'right_ankle');
 
-    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip ||
-        !leftKnee || !rightKnee || !leftAnkle || !rightAnkle) return;
+    if (
+      !leftShoulder ||
+      !rightShoulder ||
+      !leftHip ||
+      !rightHip ||
+      !leftKnee ||
+      !rightKnee ||
+      !leftAnkle ||
+      !rightAnkle
+    )
+      return;
 
     const minScore = 0.3;
-    if ([leftShoulder, rightShoulder, leftHip, rightHip,
-         leftKnee, rightKnee, leftAnkle, rightAnkle]
-        .some(kp => (kp.score || 0) < minScore)) return;
+    if (
+      [
+        leftShoulder,
+        rightShoulder,
+        leftHip,
+        rightHip,
+        leftKnee,
+        rightKnee,
+        leftAnkle,
+        rightAnkle,
+      ].some((kp) => (kp.score || 0) < minScore)
+    )
+      return;
 
     // ── 计算中值 ──
     const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
@@ -250,7 +269,10 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     }
 
     // 检测起身 → 起跳
-    if (kneeAngle > this.TAKEOFF_ANGLE_THRESHOLD && this.phaseFrameCount > this.framesAt30Fps(this.CROUCH_TO_TAKEOFF_FRAMES_30FPS)) {
+    if (
+      kneeAngle > this.TAKEOFF_ANGLE_THRESHOLD &&
+      this.phaseFrameCount > this.framesAt30Fps(this.CROUCH_TO_TAKEOFF_FRAMES_30FPS)
+    ) {
       this.transitionTo('takeoff');
       this.takeoffAnkleX = ankleX;
       this.takeoffAnkleY = _ankleY;

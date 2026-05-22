@@ -1,5 +1,16 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Modal, StatusBar, Platform, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  TextInput,
+  Modal,
+  StatusBar,
+  Platform,
+  Animated,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Pose } from '../types';
 import { WorkoutScreenProps } from '../types/navigation';
@@ -49,16 +60,22 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
   const [currentFeedback, setCurrentFeedback] = useState<FormFeedback | null>(null);
   const [poseQuality, setPoseQuality] = useState<PoseQualityResult | null>(null);
   const [startCountdown, setStartCountdown] = useState<number | null>(null);
+  const [autoStartPhase, setAutoStartPhase] = useState<'waiting' | 'ready' | 'counting' | null>(
+    null,
+  );
   const hasShownCompletionRef = useRef(false);
   const startTimeRef = useRef<number | null>(null);
   const prevFeedbackMsgRef = useRef<string | null>(null);
   const prevQualityMsgRef = useRef<string | null>(null);
   const handleStopRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const handleStartRef = useRef<() => void>(() => {});
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownLoopRef = useRef<Animated.CompositeAnimation | null>(null);
   const countdownAnim = useRef(new Animated.Value(1)).current;
   const [elapsed, setElapsed] = useState(0);
   const runtimeProfile = useMemo(() => getExerciseRuntimeProfile(exerciseType), [exerciseType]);
+  const poseQualityRef = useRef<PoseQualityResult | null>(null);
+  const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { getFeedback } = useExerciseFeedback();
   const { playSuccess } = useSound();
@@ -95,6 +112,10 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
         countdownLoopRef.current.stop();
         countdownLoopRef.current = null;
       }
+      if (autoStartTimerRef.current) {
+        clearTimeout(autoStartTimerRef.current);
+        autoStartTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -109,7 +130,7 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
         Animated.sequence([
           Animated.timing(countdownAnim, { toValue: 0.6, duration: 500, useNativeDriver: true }),
           Animated.timing(countdownAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        ])
+        ]),
       );
       countdownLoopRef.current = loop;
       loop.start();
@@ -125,15 +146,20 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
   }, [timeUp, countdownAnim]);
 
   useEffect(() => {
-    if (isActive && mode === 'count' && count > 0 && count >= targetCount && !hasShownCompletionRef.current) {
+    if (
+      isActive &&
+      mode === 'count' &&
+      count > 0 &&
+      count >= targetCount &&
+      !hasShownCompletionRef.current
+    ) {
       hasShownCompletionRef.current = true;
       playSuccess();
       const stopFn = handleStopRef.current;
-      Alert.alert(
-        '🎉 恭喜完成！',
-        `已达成目标 ${targetCount} 次！`,
-        [{ text: '继续', style: 'cancel' }, { text: '停止', onPress: () => stopFn() }]
-      );
+      Alert.alert('🎉 恭喜完成！', `已达成目标 ${targetCount} 次！`, [
+        { text: '继续', style: 'cancel' },
+        { text: '停止', onPress: () => stopFn() },
+      ]);
     }
   }, [count, targetCount, isActive, mode, playSuccess]);
 
@@ -143,36 +169,87 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
     }
   }, [timeUp, isActive]);
 
-  const handlePoseDetected = useCallback((pose: Pose) => {
-    const quality = analyzePoseQuality(pose);
-    if (quality.message !== prevQualityMsgRef.current) {
-      prevQualityMsgRef.current = quality.message;
-      setPoseQuality(quality);
-    }
-
-    processFrame(pose);
-    if (!isActive) return;
-
-    const feedback = getFeedback(pose, exerciseType);
-    // 反馈去重：只在消息内容变化时更新 state，避免每帧无效重渲染
-    if (feedback) {
-      if (feedback.message !== prevFeedbackMsgRef.current) {
-        prevFeedbackMsgRef.current = feedback.message;
-        setCurrentFeedback(feedback);
+  // Auto-start: when pose quality is good for 2 seconds, auto-trigger start
+  useEffect(() => {
+    // Don't auto-start if already active or in manual countdown
+    if (isActive || startCountdown !== null) {
+      if (autoStartTimerRef.current) {
+        clearTimeout(autoStartTimerRef.current);
+        autoStartTimerRef.current = null;
       }
-    } else if (prevFeedbackMsgRef.current !== null) {
-      prevFeedbackMsgRef.current = null;
-      setCurrentFeedback(null);
-    }
-  }, [processFrame, getFeedback, exerciseType, isActive]);
-
-  const handleStart = () => {
-    if (startCountdown !== null) return;
-
-    if (!poseQuality?.canStart) {
-      Alert.alert('先调整站位', poseQuality?.message || '请站到镜头前，保持全身可见');
+      if (autoStartPhase !== 'counting') {
+        setAutoStartPhase(null);
+      }
       return;
     }
+
+    if (poseQuality?.canStart) {
+      if (!autoStartTimerRef.current) {
+        setAutoStartPhase('ready');
+        autoStartTimerRef.current = setTimeout(() => {
+          autoStartTimerRef.current = null;
+          handleStartRef.current();
+        }, 2000);
+      }
+    } else {
+      if (autoStartTimerRef.current) {
+        clearTimeout(autoStartTimerRef.current);
+        autoStartTimerRef.current = null;
+      }
+      setAutoStartPhase('waiting');
+    }
+
+    return () => {
+      if (autoStartTimerRef.current) {
+        clearTimeout(autoStartTimerRef.current);
+        autoStartTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poseQuality?.canStart, isActive, startCountdown]);
+
+  const handlePoseDetected = useCallback(
+    (pose: Pose) => {
+      const quality = analyzePoseQuality(pose);
+      poseQualityRef.current = quality;
+      if (quality.message !== prevQualityMsgRef.current) {
+        prevQualityMsgRef.current = quality.message;
+        setPoseQuality(quality);
+      }
+
+      processFrame(pose);
+      if (!isActive) return;
+
+      const feedback = getFeedback(pose, exerciseType);
+      // 反馈去重：只在消息内容变化时更新 state，避免每帧无效重渲染
+      if (feedback) {
+        if (feedback.message !== prevFeedbackMsgRef.current) {
+          prevFeedbackMsgRef.current = feedback.message;
+          setCurrentFeedback(feedback);
+        }
+      } else if (prevFeedbackMsgRef.current !== null) {
+        prevFeedbackMsgRef.current = null;
+        setCurrentFeedback(null);
+      }
+    },
+    [processFrame, getFeedback, exerciseType, isActive],
+  );
+
+  const handleStart = useCallback(() => {
+    if (startCountdown !== null) return;
+
+    const quality = poseQualityRef.current;
+    if (!quality?.canStart) {
+      Alert.alert('先调整站位', quality?.message || '请站到镜头前，保持全身可见');
+      return;
+    }
+
+    // Cancel any pending auto-start timer
+    if (autoStartTimerRef.current) {
+      clearTimeout(autoStartTimerRef.current);
+      autoStartTimerRef.current = null;
+    }
+    setAutoStartPhase('counting');
 
     setCurrentFeedback(null);
     prevFeedbackMsgRef.current = null;
@@ -187,12 +264,13 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
           countdownTimerRef.current = null;
         }
         setStartCountdown(null);
+        setAutoStartPhase(null);
         start();
       } else {
         setStartCountdown(next);
       }
     }, 1000);
-  };
+  }, [startCountdown, start]);
 
   const handleStop = async () => {
     setCurrentFeedback(null);
@@ -204,17 +282,14 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
       Alert.alert(
         `${modeLabel}\n训练记录已保存`,
         `${EXERCISE_NAMES[exerciseType]}：${session.count} 次，耗时 ${session.duration} 秒`,
-        [{ text: '确定' }]
+        [{ text: '确定' }],
       );
     } else if (!saved && session) {
-      Alert.alert(
-        '保存失败',
-        '训练记录保存失败，请重试',
-        [{ text: '确定' }]
-      );
+      Alert.alert('保存失败', '训练记录保存失败，请重试', [{ text: '确定' }]);
     }
   };
   handleStopRef.current = handleStop;
+  handleStartRef.current = handleStart;
 
   const handleSetTarget = () => {
     const target = parseInt(targetInput, 10);
@@ -266,7 +341,10 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
         onActivePoseIntervalChange={setFrameInterval}
         enablePreviewPose={!isActive}
       />
-      <View style={[styles.overlay, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]} pointerEvents="box-none">
+      <View
+        style={[styles.overlay, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]}
+        pointerEvents="box-none"
+      >
         <View style={styles.topRow}>
           <View style={styles.namePill}>
             <Text style={styles.exerciseName}>{EXERCISE_NAMES[exerciseType]}</Text>
@@ -291,13 +369,17 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
               style={[styles.modeBtn, !isTimed && styles.modeBtnActive]}
               onPress={() => switchMode('count')}
             >
-              <Text style={[styles.modeBtnText, !isTimed && styles.modeBtnTextActive]}>🎯 定数模式</Text>
+              <Text style={[styles.modeBtnText, !isTimed && styles.modeBtnTextActive]}>
+                🎯 定数模式
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modeBtn, isTimed && styles.modeBtnActive]}
               onPress={() => switchMode('timed')}
             >
-              <Text style={[styles.modeBtnText, isTimed && styles.modeBtnTextActive]}>⏰ 定时模式</Text>
+              <Text style={[styles.modeBtnText, isTimed && styles.modeBtnTextActive]}>
+                ⏰ 定时模式
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -305,10 +387,7 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
         <View style={styles.centerContent}>
           {isActive && isTimed && (
             <Animated.View style={{ opacity: countdownAnim }}>
-              <Text style={[
-                styles.timerValue,
-                timeUp && styles.timerValueExpired,
-              ]}>
+              <Text style={[styles.timerValue, timeUp && styles.timerValueExpired]}>
                 {formatCountdown(countdown)}
               </Text>
             </Animated.View>
@@ -317,21 +396,22 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
           {startCountdown !== null ? (
             <Text style={styles.startCountdown}>{startCountdown}</Text>
           ) : (
-            <Text style={[
-              styles.counter,
-              isActive && isTimed && styles.counterTimed,
-            ]}>
+            <Text style={[styles.counter, isActive && isTimed && styles.counterTimed]}>
               {count}
             </Text>
           )}
 
           {!isActive && startCountdown === null && (
-            <View style={[
-              styles.setupGuide,
-              poseQuality?.canStart ? styles.setupGuideReady : styles.setupGuideWarning,
-            ]}>
+            <View
+              style={[
+                styles.setupGuide,
+                poseQuality?.canStart ? styles.setupGuideReady : styles.setupGuideWarning,
+              ]}
+            >
               <Text style={styles.setupGuideText}>
-                {poseQuality?.message || '正在识别站位，请保持全身入镜'}
+                {autoStartPhase === 'ready'
+                  ? '保持姿势，即将自动开始...'
+                  : poseQuality?.message || '正在识别站位，请保持全身入镜'}
               </Text>
             </View>
           )}
@@ -341,8 +421,7 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
               <Text style={styles.targetHintText}>
                 {isTimed
                   ? `剩余 ${formatCountdown(countdown)}  ·  已做 ${count} 次`
-                  : `目标 ${targetCount}  ·  ${Math.round((count / targetCount) * 100)}%`
-                }
+                  : `目标 ${targetCount}  ·  ${Math.round((count / targetCount) * 100)}%`}
               </Text>
             </View>
           )}
@@ -361,7 +440,9 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
               onPress={handleStart}
               disabled={startCountdown !== null}
             >
-              <Text style={styles.buttonText}>{startCountdown !== null ? '准备中...' : '开始'}</Text>
+              <Text style={styles.buttonText}>
+                {startCountdown !== null ? '准备中...' : '开始'}
+              </Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -375,12 +456,14 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
                   [
                     { text: '取消', style: 'cancel' },
                     { text: '停止并保存', style: 'destructive', onPress: handleStop },
-                  ]
+                  ],
                 );
               }}
               disabled={isSaving}
             >
-              <Text style={[styles.buttonText, styles.stopButtonText]}>{isSaving ? '保存中...' : '停止'}</Text>
+              <Text style={[styles.buttonText, styles.stopButtonText]}>
+                {isSaving ? '保存中...' : '停止'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -410,7 +493,10 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
                   {[30, 60, 90, 120].map((d) => (
                     <TouchableOpacity
                       key={d}
-                      style={[styles.quickBtn, durationInput === d.toString() && styles.quickBtnActive]}
+                      style={[
+                        styles.quickBtn,
+                        durationInput === d.toString() && styles.quickBtnActive,
+                      ]}
                       onPress={() => setDurationInput(d.toString())}
                     >
                       <Text style={styles.quickBtnText}>{d}s</Text>
@@ -668,7 +754,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.40,
+    shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 6,
   },

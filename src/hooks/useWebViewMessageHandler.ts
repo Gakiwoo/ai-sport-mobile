@@ -10,6 +10,7 @@ import {
   ONE_SHOT_BLOB_THRESHOLD,
 } from '../utils/webViewAssetInjection';
 import { mediaPipeAssetService } from '../services/MediaPipeAssetService';
+import { performanceMonitor } from '../services/PerformanceMonitor';
 
 type CameraState = 'idle' | 'loading' | 'ready' | 'error';
 type BlobAckWaiter = {
@@ -32,11 +33,23 @@ interface UseWebViewMessageHandlerReturn {
   errorMessage: string;
   loadingDetail: string;
   injectionDoneRef: React.MutableRefObject<boolean>;
-  handleLoadEnd: (injectionDoneRef: React.MutableRefObject<boolean>, injectLocalFiles: () => Promise<void>) => void;
+  handleLoadEnd: (
+    injectionDoneRef: React.MutableRefObject<boolean>,
+    injectLocalFiles: () => Promise<void>,
+  ) => void;
   handleMessage: (event: WebViewMessageEvent) => void;
   handleReload: () => void;
   injectBlobFile: (webView: any) => Promise<void>;
-  injectRuntimeControls: (webView: any, options: { isActive: boolean; modelComplexity: number; throttleMs: number; previewThrottleMs: number; enablePreviewPose: boolean }) => void;
+  injectRuntimeControls: (
+    webView: any,
+    options: {
+      isActive: boolean;
+      modelComplexity: number;
+      throttleMs: number;
+      previewThrottleMs: number;
+      enablePreviewPose: boolean;
+    },
+  ) => void;
   rejectPendingBlobAcks: (reason: string) => void;
   webViewRef: React.RefObject<any>;
 }
@@ -44,12 +57,12 @@ interface UseWebViewMessageHandlerReturn {
 const BLOB_ACK_TIMEOUT_MS = 30000;
 
 export function useWebViewMessageHandler(
-  options: UseWebViewMessageHandlerOptions
+  options: UseWebViewMessageHandlerOptions,
 ): UseWebViewMessageHandlerReturn {
   const [cameraState, setCameraState] = useState<CameraState>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [loadingDetail, setLoadingDetail] = useState<string>('准备中...');
-  
+
   const webViewRef = useRef<any>(null);
   const isMountedRef = useRef(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,58 +91,61 @@ export function useWebViewMessageHandler(
     });
   }, []);
 
-  const injectBlobFile = useCallback(async (webView: any): Promise<void> => {
-    try {
-      const files = mediaPipeAssetService.getFiles();
+  const injectBlobFile = useCallback(
+    async (webView: any): Promise<void> => {
+      try {
+        const files = mediaPipeAssetService.getFiles();
 
-      for (const filename of files) {
-        if (filename === 'pose.js') continue;
-        const base64 = await mediaPipeAssetService.getFileBase64(filename);
-        const mimeType = mediaPipeAssetService.getMimeType(filename);
-        
-        const ackPromise = waitForBlobAck(filename);
+        for (const filename of files) {
+          if (filename === 'pose.js') continue;
+          const base64 = await mediaPipeAssetService.getFileBase64(filename);
+          const mimeType = mediaPipeAssetService.getMimeType(filename);
 
-        // 小文件一次性注入，大文件增大分块减少 injectJavaScript 调用次数
-        if (base64.length < ONE_SHOT_BLOB_THRESHOLD) {
-          // 小于 500KB base64 的 JS/小文件 → 一键注册 blob
-          webView.injectJavaScript(buildRegisterBlobScript(filename, base64, mimeType));
-        } else {
-          // .wasm / .tflite 等大文件 → 512KB 分块（原来是 64KB）
-          webView.injectJavaScript(buildBlobBeginScript(filename, mimeType));
-          for (const chunk of splitBase64IntoChunks(base64, 512 * 1024)) {
-            webView.injectJavaScript(buildBlobAppendScript(filename, chunk));
+          const ackPromise = waitForBlobAck(filename);
+
+          // 小文件一次性注入，大文件增大分块减少 injectJavaScript 调用次数
+          if (base64.length < ONE_SHOT_BLOB_THRESHOLD) {
+            // 小于 500KB base64 的 JS/小文件 → 一键注册 blob
+            webView.injectJavaScript(buildRegisterBlobScript(filename, base64, mimeType));
+          } else {
+            // .wasm / .tflite 等大文件 → 512KB 分块（原来是 64KB）
+            webView.injectJavaScript(buildBlobBeginScript(filename, mimeType));
+            for (const chunk of splitBase64IntoChunks(base64, 512 * 1024)) {
+              webView.injectJavaScript(buildBlobAppendScript(filename, chunk));
+            }
+            webView.injectJavaScript(buildBlobCommitScript(filename));
           }
-          webView.injectJavaScript(buildBlobCommitScript(filename));
+
+          await ackPromise;
         }
 
-        await ackPromise;
-      }
+        try {
+          const poseJsBase64 = await mediaPipeAssetService.getFileBase64('pose.js');
+          webView.injectJavaScript(
+            'window.__evalPoseJs(' + JSON.stringify(poseJsBase64) + ');true;',
+          );
+        } catch (err) {
+          console.warn('[CameraView] Failed to inject pose.js:', err);
+          throw err;
+        }
 
-      try {
-        const poseJsBase64 = await mediaPipeAssetService.getFileBase64('pose.js');
-        webView.injectJavaScript(
-          'window.__evalPoseJs(' + JSON.stringify(poseJsBase64) + ');true;'
-        );
-      } catch (err) {
-        console.warn('[CameraView] Failed to inject pose.js:', err);
-        throw err;
-      }
-
-      webView.injectJavaScript('init();true;');
-      injectionDoneRef.current = true;
-    } catch (err) {
-      console.warn('[CameraView] Local injection failed, falling back to CDN:', err);
-      rejectPendingBlobAcks('Local MediaPipe injection failed');
-      try {
         webView.injectJavaScript('init();true;');
-      } catch {
-        // WebView 可能在卸载过程中，忽略 inject 异常
+        injectionDoneRef.current = true;
+      } catch (err) {
+        console.warn('[CameraView] Local injection failed, falling back to CDN:', err);
+        rejectPendingBlobAcks('Local MediaPipe injection failed');
+        try {
+          webView.injectJavaScript('init();true;');
+        } catch {
+          // WebView 可能在卸载过程中，忽略 inject 异常
+        }
+        injectionDoneRef.current = true;
+      } finally {
+        mediaPipeAssetService.clearMemoryCache();
       }
-      injectionDoneRef.current = true;
-    } finally {
-      mediaPipeAssetService.clearMemoryCache();
-    }
-  }, [waitForBlobAck]);
+    },
+    [waitForBlobAck],
+  );
 
   const rejectPendingBlobAcks = useCallback((reason: string) => {
     blobAckWaitersRef.current.forEach((waiter) => {
@@ -144,99 +160,116 @@ export function useWebViewMessageHandler(
     timeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
         console.warn('[CameraView] Initialization timeout (30s)');
-        setErrorMessage('初始化超时，请检查网络连接后重试。可能原因：模型文件未正确缓存或WebView初始化失败。');
+        setErrorMessage(
+          '初始化超时，请检查网络连接后重试。可能原因：模型文件未正确缓存或WebView初始化失败。',
+        );
         setCameraState('error');
       }
     }, 30000);
   }, []);
 
-  const applyAdaptiveInterval = useCallback((nextInterval: number) => {
-    if (options.onAdaptiveIntervalChange) {
-      options.onAdaptiveIntervalChange(nextInterval);
-    }
-  }, [options]);
-
-  const handleMessage = useCallback((event: WebViewMessageEvent) => {
-    try {
-      const message = JSON.parse(event.nativeEvent.data);
-      switch (message.type) {
-        case 'blobAck': {
-          const filename = String(message.data?.filename || '');
-          const waiter = blobAckWaitersRef.current.get(filename);
-          if (waiter) {
-            blobAckWaitersRef.current.delete(filename);
-            clearTimeout(waiter.timer);
-            if (message.data?.ok) {
-              waiter.resolve();
-            } else {
-              waiter.reject(new Error(String(message.data?.error || `Blob transfer failed: ${filename}`)));
-            }
-          }
-          break;
-        }
-        case 'pose':
-          if (message.data) {
-            options.onPoseDetected?.(message.data);
-          }
-          break;
-        case 'perf': {
-          const inferenceMs = Number(message.data?.inferenceMs);
-          const sampleIsActive = Boolean(message.data?.isActive);
-          if (Number.isFinite(inferenceMs) && options.adaptiveRuntimeRef?.current) {
-            const nextInterval = options.adaptiveRuntimeRef.current.recordSample({
-              inferenceMs,
-              isActive: sampleIsActive,
-            });
-            applyAdaptiveInterval(nextInterval);
-          }
-          break;
-        }
-        case 'ready':
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-          mediaPipeAssetService.clearMemoryCache();
-          if (isMountedRef.current) setCameraState('ready');
-          options.onReady?.();
-          break;
-        case 'error':
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-          mediaPipeAssetService.clearMemoryCache();
-          console.warn('[CameraView] MediaPipe error:', message.data);
-          if (isMountedRef.current) {
-            setErrorMessage(String(message.data || '未知错误'));
-            setCameraState('error');
-            options.onError?.(String(message.data || '未知错误'));
-          }
-          break;
-        case 'cdnStatus':
-          if (isMountedRef.current && cameraStateRef.current === 'loading') {
-            setLoadingDetail(String(message.data || ''));
-            options.onCdnStatus?.(String(message.data || ''));
-          }
-          break;
-        case 'log':
-          console.log('[CameraView]', message.data);
-          break;
+  const applyAdaptiveInterval = useCallback(
+    (nextInterval: number) => {
+      if (options.onAdaptiveIntervalChange) {
+        options.onAdaptiveIntervalChange(nextInterval);
       }
-    } catch (err) {
-      // 忽略非 JSON 消息
-    }
-  }, [options, applyAdaptiveInterval]);
+    },
+    [options],
+  );
 
-  const handleLoadEnd = useCallback((
-    injectionDone: React.MutableRefObject<boolean>,
-    injectLocalFiles: () => Promise<void>
-  ) => {
-    if (injectionDone.current) return;
+  const handleMessage = useCallback(
+    (event: WebViewMessageEvent) => {
+      try {
+        const message = JSON.parse(event.nativeEvent.data);
+        switch (message.type) {
+          case 'blobAck': {
+            const filename = String(message.data?.filename || '');
+            const waiter = blobAckWaitersRef.current.get(filename);
+            if (waiter) {
+              blobAckWaitersRef.current.delete(filename);
+              clearTimeout(waiter.timer);
+              if (message.data?.ok) {
+                waiter.resolve();
+              } else {
+                waiter.reject(
+                  new Error(String(message.data?.error || `Blob transfer failed: ${filename}`)),
+                );
+              }
+            }
+            break;
+          }
+          case 'pose':
+            if (message.data) {
+              options.onPoseDetected?.(message.data);
+            }
+            break;
+          case 'perf': {
+            const inferenceMs = Number(message.data?.inferenceMs);
+            const sampleIsActive = Boolean(message.data?.isActive);
+            // 记录到性能监控器
+            if (Number.isFinite(inferenceMs)) {
+              performanceMonitor.recordFrame(inferenceMs, sampleIsActive);
+            }
+            if (Number.isFinite(inferenceMs) && options.adaptiveRuntimeRef?.current) {
+              const nextInterval = options.adaptiveRuntimeRef.current.recordSample({
+                inferenceMs,
+                isActive: sampleIsActive,
+              });
+              applyAdaptiveInterval(nextInterval);
+            }
+            break;
+          }
+          case 'ready':
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+              timeoutRef.current = null;
+            }
+            mediaPipeAssetService.clearMemoryCache();
+            if (isMountedRef.current) setCameraState('ready');
+            options.onReady?.();
+            break;
+          case 'error':
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+              timeoutRef.current = null;
+            }
+            mediaPipeAssetService.clearMemoryCache();
+            console.warn('[CameraView] MediaPipe error:', message.data);
+            if (isMountedRef.current) {
+              setErrorMessage(String(message.data || '未知错误'));
+              setCameraState('error');
+              options.onError?.(String(message.data || '未知错误'));
+            }
+            break;
+          case 'cdnStatus':
+            if (isMountedRef.current && cameraStateRef.current === 'loading') {
+              setLoadingDetail(String(message.data || ''));
+              options.onCdnStatus?.(String(message.data || ''));
+            }
+            break;
+          case 'log':
+            if (__DEV__) {
+              // eslint-disable-next-line no-console
+              console.log('[CameraView]', message.data);
+            }
+            break;
+        }
+      } catch {
+        // 忽略非 JSON 消息
+      }
+    },
+    [options, applyAdaptiveInterval],
+  );
 
-    startTimeout();
-    injectLocalFiles();
-  }, [startTimeout]);
+  const handleLoadEnd = useCallback(
+    (injectionDone: React.MutableRefObject<boolean>, injectLocalFiles: () => Promise<void>) => {
+      if (injectionDone.current) return;
+
+      startTimeout();
+      injectLocalFiles();
+    },
+    [startTimeout],
+  );
 
   const handleReload = useCallback(() => {
     setErrorMessage('');
@@ -247,23 +280,37 @@ export function useWebViewMessageHandler(
     webViewRef.current?.reload();
   }, [startTimeout]);
 
-  const injectRuntimeControls = useCallback((
-    webView: any,
-    config: {
-      isActive: boolean;
-      modelComplexity: number;
-      throttleMs: number;
-      previewThrottleMs: number;
-      enablePreviewPose: boolean;
-    }
-  ) => {
-    webView?.injectJavaScript(
-      'window.postMessage(JSON.stringify({type:"setModelConfig",modelComplexity:' + config.modelComplexity + '}), "*");' +
-      'window.postMessage(JSON.stringify({type:"setThrottle",interval:' + config.throttleMs + '}), "*");' +
-      'window.postMessage(JSON.stringify({type:"setPreviewThrottle",interval:' + config.previewThrottleMs + '}), "*");' +
-      'window.postMessage(JSON.stringify({type:"setActive",active:' + (config.isActive ? 'true' : 'false') + ',preview:' + (config.enablePreviewPose ? 'true' : 'false') + '}), "*");'
-    );
-  }, []);
+  const injectRuntimeControls = useCallback(
+    (
+      webView: any,
+      config: {
+        isActive: boolean;
+        modelComplexity: number;
+        throttleMs: number;
+        previewThrottleMs: number;
+        enablePreviewPose: boolean;
+      },
+    ) => {
+      webView?.injectJavaScript(
+        'window.postMessage(JSON.stringify({type:"setModelConfig",modelComplexity:' +
+          config.modelComplexity +
+          '}), "*");' +
+          'window.postMessage(JSON.stringify({type:"setThrottle",interval:' +
+          config.throttleMs +
+          '}), "*");' +
+          'window.postMessage(JSON.stringify({type:"setPreviewThrottle",interval:' +
+          config.previewThrottleMs +
+          '}), "*");' +
+          'window.postMessage(JSON.stringify({type:"setSmoothLandmarks",enabled:false}), "*");' +
+          'window.postMessage(JSON.stringify({type:"setActive",active:' +
+          (config.isActive ? 'true' : 'false') +
+          ',preview:' +
+          (config.enablePreviewPose ? 'true' : 'false') +
+          '}), "*");',
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     return () => {

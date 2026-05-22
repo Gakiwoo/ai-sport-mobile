@@ -31,7 +31,11 @@ export function buildBlobCommitScript(filename: string): string {
 }
 
 /** 一次性注入（不分块）：整体 base64 → WebView 内直接注册 blob */
-export function buildRegisterBlobScript(filename: string, base64: string, mimeType: string): string {
+export function buildRegisterBlobScript(
+  filename: string,
+  base64: string,
+  mimeType: string,
+): string {
   return `window.__registerBlob(${jsLiteral(filename)},${jsLiteral(base64)},${jsLiteral(mimeType)});true;`;
 }
 

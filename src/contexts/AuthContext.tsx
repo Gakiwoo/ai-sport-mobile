@@ -6,16 +6,16 @@ import { createGuestUser } from '../utils/guestUser';
 // ── Context 类型 ──
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;         // 初始恢复 session 中
-  isAuthenticating: boolean;  // 登录/注册请求中
+  isLoading: boolean; // 初始恢复 session 中
+  isAuthenticating: boolean; // 登录/注册请求中
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginAsGuest: () => void;
   register: (email: string, password: string, nickname: string) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
-  updateUser: (user: User) => void;        // 本地直接更新 user（昵称修改后同步）
-  refreshUser: () => Promise<void>;        // 从服务端重新拉取 user
+  updateUser: (user: User) => void; // 本地直接更新 user（昵称修改后同步）
+  refreshUser: () => Promise<void>; // 从服务端重新拉取 user
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -121,7 +121,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, isAuthenticating, error, login, loginAsGuest, register, logout, clearError, updateUser, refreshUser }}
+      value={{
+        user,
+        isLoading,
+        isAuthenticating,
+        error,
+        login,
+        loginAsGuest,
+        register,
+        logout,
+        clearError,
+        updateUser,
+        refreshUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

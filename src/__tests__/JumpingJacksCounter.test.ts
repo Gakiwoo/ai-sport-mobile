@@ -1,5 +1,10 @@
 import { JumpingJacksCounter } from '../services/counters/JumpingJacksCounter';
-import { standingPose, jumpingJackOpenPose, lowConfidencePose, missingKeypointPose } from './testHelpers';
+import {
+  standingPose,
+  jumpingJackOpenPose,
+  lowConfidencePose,
+  missingKeypointPose,
+} from './testHelpers';
 
 describe('JumpingJacksCounter', () => {
   let counter: JumpingJacksCounter;
@@ -99,6 +104,16 @@ describe('JumpingJacksCounter', () => {
       expect(counter.getPhase()).toBe('idle');
       expect(counter.isCalibrated()).toBe(false);
     });
+
+    it('多次 reset 不报错', () => {
+      counter.reset();
+      counter.reset();
+      counter.reset();
+      expect(counter.getCount()).toBe(0);
+      expect(counter.getPhase()).toBe('idle');
+      counter.processFrame(standingPose());
+      // 不报错即成功
+    });
   });
 
   describe('getFeedback', () => {
@@ -106,6 +121,16 @@ describe('JumpingJacksCounter', () => {
       const fb = counter.getFeedback();
       expect(fb).not.toBeNull();
       expect(fb!.type).toBe('warning');
+    });
+
+    it('已标定 closed 阶段 getFeedback 不报错', () => {
+      for (let i = 0; i < 35; i++) {
+        counter.processFrame(standingPose());
+      }
+      expect(counter.getPhase()).toBe('closed');
+      const fb = counter.getFeedback();
+      // closed 阶段可能返回 null 或提示
+      expect(fb === null || fb.type !== undefined).toBe(true);
     });
   });
 });

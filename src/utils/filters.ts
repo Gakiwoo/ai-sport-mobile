@@ -8,10 +8,10 @@
 // ── 简易 1D Kalman 滤波器 ──
 
 export class KalmanFilter1D {
-  private x = 0;    // 状态估计
-  private p = 1;    // 估计误差协方差
-  private readonly q: number;  // 过程噪声
-  private readonly r: number;  // 测量噪声
+  private x = 0; // 状态估计
+  private p = 1; // 估计误差协方差
+  private readonly q: number; // 过程噪声
+  private readonly r: number; // 测量噪声
 
   constructor(processNoise = 0.01, measurementNoise = 0.1) {
     this.q = processNoise;
@@ -26,7 +26,7 @@ export class KalmanFilter1D {
     const xPred = this.x;
     const pPred = this.p + this.q;
     // 更新
-    const k = pPred / (pPred + this.r);  // Kalman 增益
+    const k = pPred / (pPred + this.r); // Kalman 增益
     this.x = xPred + k * (measurement - xPred);
     this.p = (1 - k) * pPred;
     return this.x;
@@ -41,7 +41,9 @@ export class KalmanFilter1D {
   }
 
   /** 当前状态估计值 */
-  get state(): number { return this.x; }
+  get state(): number {
+    return this.x;
+  }
 }
 
 // ── 滑动窗口（固定长度的环形缓冲区）──
@@ -89,14 +91,24 @@ export class SlidingWindow {
   }
 
   /** 窗口内的数据数组（只读引用） */
-  get data(): readonly number[] { return this.buffer; }
+  get data(): readonly number[] {
+    return this.buffer;
+  }
 
-  get size(): number { return this.buffer.length; }
-  get capacity(): number { return this.maxSize; }
+  get size(): number {
+    return this.buffer.length;
+  }
+  get capacity(): number {
+    return this.maxSize;
+  }
 
-  clear(): void { this.buffer.length = 0; }
+  clear(): void {
+    this.buffer.length = 0;
+  }
 
-  get isFull(): boolean { return this.buffer.length >= this.maxSize; }
+  get isFull(): boolean {
+    return this.buffer.length >= this.maxSize;
+  }
 
   resize(maxSize: number): void {
     this.maxSize = Math.max(1, Math.floor(maxSize));

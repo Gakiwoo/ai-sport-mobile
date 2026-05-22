@@ -71,6 +71,6 @@ export abstract class ExerciseCounter {
     if (this.totalFrames === 0 || this.count === 0) return 0;
     const fps = 1000 / this.frameIntervalMs;
     const seconds = this.totalFrames / fps;
-    return Math.round(this.count / seconds * 60);
+    return Math.round((this.count / seconds) * 60);
   }
 }

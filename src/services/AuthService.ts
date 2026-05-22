@@ -10,12 +10,15 @@ import {
   UsageLog,
 } from '../types/auth';
 import { resolveApiBaseUrl } from '../utils/apiBaseUrl';
+import SecureStorageService from './SecureStorageService';
 
 // ── 常量 ──
 const isDev = (globalThis as unknown as { __DEV__?: boolean }).__DEV__ ?? false;
-const envBaseUrl = (globalThis as unknown as {
-  process?: { env?: { EXPO_PUBLIC_API_BASE_URL?: string } };
-}).process?.env?.EXPO_PUBLIC_API_BASE_URL;
+const envBaseUrl = (
+  globalThis as unknown as {
+    process?: { env?: { EXPO_PUBLIC_API_BASE_URL?: string } };
+  }
+).process?.env?.EXPO_PUBLIC_API_BASE_URL;
 
 const BASE_URL = resolveApiBaseUrl({
   isDev,
@@ -39,10 +42,7 @@ export class AuthError extends Error {
 
 // ── 内部：带 Cookie 的 fetch 封装 ──
 // React Native 的 fetch 不自动处理 cookie，需要手动管理
-async function authFetch(
-  path: string,
-  options: RequestInit = {},
-): Promise<Response> {
+async function authFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const tokens = await getStoredTokens();
 
   const headers: Record<string, string> = {
@@ -67,9 +67,9 @@ async function authFetch(
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers,
-    credentials: 'include',  // 尝试让浏览器/web 端自动处理 cookie
+    credentials: 'include', // 尝试让浏览器/web 端自动处理 cookie
     // React Native 忽略 credentials，cookie 需要后端从 header 读取
-    ...(cookieParts.length > 0 ? { cookie: cookieParts.join('; ') } as any : {}),
+    ...(cookieParts.length > 0 ? ({ cookie: cookieParts.join('; ') } as any) : {}),
   });
 
   // 如果 401，尝试 refresh token
@@ -85,9 +85,11 @@ async function authFetch(
 }
 
 // ── 本地存储 ──
+// Token：使用安全存储（expo-secure-store）
+// User：使用 AsyncStorage（非敏感数据）
 async function getStoredTokens(): Promise<AuthTokens | null> {
   try {
-    const raw = await AsyncStorage.getItem(TOKEN_KEY);
+    const raw = await SecureStorageService.getItem(TOKEN_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -95,11 +97,11 @@ async function getStoredTokens(): Promise<AuthTokens | null> {
 }
 
 async function storeTokens(tokens: AuthTokens): Promise<void> {
-  await AsyncStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
+  await SecureStorageService.setItem(TOKEN_KEY, JSON.stringify(tokens));
 }
 
 async function clearTokens(): Promise<void> {
-  await AsyncStorage.removeItem(TOKEN_KEY);
+  await SecureStorageService.removeItem(TOKEN_KEY);
 }
 
 async function storeUser(user: User): Promise<void> {

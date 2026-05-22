@@ -13,8 +13,8 @@ describe('exercise runtime profile', () => {
     const squat = getExerciseRuntimeProfile('squats');
     const sitUps = getExerciseRuntimeProfile('sit_ups');
 
-    expect(squat.activePoseIntervalMs).toBe(120);
-    expect(sitUps.activePoseIntervalMs).toBe(120);
+    expect(squat.activePoseIntervalMs).toBe(130);
+    expect(sitUps.activePoseIntervalMs).toBe(130);
     expect(squat.maxAdaptiveIntervalMs).toBeGreaterThan(squat.activePoseIntervalMs);
   });
 

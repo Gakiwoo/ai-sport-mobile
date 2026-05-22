@@ -1,5 +1,11 @@
 import { VerticalJumpCounter } from '../services/counters/VerticalJumpCounter';
-import { standingPose, squatBottomPose, airbornePose, lowConfidencePose, missingKeypointPose } from './testHelpers';
+import {
+  standingPose,
+  squatBottomPose,
+  airbornePose,
+  lowConfidencePose,
+  missingKeypointPose,
+} from './testHelpers';
 
 describe('VerticalJumpCounter', () => {
   let counter: VerticalJumpCounter;

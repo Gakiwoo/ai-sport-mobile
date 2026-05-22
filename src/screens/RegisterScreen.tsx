@@ -121,15 +121,10 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             activeOpacity={0.8}
             disabled={isAuthenticating}
           >
-            <Text style={styles.buttonText}>
-              {isAuthenticating ? '注册中...' : '注册'}
-            </Text>
+            <Text style={styles.buttonText}>{isAuthenticating ? '注册中...' : '注册'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.switchLink}
-            onPress={() => navigation.navigate('Login')}
-          >
+          <TouchableOpacity style={styles.switchLink} onPress={() => navigation.navigate('Login')}>
             <Text style={styles.switchText}>
               已有账号？<Text style={styles.switchHighlight}>立即登录</Text>
             </Text>

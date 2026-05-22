@@ -99,6 +99,86 @@ describe('ExerciseCounter getRate 公式验证', () => {
   });
 });
 
+describe('ExerciseCounter 边界值', () => {
+  let counter: TestCounter;
+
+  beforeEach(() => {
+    counter = new TestCounter();
+  });
+
+  it('setFrameInterval(0) 应被钳位到最小 16ms', () => {
+    counter.setFrameInterval(0);
+    expect((counter as any).frameIntervalMs).toBe(16);
+  });
+
+  it('setFrameInterval(-10) 应被钳位到最小 16ms', () => {
+    counter.setFrameInterval(-10);
+    expect((counter as any).frameIntervalMs).toBe(16);
+  });
+
+  it('setFrameInterval(16) 应保留最小值 16ms', () => {
+    counter.setFrameInterval(16);
+    expect((counter as any).frameIntervalMs).toBe(16);
+  });
+
+  it('setFrameInterval 接受非常大的值', () => {
+    counter.setFrameInterval(10000);
+    expect((counter as any).frameIntervalMs).toBe(10000);
+  });
+
+  it('多次 reset 后仍可正常使用', () => {
+    counter.processFrame({});
+    counter.reset();
+    counter.reset();
+    counter.reset();
+    expect(counter.getCount()).toBe(0);
+    expect(counter.getPhase()).toBe('neutral');
+    // 再次 processFrame 不报错
+    counter.processFrame({});
+    expect((counter as any).totalFrames).toBe(1);
+  });
+
+  it('getRate 在只有帧没有计数时返回 0', () => {
+    counter.setFrameInterval(100);
+    for (let i = 0; i < 200; i++) {
+      counter.processFrame({});
+    }
+    expect(counter.getRate()).toBe(0);
+  });
+});
+
+describe('ExerciseCounter getRate 不同帧间隔公式验证', () => {
+  it('60帧 @ 80ms间隔 + 5次计数 = 62.5 ≈ 63/分钟', () => {
+    class RCounter extends ExerciseCounter {
+      processFrame(): void {}
+      setCount(c: number, f: number) {
+        (this as any).count = c;
+        (this as any).totalFrames = f;
+      }
+    }
+    const c = new RCounter();
+    c.setFrameInterval(80); // fps = 12.5
+    c.setCount(5, 60); // seconds = 60/12.5 = 4.8
+    // rate = 5/4.8 * 60 = 62.5 → Math.round = 63
+    expect(c.getRate()).toBe(63);
+  });
+
+  it('120帧 @ 120ms间隔 + 10次计数 = 60/分钟', () => {
+    class RCounter extends ExerciseCounter {
+      processFrame(): void {}
+      setCount(c: number, f: number) {
+        (this as any).count = c;
+        (this as any).totalFrames = f;
+      }
+    }
+    const c = new RCounter();
+    c.setFrameInterval(120); // fps = 8.33
+    c.setCount(10, 120); // seconds = 120/8.33 = 14.4
+    // rate = 10/14.4 * 60 = 41.67 → Math.round = 42
+    expect(c.getRate()).toBe(42);
+  });
+});
+
 describe('ExerciseCounter 时间窗口换算', () => {
   class TimingCounter extends ExerciseCounter {
     processFrame(_pose: any): void {

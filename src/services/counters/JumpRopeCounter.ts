@@ -35,14 +35,14 @@ type RopePhase = 'idle' | 'detecting' | 'jumping' | 'resting';
 
 export class JumpRopeCounter extends ExerciseCounter {
   // ── 滤波器 ──
-  private wristDistFilter = new KalmanFilter1D(0.01, 0.06);  // 手腕距离滤波
-  private hipYFilter = new KalmanFilter1D(0.005, 0.03);      // 髋部 Y 滤波
-  private ankleYFilter = new KalmanFilter1D(0.005, 0.03);    // 脚踝 Y 滤波
+  private wristDistFilter = new KalmanFilter1D(0.01, 0.06); // 手腕距离滤波
+  private hipYFilter = new KalmanFilter1D(0.005, 0.03); // 髋部 Y 滤波
+  private ankleYFilter = new KalmanFilter1D(0.005, 0.03); // 脚踝 Y 滤波
 
   // ── 信号检测 ──
-  private wristDistHistory = new SlidingWindow(40);    // 手腕距离历史
-  private hipYHistory = new SlidingWindow(40);         // 髋部 Y 历史
-  private wristAngleHistory = new SlidingWindow(40);   // 手腕角度历史（手腕相对身体的角度）
+  private wristDistHistory = new SlidingWindow(40); // 手腕距离历史
+  private hipYHistory = new SlidingWindow(40); // 髋部 Y 历史
+  private wristAngleHistory = new SlidingWindow(40); // 手腕角度历史（手腕相对身体的角度）
 
   // ── 状态机 ──
   private phase: RopePhase = 'idle';
@@ -50,39 +50,39 @@ export class JumpRopeCounter extends ExerciseCounter {
   private lastPhase: RopePhase = 'idle';
 
   // ── 手腕旋转检测 ──
-  private wristCycleDetected = false;    // 检测到一次手腕旋转周期
-  private lastWristPeak = false;         // 上次手腕距离是否在峰值
-  private wristPeakCount = 0;            // 手腕峰值计数（用于节奏检测）
-  private wristCycleFrames = 0;          // 上一次完整周期帧数
-  private expectedCycleFrames = this.framesAt30Fps(20);      // 期望周期帧数（自适应，初始 ~0.67s@30fps）
-  private framesSinceLastPeak = 0;       // 距上一个峰的帧数（防止高频噪声）
+  private wristCycleDetected = false; // 检测到一次手腕旋转周期
+  private lastWristPeak = false; // 上次手腕距离是否在峰值
+  private wristPeakCount = 0; // 手腕峰值计数（用于节奏检测）
+  private wristCycleFrames = 0; // 上一次完整周期帧数
+  private expectedCycleFrames = this.framesAt30Fps(20); // 期望周期帧数（自适应，初始 ~0.67s@30fps）
+  private framesSinceLastPeak = 0; // 距上一个峰的帧数（防止高频噪声）
   private framesSinceLastCycleStart = 0; // 距上一个周期开始的帧数（自适应用）
 
   // ── 髋部弹跳检测 ──
-  private lastHipValley = false;         // 上次髋部 Y 是否在谷值
-  private hipBaselineY = 0;              // 髋部 Y 基线（站立时）
+  private lastHipValley = false; // 上次髋部 Y 是否在谷值
+  private hipBaselineY = 0; // 髋部 Y 基线（站立时）
   private baselineWindow = new SlidingWindow(30);
 
   // ── 双信号融合 ──
-  private recentJumpIntervals: number[] = [];  // 最近几次跳跃的帧间隔
-  private avgJumpInterval = this.framesAt30Fps(20);                // 平均帧间隔（自适应）
+  private recentJumpIntervals: number[] = []; // 最近几次跳跃的帧间隔
+  private avgJumpInterval = this.framesAt30Fps(20); // 平均帧间隔（自适应）
   private confirmWindow = new SlidingWindow(6); // 确认窗口（防抖）
   private bounceWindow = new SlidingWindow(60); // 弹跳信号回溯窗口（交叉验证用）
 
   // ── 统计 ──
-  private consecutiveJumps = 0;          // 连续有效跳跃次数
-  private missedSwings = 0;              // 漏绳检测
+  private consecutiveJumps = 0; // 连续有效跳跃次数
+  private missedSwings = 0; // 漏绳检测
 
   // ── 阈值配置 ──
-  private readonly WRIST_DIST_CHANGE_THRESHOLD = 0.008;  // 手腕距离变化阈值（归一化）
-  private readonly HIP_JUMP_THRESHOLD = 0.015;           // 髋部弹跳阈值
-  private readonly MIN_CYCLE_FRAMES_30FPS = 8;            // 最小周期帧数（约 0.27s@30fps）
-  private readonly MAX_CYCLE_FRAMES_30FPS = 60;           // 最大周期帧数（约 2s@30fps）
-  private readonly REST_TIMEOUT_FRAMES_30FPS = 45;        // 休息超时帧数（约 1.5s）
+  private readonly WRIST_DIST_CHANGE_THRESHOLD = 0.008; // 手腕距离变化阈值（归一化）
+  private readonly HIP_JUMP_THRESHOLD = 0.015; // 髋部弹跳阈值
+  private readonly MIN_CYCLE_FRAMES_30FPS = 8; // 最小周期帧数（约 0.27s@30fps）
+  private readonly MAX_CYCLE_FRAMES_30FPS = 60; // 最大周期帧数（约 2s@30fps）
+  private readonly REST_TIMEOUT_FRAMES_30FPS = 45; // 休息超时帧数（约 1.5s）
 
   // ── 自适应标定 ──
-  private shoulderWidth = 0;             // 肩宽（归一化，用于手腕距离归一化）
-  private hipWidth = 0;                  // 髋宽
+  private shoulderWidth = 0; // 肩宽（归一化，用于手腕距离归一化）
+  private hipWidth = 0; // 髋宽
   private calibrated = false;
 
   protected onFrameIntervalChanged(): void {
@@ -152,8 +152,12 @@ export class JumpRopeCounter extends ExerciseCounter {
     if (!leftWrist || !rightWrist) return;
 
     const minScore = 0.3;
-    if ([leftShoulder, rightShoulder, leftWrist, rightWrist, leftHip, rightHip]
-        .some(kp => (kp.score || 0) < minScore)) return;
+    if (
+      [leftShoulder, rightShoulder, leftWrist, rightWrist, leftHip, rightHip].some(
+        (kp) => (kp.score || 0) < minScore,
+      )
+    )
+      return;
 
     // ── 计算信号 ──
 
@@ -162,7 +166,9 @@ export class JumpRopeCounter extends ExerciseCounter {
       ? Math.sqrt(Math.pow(leftWrist.x - leftElbow.x, 2) + Math.pow(leftWrist.y - leftElbow.y, 2))
       : 0;
     const rightWristElbowDist = rightElbow
-      ? Math.sqrt(Math.pow(rightWrist.x - rightElbow.x, 2) + Math.pow(rightWrist.y - rightElbow.y, 2))
+      ? Math.sqrt(
+          Math.pow(rightWrist.x - rightElbow.x, 2) + Math.pow(rightWrist.y - rightElbow.y, 2),
+        )
       : 0;
     const avgWristDist = (leftWristElbowDist + rightWristElbowDist) / 2;
 
@@ -177,9 +183,7 @@ export class JumpRopeCounter extends ExerciseCounter {
     const hipMidY = (leftHip.y + rightHip.y) / 2;
 
     // 信号 3：脚踝 Y（辅助弹跳检测）
-    const ankleMidY = (leftAnkle && rightAnkle)
-      ? (leftAnkle.y + rightAnkle.y) / 2
-      : hipMidY;
+    const ankleMidY = leftAnkle && rightAnkle ? (leftAnkle.y + rightAnkle.y) / 2 : hipMidY;
 
     // ── 自适应标定 ──
     this.shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
@@ -227,9 +231,8 @@ export class JumpRopeCounter extends ExerciseCounter {
     // 检测手腕是否有周期性运动（甩绳意图）
     if (this.wristDistHistory.size >= this.framesAt30Fps(20)) {
       const variance = this.wristDistHistory.variance();
-      const normalizedVar = this.shoulderWidth > 0.01
-        ? variance / (this.shoulderWidth * this.shoulderWidth)
-        : Infinity;
+      const normalizedVar =
+        this.shoulderWidth > 0.01 ? variance / (this.shoulderWidth * this.shoulderWidth) : Infinity;
       // 手腕距离方差显著 → 可能在甩绳
       if (normalizedVar > 0.02 && this.calibrated) {
         this.transitionTo('detecting');
@@ -275,7 +278,7 @@ export class JumpRopeCounter extends ExerciseCounter {
       const recentBounces = this.bounceWindow.data;
       const lookback = Math.min(recentBounces.length, this.expectedCycleFrames);
       const slice = recentBounces.slice(-lookback);
-      const hasBounce = slice.some(v => v > 0);
+      const hasBounce = slice.some((v) => v > 0);
 
       if (hasBounce) {
         this.count++;
@@ -285,12 +288,15 @@ export class JumpRopeCounter extends ExerciseCounter {
         // 自适应周期
         if (this.wristCycleFrames > 0) {
           this.expectedCycleFrames = Math.round(
-            this.expectedCycleFrames * 0.7 + this.wristCycleFrames * 0.3
+            this.expectedCycleFrames * 0.7 + this.wristCycleFrames * 0.3,
           );
           // 限制范围
           const minCycleFrames = this.framesAt30Fps(this.MIN_CYCLE_FRAMES_30FPS);
           const maxCycleFrames = this.framesAt30Fps(this.MAX_CYCLE_FRAMES_30FPS);
-          this.expectedCycleFrames = Math.max(minCycleFrames, Math.min(maxCycleFrames, this.expectedCycleFrames));
+          this.expectedCycleFrames = Math.max(
+            minCycleFrames,
+            Math.min(maxCycleFrames, this.expectedCycleFrames),
+          );
         }
       }
     }
@@ -299,9 +305,10 @@ export class JumpRopeCounter extends ExerciseCounter {
     if (this.hipYHistory.isFull && this.wristDistHistory.isFull) {
       const hipVariance = this.hipYHistory.variance();
       const wristVariance = this.wristDistHistory.variance();
-      const normalizedWristVar = this.shoulderWidth > 0.01
-        ? wristVariance / (this.shoulderWidth * this.shoulderWidth)
-        : Infinity;
+      const normalizedWristVar =
+        this.shoulderWidth > 0.01
+          ? wristVariance / (this.shoulderWidth * this.shoulderWidth)
+          : Infinity;
 
       if (hipVariance < 0.5 && normalizedWristVar < 0.01) {
         // 检测到稳定 → 进入休息
@@ -325,9 +332,8 @@ export class JumpRopeCounter extends ExerciseCounter {
     // 检测是否又开始跳绳
     if (this.wristDistHistory.isFull) {
       const variance = this.wristDistHistory.variance();
-      const normalizedVar = this.shoulderWidth > 0.01
-        ? variance / (this.shoulderWidth * this.shoulderWidth)
-        : Infinity;
+      const normalizedVar =
+        this.shoulderWidth > 0.01 ? variance / (this.shoulderWidth * this.shoulderWidth) : Infinity;
       if (normalizedVar > 0.02) {
         this.transitionTo('detecting');
       }
@@ -402,7 +408,8 @@ export class JumpRopeCounter extends ExerciseCounter {
     if (this.recentJumpIntervals.length > 10) {
       this.recentJumpIntervals.shift();
     }
-    this.avgJumpInterval = this.recentJumpIntervals.reduce((s, v) => s + v, 0) / this.recentJumpIntervals.length;
+    this.avgJumpInterval =
+      this.recentJumpIntervals.reduce((s, v) => s + v, 0) / this.recentJumpIntervals.length;
   }
 
   private transitionTo(newPhase: RopePhase): void {

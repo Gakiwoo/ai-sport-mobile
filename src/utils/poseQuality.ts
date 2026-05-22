@@ -48,9 +48,9 @@ function emptyResult(message: string): PoseQualityResult {
 }
 
 function getCoreKeypoints(pose: Pose): Keypoint[] {
-  return CORE_KEYPOINTS
-    .map((name) => pose.keypoints.find((kp) => kp.name === name))
-    .filter((kp): kp is Keypoint => Boolean(kp));
+  return CORE_KEYPOINTS.map((name) => pose.keypoints.find((kp) => kp.name === name)).filter(
+    (kp): kp is Keypoint => Boolean(kp),
+  );
 }
 
 export function analyzePoseQuality(pose: Pose | null | undefined): PoseQualityResult {
@@ -63,9 +63,8 @@ export function analyzePoseQuality(pose: Pose | null | undefined): PoseQualityRe
   const core = getCoreKeypoints(pose);
   const visibleCore = core.filter((kp) => (kp.score ?? 0) >= MIN_VISIBLE_SCORE);
   const visibilityScore = visibleCore.length / CORE_KEYPOINTS.length;
-  const averageScore = core.length === 0
-    ? 0
-    : core.reduce((sum, kp) => sum + (kp.score ?? 0), 0) / core.length;
+  const averageScore =
+    core.length === 0 ? 0 : core.reduce((sum, kp) => sum + (kp.score ?? 0), 0) / core.length;
 
   if (visibilityScore <= MIN_CORE_VISIBILITY) {
     return {
@@ -92,7 +91,10 @@ export function analyzePoseQuality(pose: Pose | null | undefined): PoseQualityRe
   const xs = visibleCore.map((kp) => kp.x);
   const ys = visibleCore.map((kp) => kp.y);
   // 显式循环避免 spread 操作符潜在的栈溢出风险
-  let minX = xs[0], maxX = xs[0], minY = ys[0], maxY = ys[0];
+  let minX = xs[0],
+    maxX = xs[0],
+    minY = ys[0],
+    maxY = ys[0];
   for (let i = 1; i < xs.length; i++) {
     if (xs[i] < minX) minX = xs[i];
     if (xs[i] > maxX) maxX = xs[i];
@@ -125,7 +127,12 @@ export function analyzePoseQuality(pose: Pose | null | undefined): PoseQualityRe
     };
   }
 
-  if (minX < edgeMarginX || maxX > frameWidth - edgeMarginX || minY < edgeMarginY || maxY > frameHeight - edgeMarginY) {
+  if (
+    minX < edgeMarginX ||
+    maxX > frameWidth - edgeMarginX ||
+    minY < edgeMarginY ||
+    maxY > frameHeight - edgeMarginY
+  ) {
     return {
       status: 'near_edge',
       canStart: false,

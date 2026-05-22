@@ -24,7 +24,7 @@ const SKELETON_CONNECTIONS = [
 
 export default function SkeletonOverlay({ pose }: SkeletonOverlayProps) {
   const getKeypoint = (name: string) => {
-    return pose.keypoints.find(kp => kp.name === name);
+    return pose.keypoints.find((kp) => kp.name === name);
   };
 
   return (
@@ -50,15 +50,7 @@ export default function SkeletonOverlay({ pose }: SkeletonOverlayProps) {
         })}
         {pose.keypoints.map((kp, index) => {
           if ((kp.score || 0) < 0.3) return null;
-          return (
-            <Circle
-              key={index}
-              cx={kp.x}
-              cy={kp.y}
-              r="4"
-              fill="#ff0000"
-            />
-          );
+          return <Circle key={index} cx={kp.x} cy={kp.y} r="4" fill="#ff0000" />;
         })}
       </Svg>
     </View>

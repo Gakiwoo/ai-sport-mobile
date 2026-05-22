@@ -1,0 +1,223 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`BarChart 单条数据渲染快照 1`] = `
+<View
+  style={
+    {
+      "alignItems": "center",
+      "padding": 10,
+    }
+  }
+>
+  <View
+    data-svg-mock="Svg"
+    height={200}
+    width={300}
+  >
+    <View
+      data-svg-mock="Rect"
+      fill="#FF0000"
+      height={160}
+      rx={4}
+      width={270}
+      x={10}
+      y={10}
+    />
+    <View
+      data-svg-mock="SvgText"
+      fill="#666"
+      fontSize={10}
+      textAnchor="middle"
+      x={145}
+      y={195}
+    >
+      单
+    </View>
+    <View
+      data-svg-mock="SvgText"
+      fill="#333"
+      fontSize={10}
+      textAnchor="middle"
+      x={145}
+      y={5}
+    >
+      42
+    </View>
+  </View>
+</View>
+`;
+
+exports[`BarChart 无标题时渲染快照 1`] = `
+<View
+  style={
+    {
+      "alignItems": "center",
+      "padding": 10,
+    }
+  }
+>
+  <Text
+    style={
+      {
+        "color": "#999",
+        "fontSize": 14,
+        "padding": 20,
+      }
+    }
+  >
+    暂无数据
+  </Text>
+</View>
+`;
+
+exports[`BarChart 有数据时渲染柱状图快照 1`] = `
+<View
+  style={
+    {
+      "alignItems": "center",
+      "padding": 10,
+    }
+  }
+>
+  <Text
+    style={
+      {
+        "color": "#333",
+        "fontSize": 16,
+        "fontWeight": "bold",
+        "marginBottom": 10,
+      }
+    }
+  >
+    测试图表
+  </Text>
+  <View
+    data-svg-mock="Svg"
+    height={200}
+    width={300}
+  >
+    <View
+      data-svg-mock="Rect"
+      fill="#007AFF"
+      height={80}
+      rx={4}
+      width={83.33333333333333}
+      x={10}
+      y={90}
+    />
+    <View
+      data-svg-mock="SvgText"
+      fill="#666"
+      fontSize={10}
+      textAnchor="middle"
+      x={51.666666666666664}
+      y={195}
+    >
+      一
+    </View>
+    <View
+      data-svg-mock="SvgText"
+      fill="#333"
+      fontSize={10}
+      textAnchor="middle"
+      x={51.666666666666664}
+      y={85}
+    >
+      10
+    </View>
+    <View
+      data-svg-mock="Rect"
+      fill="#007AFF"
+      height={160}
+      rx={4}
+      width={83.33333333333333}
+      x={103.33333333333333}
+      y={10}
+    />
+    <View
+      data-svg-mock="SvgText"
+      fill="#666"
+      fontSize={10}
+      textAnchor="middle"
+      x={145}
+      y={195}
+    >
+      二
+    </View>
+    <View
+      data-svg-mock="SvgText"
+      fill="#333"
+      fontSize={10}
+      textAnchor="middle"
+      x={145}
+      y={5}
+    >
+      20
+    </View>
+    <View
+      data-svg-mock="Rect"
+      fill="#007AFF"
+      height={120}
+      rx={4}
+      width={83.33333333333333}
+      x={196.66666666666666}
+      y={50}
+    />
+    <View
+      data-svg-mock="SvgText"
+      fill="#666"
+      fontSize={10}
+      textAnchor="middle"
+      x={238.33333333333331}
+      y={195}
+    >
+      三
+    </View>
+    <View
+      data-svg-mock="SvgText"
+      fill="#333"
+      fontSize={10}
+      textAnchor="middle"
+      x={238.33333333333331}
+      y={45}
+    >
+      15
+    </View>
+  </View>
+</View>
+`;
+
+exports[`BarChart 空数据渲染快照 1`] = `
+<View
+  style={
+    {
+      "alignItems": "center",
+      "padding": 10,
+    }
+  }
+>
+  <Text
+    style={
+      {
+        "color": "#333",
+        "fontSize": 16,
+        "fontWeight": "bold",
+        "marginBottom": 10,
+      }
+    }
+  >
+    空图表
+  </Text>
+  <Text
+    style={
+      {
+        "color": "#999",
+        "fontSize": 14,
+        "padding": 20,
+      }
+    }
+  >
+    暂无数据
+  </Text>
+</View>
+`;

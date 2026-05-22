@@ -38,11 +38,7 @@ function uniqueBases(bases: readonly string[]): string[] {
 
 export function buildMediaPipeCdnBases(envValue?: string): string[] {
   const envBases = envValue ? envValue.split(',') : [];
-  return uniqueBases([
-    ...envBases,
-    ...DEFAULT_CN_FRIENDLY_BASES,
-    ...DEFAULT_GLOBAL_FALLBACK_BASES,
-  ]);
+  return uniqueBases([...envBases, ...DEFAULT_CN_FRIENDLY_BASES, ...DEFAULT_GLOBAL_FALLBACK_BASES]);
 }
 
 export function prioritizeMediaPipeCdnBases(
@@ -51,7 +47,9 @@ export function prioritizeMediaPipeCdnBases(
 ): string[] {
   const normalizedBases = uniqueBases(bases);
   const failed = new Set(uniqueBases(options.failedBases ?? []));
-  const lastSuccessful = options.lastSuccessfulBase ? normalizeBase(options.lastSuccessfulBase) : null;
+  const lastSuccessful = options.lastSuccessfulBase
+    ? normalizeBase(options.lastSuccessfulBase)
+    : null;
 
   const preferred: string[] = [];
   if (lastSuccessful && normalizedBases.includes(lastSuccessful) && !failed.has(lastSuccessful)) {
@@ -66,4 +64,3 @@ export function prioritizeMediaPipeCdnBases(
 export function shouldPreloadMediaPipeAssets(input: PreloadDecisionInput): boolean {
   return !input.authLoading && !input.alreadyStarted;
 }
-

@@ -12,12 +12,16 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '../contexts/LocaleContext';
+import { t, getSupportedLocales } from '../i18n';
 import AuthService from '../services/AuthService';
 import { ProfileScreenProps } from '../types/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { user, logout, updateUser } = useAuth();
+  const { locale, switchLocale } = useLocale();
+  const [showLangPicker, setShowLangPicker] = useState(false);
   const insets = useSafeAreaInsets();
   const [isEditing, setIsEditing] = useState(false);
   const [nickname, setNickname] = useState(user?.nickname || '');
@@ -46,7 +50,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
     setIsSaving(true);
     try {
       const updatedUser = await AuthService.updateNickname({ nickname: nickname.trim() });
-      updateUser(updatedUser);   // 同步全局 user（头像字母等立即更新）
+      updateUser(updatedUser); // 同步全局 user（头像字母等立即更新）
       setIsEditing(false);
       Alert.alert('成功', '昵称已更新');
     } catch (err: any) {
@@ -90,16 +94,20 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   };
 
   const handleLogout = () => {
-    Alert.alert(isGuest ? '退出本地模式' : '确认登出', isGuest ? '确定要退出本地训练模式吗？' : '确定要退出登录吗？', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: isGuest ? '退出' : '登出',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
+    Alert.alert(
+      isGuest ? '退出本地模式' : '确认登出',
+      isGuest ? '确定要退出本地训练模式吗？' : '确定要退出登录吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: isGuest ? '退出' : '登出',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
@@ -108,10 +116,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
       {/* 顶栏 */}
       <View style={[styles.topbar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.topbarTitle}>我的</Text>
@@ -125,7 +130,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>邮箱</Text>
-            <Text style={styles.infoValue} numberOfLines={1}>{isGuest ? '本地模式' : user?.email}</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>
+              {isGuest ? '本地模式' : user?.email}
+            </Text>
           </View>
 
           <View style={styles.infoRow}>
@@ -138,13 +145,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                   onChangeText={setNickname}
                   autoFocus
                 />
-                <TouchableOpacity
-                  onPress={handleSaveNickname}
-                  disabled={isSaving}
-                >
-                  <Text style={styles.editAction}>
-                    {isSaving ? '...' : '保存'}
-                  </Text>
+                <TouchableOpacity onPress={handleSaveNickname} disabled={isSaving}>
+                  <Text style={styles.editAction}>{isSaving ? '...' : '保存'}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -167,18 +169,69 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
         {/* 安全设置卡片 */}
         {!isGuest && (
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>安全设置</Text>
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => setShowPasswordModal(true)}>
+              <Text style={styles.menuText}>修改密码</Text>
+              <Text style={styles.menuArrow}>›</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* 关于 */}
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>安全设置</Text>
+          <Text style={styles.cardLabel}>{t('profile.about')}</Text>
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => setShowPasswordModal(true)}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
           >
-            <Text style={styles.menuText}>修改密码</Text>
+            <Text style={styles.menuText}>{t('profile.privacyPolicy')}</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setShowLangPicker(!showLangPicker)}
+          >
+            <Text style={styles.menuText}>{t('profile.language')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.menuValue}>{t(`profile.lang.${locale}`)}</Text>
+              <Text style={styles.menuArrow}>›</Text>
+            </View>
+          </TouchableOpacity>
+
+          {showLangPicker && (
+            <View style={styles.langPicker}>
+              {getSupportedLocales().map((l) => (
+                <TouchableOpacity
+                  key={l.code}
+                  style={[styles.langOption, locale === l.code && styles.langOptionActive]}
+                  onPress={() => {
+                    switchLocale(l.code as 'zh' | 'en');
+                    setShowLangPicker(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.langOptionText,
+                      locale === l.code && styles.langOptionTextActive,
+                    ]}
+                  >
+                    {l.localName}
+                  </Text>
+                  {locale === l.code && <Text style={styles.langCheck}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.menuItem}>
+            <Text style={styles.menuText}>{t('profile.version')}</Text>
+            <Text style={styles.menuValue}>1.0.0</Text>
+          </View>
         </View>
-        )}
 
         {/* 登出按钮 */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
@@ -364,6 +417,11 @@ const styles = StyleSheet.create({
     color: '#C7C7CC',
     fontWeight: '300',
   },
+  menuValue: {
+    fontSize: 15,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
   logoutBtn: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -452,5 +510,37 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  langPicker: {
+    marginTop: 8,
+    borderRadius: 10,
+    backgroundColor: '#F2F2F7',
+    overflow: 'hidden',
+  },
+  langOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5EA',
+  },
+  langOptionActive: {
+    backgroundColor: '#E8F0FE',
+  },
+  langOptionText: {
+    fontSize: 15,
+    color: '#1C1C1E',
+    fontWeight: '500',
+  },
+  langOptionTextActive: {
+    color: '#007AFF',
+    fontWeight: '700',
+  },
+  langCheck: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '700',
   },
 });

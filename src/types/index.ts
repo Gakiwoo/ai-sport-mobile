@@ -1,4 +1,10 @@
-export type ExerciseType = 'jump_rope' | 'jumping_jacks' | 'squats' | 'standing_long_jump' | 'vertical_jump' | 'sit_ups';
+export type ExerciseType =
+  | 'jump_rope'
+  | 'jumping_jacks'
+  | 'squats'
+  | 'standing_long_jump'
+  | 'vertical_jump'
+  | 'sit_ups';
 
 /** 训练模式：定数（目标次数）或定时（目标时长） */
 export type WorkoutMode = 'count' | 'timed';

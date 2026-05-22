@@ -16,10 +16,7 @@ import {
   isMediaPipeCacheComplete,
 } from '../utils/mediaPipeManifest';
 import { runWithConcurrency } from '../utils/asyncPool';
-import {
-  buildMediaPipeCdnBases,
-  prioritizeMediaPipeCdnBases,
-} from '../utils/mediaPipeCdnPolicy';
+import { buildMediaPipeCdnBases, prioritizeMediaPipeCdnBases } from '../utils/mediaPipeCdnPolicy';
 
 // MediaPipe 资源文件列表
 const MEDIAPIPE_FILES = [
@@ -95,8 +92,12 @@ class MediaPipeAssetService {
 
     // 使用 identity-check 确保只清理自身 promise，避免并发重试时误清
     promise.then(
-      () => { if (this.ensurePromise === promise) this.ensurePromise = null; },
-      () => { if (this.ensurePromise === promise) this.ensurePromise = null; },
+      () => {
+        if (this.ensurePromise === promise) this.ensurePromise = null;
+      },
+      () => {
+        if (this.ensurePromise === promise) this.ensurePromise = null;
+      },
     );
 
     return this.ensurePromise;
@@ -130,13 +131,16 @@ class MediaPipeAssetService {
     for (let i = 0; i < cdnBases.length; i++) {
       const cdnBase = cdnBases[i];
       const host = cdnBase.split('/')[2];
-      onProgress?.(`尝试 CDN ${i + 1}/${cdnBases.length}: ${host}`, (i + 1) / (cdnBases.length + 1));
+      onProgress?.(
+        `尝试 CDN ${i + 1}/${cdnBases.length}: ${host}`,
+        (i + 1) / (cdnBases.length + 1),
+      );
 
       try {
         await this.downloadAllFromCdn(cdnBase, (fileIdx, total) => {
           onProgress?.(
             `从 ${host} 下载中 (${fileIdx + 1}/${total})`,
-            (i * total + fileIdx + 1) / (cdnBases.length * total)
+            (i * total + fileIdx + 1) / (cdnBases.length * total),
           );
         });
         successBase = cdnBase;
@@ -158,7 +162,7 @@ class MediaPipeAssetService {
     const files = await this.getCachedAssetInfo();
     await writeAsStringAsync(
       MANIFEST_FILE,
-      JSON.stringify(createMediaPipeManifest(CACHE_VERSION, files), null, 2)
+      JSON.stringify(createMediaPipeManifest(CACHE_VERSION, files), null, 2),
     );
     this.cachedBaseUrl = CACHE_DIR;
     onProgress?.('AI 模型就绪', 1);
@@ -166,9 +170,11 @@ class MediaPipeAssetService {
   }
 
   private getEnvCdnBases(): string | undefined {
-    return (globalThis as unknown as {
-      process?: { env?: Record<string, string | undefined> };
-    }).process?.env?.EXPO_PUBLIC_MEDIAPIPE_CDN_BASES;
+    return (
+      globalThis as unknown as {
+        process?: { env?: Record<string, string | undefined> };
+      }
+    ).process?.env?.EXPO_PUBLIC_MEDIAPIPE_CDN_BASES;
   }
 
   private async getPrioritizedCdnBases(): Promise<string[]> {
@@ -177,10 +183,10 @@ class MediaPipeAssetService {
       AsyncStorage.getItem(FAILED_CDN_KEY),
     ]);
     const failedBases = this.parseStoredBases(failedBasesJson);
-    return prioritizeMediaPipeCdnBases(
-      buildMediaPipeCdnBases(this.getEnvCdnBases()),
-      { lastSuccessfulBase, failedBases },
-    );
+    return prioritizeMediaPipeCdnBases(buildMediaPipeCdnBases(this.getEnvCdnBases()), {
+      lastSuccessfulBase,
+      failedBases,
+    });
   }
 
   private async recordSuccessfulCdn(cdnBase: string): Promise<void> {
@@ -201,7 +207,9 @@ class MediaPipeAssetService {
     if (!value) return [];
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+      return Array.isArray(parsed)
+        ? parsed.filter((item): item is string => typeof item === 'string')
+        : [];
     } catch {
       return [];
     }
@@ -310,14 +318,14 @@ class MediaPipeAssetService {
           name: file,
           size: info.exists && typeof info.size === 'number' ? info.size : 0,
         };
-      })
+      }),
     );
     return results;
   }
 
   private async downloadAllFromCdn(
     cdnBase: string,
-    onFileProgress: (fileIdx: number, total: number) => void
+    onFileProgress: (fileIdx: number, total: number) => void,
   ): Promise<void> {
     const total = MEDIAPIPE_FILES.length;
 
@@ -359,9 +367,12 @@ class MediaPipeAssetService {
       }
     }
 
-    throw new Error(`Failed to download ${filename} after ${DOWNLOAD_MAX_ATTEMPTS} attempts: ${lastError}`, {
-      cause: lastError,
-    });
+    throw new Error(
+      `Failed to download ${filename} after ${DOWNLOAD_MAX_ATTEMPTS} attempts: ${lastError}`,
+      {
+        cause: lastError,
+      },
+    );
   }
 
   private async deleteInvalidFile(filename: string): Promise<void> {

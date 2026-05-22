@@ -87,9 +87,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             activeOpacity={0.8}
             disabled={isAuthenticating}
           >
-            <Text style={styles.buttonText}>
-              {isAuthenticating ? '登录中...' : '登录'}
-            </Text>
+            <Text style={styles.buttonText}>{isAuthenticating ? '登录中...' : '登录'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

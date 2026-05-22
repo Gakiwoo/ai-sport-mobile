@@ -1,0 +1,126 @@
+/**
+ * English translations
+ */
+const en: Record<string, string | ((...args: any[]) => string)> = {
+  // ── General ──
+  'app.name': 'AI Sport Trainer',
+  'common.loading': 'Loading...',
+  'common.error': 'Error',
+  'common.retry': 'Retry',
+  'common.back': 'Back',
+  'common.save': 'Save',
+  'common.cancel': 'Cancel',
+  'common.confirm': 'Confirm',
+  'common.done': 'Done',
+
+  // ── Auth ──
+  'auth.login': 'Login',
+  'auth.register': 'Register',
+  'auth.logout': 'Log Out',
+  'auth.email': 'Email',
+  'auth.password': 'Password',
+  'auth.nickname': 'Nickname',
+  'auth.loginTitle': 'Welcome Back',
+  'auth.registerTitle': 'Create Account',
+  'auth.noAccount': "Don't have an account?",
+  'auth.hasAccount': 'Already have an account?',
+  'auth.guestMode': 'Guest Mode',
+  'auth.loginSuccess': 'Login successful',
+  'auth.registerSuccess': 'Registration successful',
+
+  // ── Home ──
+  'home.title': 'AI Sport Trainer',
+  'home.start': 'Start Workout',
+  'home.history': 'History',
+  'home.analytics': 'Analytics',
+  'home.profile': 'Profile',
+  'home.selectExercise': 'Select Exercise',
+
+  // ── Exercise Types ──
+  'exercise.jump_rope': 'Jump Rope',
+  'exercise.jumping_jacks': 'Jumping Jacks',
+  'exercise.squats': 'Squats',
+  'exercise.standing_long_jump': 'Standing Long Jump',
+  'exercise.vertical_jump': 'Vertical Jump',
+  'exercise.sit_ups': 'Sit-ups',
+
+  // ── Workout ──
+  'workout.title': 'Workout',
+  'workout.countMode': 'Count Mode',
+  'workout.timedMode': 'Timed Mode',
+  'workout.start': 'Start',
+  'workout.stop': 'Stop',
+  'workout.pause': 'Pause',
+  'workout.resume': 'Resume',
+  'workout.targetCount': (n: number) => `Target: ${n} reps`,
+  'workout.targetDuration': (n: number) => `Target: ${n}s`,
+  'workout.count': (n: number) => `${n} reps`,
+  'workout.duration': (n: number) => `${n}s`,
+  'workout.timeUp': "Time's Up!",
+  'workout.saving': 'Saving...',
+  'workout.saved': 'Workout saved',
+  'workout.result': 'Workout Result',
+  'workout.rate': (n: number) => `Avg ${n}/min`,
+  'workout.noData': 'No workout data yet',
+  'workout.cameraReady': 'Camera ready, tap Start to begin',
+  'workout.autoStart': 'Hold still, auto-starting...',
+  'workout.feedback.good': 'Good job!',
+  'workout.feedback.standUp': 'Please stand straight',
+  'workout.feedback.lieDown': 'Please lie down',
+  'workout.feedback.tooFast': 'Too fast, slow down',
+  'workout.feedback.tooSlow': 'Keep going, speed up',
+  'workout.feedback.squatDeeper': 'Squat deeper',
+  'workout.feedback.shallowSquat': 'Squat too shallow',
+
+  // ── History ──
+  'history.title': 'History',
+  'history.empty': 'No workout history',
+  'history.date': (d: string) => d,
+  'history.exercise': (name: string) => name,
+  'history.totalCount': (n: number) => `${n} total`,
+  'history.totalDuration': (n: number) => `${n} min total`,
+
+  // ── Analytics ──
+  'analytics.title': 'Analytics',
+  'analytics.totalWorkouts': 'Total Workouts',
+  'analytics.totalReps': 'Total Reps',
+  'analytics.averageReps': 'Avg Reps',
+  'analytics.totalTime': 'Total Time',
+
+  // ── Profile ──
+  'profile.title': 'Profile',
+  'profile.accountInfo': 'Account Info',
+  'profile.email': 'Email',
+  'profile.nickname': 'Nickname',
+  'profile.editNickname': 'Edit Nickname',
+  'profile.registerTime': 'Registered',
+  'profile.security': 'Security',
+  'profile.changePassword': 'Change Password',
+  'profile.about': 'About',
+  'profile.privacyPolicy': 'Privacy Policy',
+  'profile.version': 'Version',
+  'profile.logout': 'Log Out',
+  'profile.guestMode': 'Guest Mode',
+  'profile.guestLogout': 'Exit Guest Mode',
+  'profile.confirmLogout': 'Are you sure you want to log out?',
+  'profile.confirmGuestLogout': 'Are you sure you want to exit guest mode?',
+  'profile.nicknameRequired': 'Nickname is required',
+  'profile.nicknameUpdated': 'Nickname updated',
+  'profile.passwordChanged': 'Password changed, please log in again',
+  'profile.currentPassword': 'Current Password',
+  'profile.newPassword': 'New Password (min 6 chars)',
+  'profile.confirmPassword': 'Confirm Password',
+  'profile.passwordMismatch': 'Passwords do not match',
+  'profile.passwordTooShort': 'Password must be at least 6 characters',
+  'profile.language': 'Language',
+  'profile.lang.zh': '中文',
+  'profile.lang.en': 'English',
+
+  // ── Language ──
+  'lang.switchTo': 'Switch Language',
+  'lang.zh': '中文',
+  'lang.en': 'English',
+  'lang.current': 'Current Language',
+};
+
+export default en;

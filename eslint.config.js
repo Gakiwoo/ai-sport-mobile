@@ -3,6 +3,7 @@ const tsPlugin = require('@typescript-eslint/eslint-plugin');
 const tsParser = require('@typescript-eslint/parser');
 const prettierPlugin = require('eslint-plugin-prettier');
 const prettierConfig = require('eslint-config-prettier');
+const reactHooksPlugin = require('eslint-plugin-react-hooks');
 const globals = require('globals');
 
 module.exports = [
@@ -27,6 +28,7 @@ module.exports = [
     plugins: {
       '@typescript-eslint': tsPlugin,
       prettier: prettierPlugin,
+      'react-hooks': reactHooksPlugin,
     },
     rules: {
       // TypeScript 规则
@@ -36,6 +38,10 @@ module.exports = [
 
       // Prettier 集成
       'prettier/prettier': 'warn',
+
+      // React Hooks 规则
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
 
       // 通用规则
       'no-console': ['warn', { allow: ['warn', 'error'] }],

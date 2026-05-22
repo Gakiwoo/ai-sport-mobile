@@ -1,10 +1,19 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Linking,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Camera } from 'expo-camera';
 import { Pose } from '../types';
 import { useWebViewMessageHandler } from '../hooks/useWebViewMessageHandler';
 import { createAdaptivePoseRuntime } from '../utils/adaptivePoseRuntime';
+import { performanceMonitor } from '../services/PerformanceMonitor';
 
 interface CameraViewProps {
   onPoseDetected: (pose: Pose) => void;
@@ -67,6 +76,11 @@ const MEDIAPIPE_HTML = `
     var shouldSendPose = false;
     var isWorkoutActive = false;
     var isPreviewEnabled = true;
+
+    // Performance tuning
+    var useSmoothLandmarks = true;
+    var drawSkipCounter = 0;
+    var drawSkipEvery = 0; // 0=all frames, 1=every other, 2=every 3rd
 
     var blobRegistry = {};
 
@@ -155,15 +169,14 @@ const MEDIAPIPE_HTML = `
     function drawResults(results) {
       var W = canvas.width;
       var H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
-
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.translate(-W, 0);
-      ctx.drawImage(results.image, 0, 0, W, H);
-      ctx.restore();
 
       if (!results.poseLandmarks) {
+        ctx.clearRect(0, 0, W, H);
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.translate(-W, 0);
+        ctx.drawImage(results.image, 0, 0, W, H);
+        ctx.restore();
         lastPoseData = null;
         return;
       }
@@ -173,6 +186,27 @@ const MEDIAPIPE_HTML = `
       for (var i = 0; i < lm.length; i++) {
         pts.push({ x: (1 - lm[i].x) * W, y: lm[i].y * H, v: lm[i].visibility, n: KEYPOINT_NAMES[i] || ('kp_' + i) });
       }
+
+      // Always update lastPoseData (needed for counting)
+      var keypoints = [];
+      for (var j = 0; j < pts.length; j++) {
+        keypoints.push({ x: pts[j].x, y: pts[j].y, score: pts[j].v, name: pts[j].n });
+      }
+      lastPoseData = { keypoints: keypoints, score: 0.9, frameWidth: W, frameHeight: H };
+
+      // Throttle canvas drawing — skip skeleton rendering on some frames for performance
+      drawSkipCounter++;
+      if (drawSkipEvery > 0 && drawSkipCounter % (drawSkipEvery + 1) !== 0) {
+        return; // Skip drawing this frame entirely, pose data already saved
+      }
+
+      // Full redraw: video frame + skeleton overlay
+      ctx.clearRect(0, 0, W, H);
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.translate(-W, 0);
+      ctx.drawImage(results.image, 0, 0, W, H);
+      ctx.restore();
 
       ctx.strokeStyle = '#00FF88';
       ctx.lineWidth = 3;
@@ -188,23 +222,17 @@ const MEDIAPIPE_HTML = `
         }
       }
 
-      for (var i = 0; i < pts.length; i++) {
-        if (pts[i].v > 0.3) {
+      for (var m = 0; m < pts.length; m++) {
+        if (pts[m].v > 0.3) {
           ctx.beginPath();
-          ctx.arc(pts[i].x, pts[i].y, 5, 0, 2 * Math.PI);
-          ctx.fillStyle = i <= 10 ? '#FF3B30' : '#FFD60A';
+          ctx.arc(pts[m].x, pts[m].y, 5, 0, 2 * Math.PI);
+          ctx.fillStyle = m <= 10 ? '#FF3B30' : '#FFD60A';
           ctx.fill();
           ctx.strokeStyle = '#FFF';
           ctx.lineWidth = 1;
           ctx.stroke();
         }
       }
-
-      var keypoints = [];
-      for (var j = 0; j < pts.length; j++) {
-        keypoints.push({ x: pts[j].x, y: pts[j].y, score: pts[j].v, name: pts[j].n });
-      }
-      lastPoseData = { keypoints: keypoints, score: 0.9, frameWidth: W, frameHeight: H };
     }
 
     function drawVideoOnly() {
@@ -226,15 +254,15 @@ const MEDIAPIPE_HTML = `
       }
       post('log', 'Requesting camera via getUserMedia...');
       var stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 } },
+        video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } },
         audio: false
       });
       video.srcObject = stream;
       await video.play();
-      post('log', 'Camera stream obtained, video playing');
+      post('log', 'Camera stream obtained, video playing — ' + video.videoWidth + 'x' + video.videoHeight);
 
-      canvas.width = video.videoWidth || 480;
-      canvas.height = video.videoHeight || 360;
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
 
       function processFrame() {
         if (!video || video.paused || video.ended) {
@@ -315,7 +343,7 @@ const MEDIAPIPE_HTML = `
       });
       poseInstance.setOptions({
         modelComplexity: modelComplexity,
-        smoothLandmarks: true,
+        smoothLandmarks: useSmoothLandmarks,
         enableSegmentation: false,
         smoothSegmentation: false,
         minDetectionConfidence: 0.5,
@@ -359,7 +387,7 @@ const MEDIAPIPE_HTML = `
       });
       poseInstance.setOptions({
         modelComplexity: modelComplexity,
-        smoothLandmarks: true,
+        smoothLandmarks: useSmoothLandmarks,
         enableSegmentation: false,
         smoothSegmentation: false,
         minDetectionConfidence: 0.5,
@@ -447,7 +475,14 @@ const MEDIAPIPE_HTML = `
           shouldSendPose = shouldProcessPose;
           sendInterval = isWorkoutActive ? activeSendInterval : previewSendInterval;
           inferenceInterval = sendInterval;
-          post('log', 'Active state changed: ' + msg.active + ', preview: ' + isPreviewEnabled + ', interval: ' + sendInterval);
+          // Throttle canvas drawing during workout for performance
+          drawSkipEvery = isWorkoutActive ? 1 : 0;
+          drawSkipCounter = 0;
+          post('log', 'Active state changed: ' + msg.active + ', preview: ' + isPreviewEnabled + ', interval: ' + sendInterval + ', drawSkip: ' + drawSkipEvery);
+        }
+        if (msg.type === 'setSmoothLandmarks') {
+          useSmoothLandmarks = !!msg.enabled;
+          post('log', 'Smooth landmarks: ' + useSmoothLandmarks);
         }
       } catch (e) {}
     });
@@ -471,11 +506,13 @@ export default function CameraView({
   modelComplexity = 1,
   onActivePoseIntervalChange,
 }: CameraViewProps) {
-  const adaptiveRuntimeRef = useRef(createAdaptivePoseRuntime({
-    baseIntervalMs: throttleMs,
-    minIntervalMs: Math.min(60, throttleMs),
-    maxIntervalMs: maxAdaptiveIntervalMs,
-  }));
+  const adaptiveRuntimeRef = useRef(
+    createAdaptivePoseRuntime({
+      baseIntervalMs: throttleMs,
+      minIntervalMs: Math.min(60, throttleMs),
+      maxIntervalMs: maxAdaptiveIntervalMs,
+    }),
+  );
 
   const {
     cameraState,
@@ -529,7 +566,16 @@ export default function CameraView({
         enablePreviewPose,
       });
     }
-  }, [cameraState, injectRuntimeControls, isActive, modelComplexity, previewThrottleMs, throttleMs, enablePreviewPose, webViewRef]);
+  }, [
+    cameraState,
+    injectRuntimeControls,
+    isActive,
+    modelComplexity,
+    previewThrottleMs,
+    throttleMs,
+    enablePreviewPose,
+    webViewRef,
+  ]);
 
   const handleLoadEnd = useCallback(() => {
     if (!webViewRef.current) return;
@@ -540,11 +586,10 @@ export default function CameraView({
       await injectBlobFile(webView);
     };
 
-    
     setTimeout(async () => {
       if (injectionDoneRef.current) return;
       injectionDoneRef.current = true;
-      
+
       try {
         await injectLocalFiles();
       } catch (err) {
@@ -623,6 +668,16 @@ export default function CameraView({
       {cameraState === 'ready' && !isActive && (
         <View style={[styles.overlay, styles.idleOverlay]} pointerEvents="none">
           <Text style={styles.idleText}>相机就绪，点击「开始」进行训练</Text>
+        </View>
+      )}
+
+      {/* ── 调试信息：FPS / 推理耗时 ── */}
+      {__DEV__ && cameraState === 'ready' && performanceMonitor.isRunning && (
+        <View style={styles.fpsBadge} pointerEvents="none">
+          <Text style={styles.fpsText}>{performanceMonitor.getCurrentFps().toFixed(1)} FPS</Text>
+          <Text style={styles.fpsSubText}>
+            {performanceMonitor.getAverageInferenceMs().toFixed(0)} ms
+          </Text>
         </View>
       )}
     </View>
@@ -725,5 +780,28 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  fpsBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  fpsText: {
+    color: '#4CD964',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  fpsSubText: {
+    color: '#8E8E93',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginTop: 2,
   },
 });

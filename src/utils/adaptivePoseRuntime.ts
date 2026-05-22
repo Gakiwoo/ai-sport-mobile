@@ -41,7 +41,9 @@ function normalizeConfig(config: AdaptivePoseRuntimeConfig): Required<AdaptivePo
   };
 }
 
-export function createAdaptivePoseRuntime(initialConfig: AdaptivePoseRuntimeConfig): AdaptivePoseRuntime {
+export function createAdaptivePoseRuntime(
+  initialConfig: AdaptivePoseRuntimeConfig,
+): AdaptivePoseRuntime {
   let config = normalizeConfig(initialConfig);
   let intervalMs = config.baseIntervalMs;
   let slowSamples = 0;
@@ -74,11 +76,19 @@ export function createAdaptivePoseRuntime(initialConfig: AdaptivePoseRuntimeConf
       }
 
       if (slowSamples >= config.slowSampleThreshold) {
-        intervalMs = clamp(intervalMs + config.increaseStepMs, config.minIntervalMs, config.maxIntervalMs);
+        intervalMs = clamp(
+          intervalMs + config.increaseStepMs,
+          config.minIntervalMs,
+          config.maxIntervalMs,
+        );
         slowSamples = 0;
         fastSamples = 0;
       } else if (fastSamples >= config.fastSampleThreshold && intervalMs > config.baseIntervalMs) {
-        intervalMs = clamp(intervalMs - config.decreaseStepMs, config.baseIntervalMs, config.maxIntervalMs);
+        intervalMs = clamp(
+          intervalMs - config.decreaseStepMs,
+          config.baseIntervalMs,
+          config.maxIntervalMs,
+        );
         slowSamples = 0;
         fastSamples = 0;
       }
@@ -87,4 +97,3 @@ export function createAdaptivePoseRuntime(initialConfig: AdaptivePoseRuntimeConf
     },
   };
 }
-

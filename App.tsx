@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { LocaleProvider } from './src/contexts/LocaleContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -11,6 +12,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import WorkoutScreen from './src/screens/WorkoutScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import AnalyticsScreen from './src/screens/AnalyticsScreen';
+import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { RootStackParamList } from './src/types/navigation';
 import { mediaPipeAssetService } from './src/services/MediaPipeAssetService';
@@ -84,6 +86,12 @@ function AuthGate() {
           />
         </>
       )}
+      {/* 公共页面（无需登录也可访问） */}
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }
@@ -92,11 +100,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <AuthProvider>
-          <NavigationContainer>
-            <AuthGate />
-          </NavigationContainer>
-        </AuthProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <NavigationContainer>
+              <AuthGate />
+            </NavigationContainer>
+          </AuthProvider>
+        </LocaleProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );
