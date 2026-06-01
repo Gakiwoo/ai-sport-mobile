@@ -3,7 +3,8 @@
 [![Expo](https://img.shields.io/badge/Expo-55-blueviolet?logo=expo)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript)](https://www.typescriptlang.org)
-[![Test](https://img.shields.io/badge/tests-118_passing-brightgreen)](https://jestjs.io)
+[![Test](https://img.shields.io/badge/tests-214_passing-brightgreen)](https://jestjs.io)
+[![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **AI Motion Tracker** — 基于 MediaPipe Pose 的实时运动追踪 App，支持 Android 和 iOS。通过手机摄像头实时检测人体姿态，自动计数跳绳、深蹲、仰卧起坐等 6 种运动项目，并提供动作质量反馈。
@@ -164,14 +165,14 @@ npx expo start --web
 ## Testing
 
 ```bash
-# Run all tests (20 suites / 118 tests)
+# Run all tests (31 suites)
 npm test
 
 # Watch mode
 npm run test:watch
 
-# Generate coverage report
-npx jest --coverage
+# Coverage report (enforces thresholds in jest.config.js)
+npm run test:coverage
 ```
 
 **Test Coverage Areas:**
@@ -182,8 +183,16 @@ npx jest --coverage
 | Services | 2 suites | Auth、Storage |
 | Hooks | 1 suite | useWorkout |
 | Utils | 5 suites | filters、poseQuality、asyncPool、adaptiveRuntime、CDN policy |
-| Infrastructure | 6 suites | CDN policy、Manifest、Asset injection、Runtime config |
-| **Total** | **20 suites / 118 tests** | |
+| Infrastructure | 7 suites | CDN、Manifest、Asset injection、mediapipeBridge |
+| **Total** | **31 suites / 214 tests** | |
+
+CI runs `npm run lint` and `npm run test:coverage` on every push/PR to `main`/`master`. See [docs/ROADMAP.md](docs/ROADMAP.md) for the development plan.
+
+### E2E (Maestro, optional)
+
+```bash
+npm run e2e:maestro   # 需安装 Maestro + dev build，见 docs/e2e/README.md
+```
 
 ---
 
@@ -237,7 +246,8 @@ ai-motion-tracker/
 │
 ├── src/
 │   ├── components/            # 可复用 UI 组件
-│   │   ├── CameraView.tsx         # WebView + MediaPipe 核心组件
+│   │   ├── CameraView.tsx         # WebView 壳（HTML 见 assets/mediapipe/pose.html）
+│   │   └── workout/               # WorkoutScreen 子组件（Setup / Active / …）
 │   │   ├── ErrorBoundary.tsx      # 全局错误边界
 │   │   ├── ExerciseIllustration.tsx # 运动 SVG 插画
 │   │   ├── BarChart.tsx           # 统计图表
@@ -268,12 +278,20 @@ ai-motion-tracker/
 │   │
 │   ├── hooks/                 # 自定义 Hooks
 │   │   ├── useWorkout.ts
+│   │   ├── useWorkoutScreen.ts    # 训练页状态与副作用
 │   │   ├── useExerciseFeedback.ts
 │   │   ├── useSound.ts
 │   │   └── useWebViewMessageHandler.ts
 │   │
 │   ├── contexts/
 │   │   └── AuthContext.tsx
+│   │
+│   ├── mediapipe/             # WebView ↔ RN（协议 + HTML 加载）
+│   │   ├── mediapipeBridge.ts
+│   │   └── loadPoseHtml.ts
+│
+├── assets/mediapipe/
+│   └── pose.html              # MediaPipe WebView 页面（编辑后重启 Metro）
 │   │
 │   ├── utils/                 # 工具函数
 │   │   ├── filters.ts             # Kalman 滤波 + 滑动窗口
@@ -286,7 +304,8 @@ ai-motion-tracker/
 │   │   └── exerciseRuntime.ts     # 运动运行时配置
 │   │
 │   ├── constants/
-│   │   ├── exerciseConfig.ts
+│   │   ├── exerciseRegistry.ts    # 运动元数据 + 运行时帧率（单一数据源）
+│   │   ├── exerciseConfig.ts      # 兼容 re-export
 │   │   └── counterThresholds.ts   # 运动阈值常量
 │   │
 │   ├── types/                 # TypeScript 类型定义
@@ -298,10 +317,12 @@ ai-motion-tracker/
 │       └── ... (×13 more)
 │
 ├── docs/                      # 项目文档
+│   ├── ROADMAP.md                 # 开发路线图
 │   ├── architecture/
 │   ├── deployment/
-│   ├── PROJECT_EVALUATION_REPORT.md
-│   └── INSTALLATION.md
+│   └── PROJECT_EVALUATION_REPORT.md
+│
+├── .github/workflows/ci.yml   # CI：lint + test:coverage
 │
 ├── scripts/
 │   └── deployment/            # CDN 部署脚本

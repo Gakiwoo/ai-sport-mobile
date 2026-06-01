@@ -1,0 +1,12 @@
+{
+  "id": "squats-no-count",
+  "description": "仅站立不下蹲，不应误计数",
+  "exerciseType": "squats",
+  "frameIntervalMs": 100,
+  "steps": [{ "preset": "standing", "frames": 100 }],
+  "expect": {
+    "minCount": 0,
+    "maxCount": 0,
+    "finalPhaseOneOf": ["standing", "idle"]
+  }
+}

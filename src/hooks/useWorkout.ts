@@ -9,8 +9,11 @@ import { VerticalJumpCounter } from '../services/counters/VerticalJumpCounter';
 import { SitUpCounter } from '../services/counters/SitUpCounter';
 import StorageService from '../services/StorageService';
 import { performanceMonitor } from '../services/PerformanceMonitor';
-import { DEFAULT_TARGETS, DEFAULT_DURATIONS } from '../constants/exerciseConfig';
-import { getExerciseRuntimeProfile } from '../utils/exerciseRuntime';
+import {
+  DEFAULT_TARGETS,
+  DEFAULT_DURATIONS,
+  getExerciseRuntimeProfile,
+} from '../constants/exerciseRegistry';
 
 export interface WorkoutState {
   isActive: boolean;

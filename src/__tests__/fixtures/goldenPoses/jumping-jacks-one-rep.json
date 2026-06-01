@@ -1,0 +1,17 @@
+{
+  "id": "jumping-jacks-one-rep",
+  "description": "标定 → 张开 → 收回，开合跳 1 次",
+  "exerciseType": "jumping_jacks",
+  "frameIntervalMs": 100,
+  "steps": [
+    { "preset": "standing", "frames": 35 },
+    { "preset": "jumping_jack_open", "frames": 15 },
+    { "preset": "standing", "frames": 15 }
+  ],
+  "expect": {
+    "minCount": 0,
+    "maxCount": 2,
+    "calibrated": true,
+    "finalPhaseOneOf": ["closed", "open", "closing"]
+  }
+}

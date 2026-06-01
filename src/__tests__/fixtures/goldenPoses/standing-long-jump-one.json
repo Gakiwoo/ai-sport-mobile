@@ -1,0 +1,19 @@
+{
+  "id": "standing-long-jump-one",
+  "description": "标定 → 下蹲 → 起跳 → 腾空 → 落地完整跳远流程",
+  "exerciseType": "standing_long_jump",
+  "frameIntervalMs": 100,
+  "steps": [
+    { "preset": "standing", "frames": 30 },
+    { "preset": "squat_bottom", "frames": 10 },
+    { "preset": "standing", "frames": 5 },
+    { "preset": "airborne", "frames": 10 },
+    { "preset": "long_jump_landing", "frames": 20 }
+  ],
+  "expect": {
+    "minCount": 0,
+    "maxCount": 500,
+    "calibrated": true,
+    "finalPhaseOneOf": ["stable", "landing", "airborne", "ready", "crouch"]
+  }
+}

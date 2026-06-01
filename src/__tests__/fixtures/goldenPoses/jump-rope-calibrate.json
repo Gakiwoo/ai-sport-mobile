@@ -1,0 +1,16 @@
+{
+  "id": "jump-rope-calibrate",
+  "description": "站立标定后进入跳绳检测态，不误计数",
+  "exerciseType": "jump_rope",
+  "frameIntervalMs": 80,
+  "steps": [
+    { "preset": "standing", "frames": 35 },
+    { "preset": "rope_swing", "frames": 30 }
+  ],
+  "expect": {
+    "minCount": 0,
+    "maxCount": 0,
+    "calibrated": true,
+    "finalPhaseOneOf": ["idle", "detecting", "jumping"]
+  }
+}

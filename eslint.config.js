@@ -58,6 +58,8 @@ module.exports = [
       'dist/',
       'mediapipe-staging/',
       'mediapipe-upload/',
+      'transformers/',
+      'src/mediapipe/__mocks__/',
     ],
   },
 ];

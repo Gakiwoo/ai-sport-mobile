@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginScreenProps } from '../types/navigation';
+import { E2E_TEST_IDS } from '../constants/e2eTestIds';
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { login, loginAsGuest, isAuthenticating, error, clearError } = useAuth();
@@ -91,6 +92,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID={E2E_TEST_IDS.loginGuestButton}
             style={styles.localButton}
             onPress={loginAsGuest}
             activeOpacity={0.8}

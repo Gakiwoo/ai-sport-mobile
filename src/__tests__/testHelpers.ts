@@ -190,6 +190,44 @@ export function lowConfidencePose(): Pose {
   });
 }
 
+/** 跳绳甩绳 — 手腕抬高（与 JumpRopeCounter 测试一致，归一化坐标） */
+export function ropeSwingPose(): Pose {
+  return buildPose({
+    nose: { x: 0.5, y: 0.1, score: 0.9 },
+    left_shoulder: { x: 0.35, y: 0.25, score: 0.9 },
+    right_shoulder: { x: 0.65, y: 0.25, score: 0.9 },
+    left_elbow: { x: 0.28, y: 0.2, score: 0.9 },
+    right_elbow: { x: 0.72, y: 0.2, score: 0.9 },
+    left_wrist: { x: 0.25, y: 0.1, score: 0.9 },
+    right_wrist: { x: 0.75, y: 0.1, score: 0.9 },
+    left_hip: { x: 0.4, y: 0.55, score: 0.9 },
+    right_hip: { x: 0.6, y: 0.55, score: 0.9 },
+    left_knee: { x: 0.4, y: 0.72, score: 0.9 },
+    right_knee: { x: 0.6, y: 0.72, score: 0.9 },
+    left_ankle: { x: 0.4, y: 0.9, score: 0.9 },
+    right_ankle: { x: 0.6, y: 0.9, score: 0.9 },
+  });
+}
+
+/** 立定跳远落地 — 身体前移（归一化坐标） */
+export function longJumpLandingPose(): Pose {
+  return buildPose({
+    nose: { x: 0.6, y: 0.2, score: 0.9 },
+    left_shoulder: { x: 0.45, y: 0.28, score: 0.9 },
+    right_shoulder: { x: 0.75, y: 0.28, score: 0.9 },
+    left_elbow: { x: 0.4, y: 0.38, score: 0.9 },
+    right_elbow: { x: 0.8, y: 0.38, score: 0.9 },
+    left_wrist: { x: 0.38, y: 0.48, score: 0.9 },
+    right_wrist: { x: 0.82, y: 0.48, score: 0.9 },
+    left_hip: { x: 0.5, y: 0.55, score: 0.9 },
+    right_hip: { x: 0.7, y: 0.55, score: 0.9 },
+    left_knee: { x: 0.5, y: 0.72, score: 0.9 },
+    right_knee: { x: 0.7, y: 0.72, score: 0.9 },
+    left_ankle: { x: 0.5, y: 0.9, score: 0.9 },
+    right_ankle: { x: 0.7, y: 0.9, score: 0.9 },
+  });
+}
+
 /** 缺失关键点的姿态 */
 export function missingKeypointPose(): Pose {
   return buildPose({

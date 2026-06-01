@@ -1,0 +1,20 @@
+# 烟雾测试：游客登录 → 进入深蹲训练页 → 点击开始
+# 需在已安装 dev build 的真机/模拟器上运行（依赖相机与 MediaPipe 初始化）
+appId: com.aimotion.tracker
+---
+- launchApp
+- tapOn:
+    id: login-guest-button
+- assertVisible: 'AI SPORT'
+- tapOn:
+    id: home-exercise-squats
+- extendedWaitUntil:
+    visible:
+      id: workout-start-button
+    timeout: 90000
+- tapOn:
+    id: workout-start-button
+- extendedWaitUntil:
+    visible:
+      id: workout-stop-button
+    timeout: 15000

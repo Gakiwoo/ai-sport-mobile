@@ -1,0 +1,16 @@
+{
+  "id": "squats-one-rep",
+  "description": "标定 → 深蹲到底 → 站起，应完成 1 次计数",
+  "exerciseType": "squats",
+  "frameIntervalMs": 100,
+  "steps": [
+    { "preset": "standing", "frames": 35 },
+    { "preset": "squat_bottom", "frames": 25 },
+    { "preset": "standing", "frames": 30 }
+  ],
+  "expect": {
+    "minCount": 1,
+    "maxCount": 2,
+    "finalPhaseOneOf": ["standing", "ascending"]
+  }
+}

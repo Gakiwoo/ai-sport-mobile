@@ -1,0 +1,3 @@
+# Maestro 全局配置 — https://maestro.mobile.dev
+flows:
+  - flows/*

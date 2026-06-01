@@ -1,25 +1,10 @@
-import { Pose } from '../types';
 import { JumpRopeCounter } from '../services/counters/JumpRopeCounter';
-import { standingPose, lowConfidencePose, missingKeypointPose, buildPose } from './testHelpers';
-
-/** 跳绳甩绳姿态 — 手腕在肩上方运动 */
-function ropeSwingPose(): Pose {
-  return buildPose({
-    nose: { x: 0.5, y: 0.1, score: 0.9 },
-    left_shoulder: { x: 0.35, y: 0.25, score: 0.9 },
-    right_shoulder: { x: 0.65, y: 0.25, score: 0.9 },
-    left_elbow: { x: 0.28, y: 0.2, score: 0.9 },
-    right_elbow: { x: 0.72, y: 0.2, score: 0.9 },
-    left_wrist: { x: 0.25, y: 0.1, score: 0.9 }, // 手腕举过头顶
-    right_wrist: { x: 0.75, y: 0.1, score: 0.9 },
-    left_hip: { x: 0.4, y: 0.55, score: 0.9 },
-    right_hip: { x: 0.6, y: 0.55, score: 0.9 },
-    left_knee: { x: 0.4, y: 0.72, score: 0.9 },
-    right_knee: { x: 0.6, y: 0.72, score: 0.9 },
-    left_ankle: { x: 0.4, y: 0.9, score: 0.9 },
-    right_ankle: { x: 0.6, y: 0.9, score: 0.9 },
-  });
-}
+import {
+  standingPose,
+  ropeSwingPose,
+  lowConfidencePose,
+  missingKeypointPose,
+} from './testHelpers';
 
 describe('JumpRopeCounter', () => {
   let counter: JumpRopeCounter;

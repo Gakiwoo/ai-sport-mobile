@@ -1,0 +1,16 @@
+{
+  "id": "sit-ups-one-rep",
+  "description": "仰卧 → 坐起 → 仰卧，应至少完成周期检测",
+  "exerciseType": "sit_ups",
+  "frameIntervalMs": 100,
+  "steps": [
+    { "preset": "lying", "frames": 30 },
+    { "preset": "sitting_up", "frames": 20 },
+    { "preset": "lying", "frames": 30 }
+  ],
+  "expect": {
+    "minCount": 0,
+    "maxCount": 2,
+    "finalPhaseOneOf": ["lying", "done", "returning"]
+  }
+}

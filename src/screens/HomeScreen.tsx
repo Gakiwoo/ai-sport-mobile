@@ -16,6 +16,7 @@ import { ExerciseType } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { t } from '../i18n';
 import ExerciseIllustration from '../components/ExerciseIllustration';
+import { E2E_TEST_IDS } from '../constants/e2eTestIds';
 
 // ── 布局常量 ──
 const SCREEN_W = Dimensions.get('window').width;
@@ -93,6 +94,7 @@ function ExerciseCard({
   return (
     <Animated.View style={{ opacity, transform: [{ scale }] }}>
       <TouchableOpacity
+        testID={E2E_TEST_IDS.homeExerciseCard(exercise.type)}
         onPress={onPress}
         onPressIn={pressIn}
         onPressOut={pressOut}

@@ -11,6 +11,14 @@ import {
 } from '../utils/webViewAssetInjection';
 import { mediaPipeAssetService } from '../services/MediaPipeAssetService';
 import { performanceMonitor } from '../services/PerformanceMonitor';
+import {
+  BLOB_ACK_TIMEOUT_MS,
+  MEDIAPIPE_INIT_TIMEOUT_MS,
+  WEBVIEW_MESSAGE_TYPES,
+  buildRuntimeControlScript,
+  parseWebViewMessage,
+} from '../mediapipe/mediapipeBridge';
+import { Pose } from '../types';
 
 type CameraState = 'idle' | 'loading' | 'ready' | 'error';
 type BlobAckWaiter = {
@@ -20,7 +28,7 @@ type BlobAckWaiter = {
 };
 
 interface UseWebViewMessageHandlerOptions {
-  onPoseDetected: (pose: any) => void;
+  onPoseDetected: (pose: Pose) => void;
   onAdaptiveIntervalChange?: (intervalMs: number) => void;
   onReady?: () => void;
   onError?: (message: string) => void;
@@ -54,8 +62,6 @@ interface UseWebViewMessageHandlerReturn {
   webViewRef: React.RefObject<any>;
 }
 
-const BLOB_ACK_TIMEOUT_MS = 30000;
-
 export function useWebViewMessageHandler(
   options: UseWebViewMessageHandlerOptions,
 ): UseWebViewMessageHandlerReturn {
@@ -69,6 +75,8 @@ export function useWebViewMessageHandler(
   const cameraStateRef = useRef<CameraState>('idle');
   const injectionDoneRef = useRef(false);
   const blobAckWaitersRef = useRef<Map<string, BlobAckWaiter>>(new Map());
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   useEffect(() => {
     cameraStateRef.current = cameraState;
@@ -89,6 +97,14 @@ export function useWebViewMessageHandler(
 
       blobAckWaitersRef.current.set(filename, { resolve, reject, timer });
     });
+  }, []);
+
+  const rejectPendingBlobAcks = useCallback((reason: string) => {
+    blobAckWaitersRef.current.forEach((waiter) => {
+      clearTimeout(waiter.timer);
+      waiter.reject(new Error(reason));
+    });
+    blobAckWaitersRef.current.clear();
   }, []);
 
   const injectBlobFile = useCallback(
@@ -144,16 +160,8 @@ export function useWebViewMessageHandler(
         mediaPipeAssetService.clearMemoryCache();
       }
     },
-    [waitForBlobAck],
+    [waitForBlobAck, rejectPendingBlobAcks],
   );
-
-  const rejectPendingBlobAcks = useCallback((reason: string) => {
-    blobAckWaitersRef.current.forEach((waiter) => {
-      clearTimeout(waiter.timer);
-      waiter.reject(new Error(reason));
-    });
-    blobAckWaitersRef.current.clear();
-  }, []);
 
   const startTimeout = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -165,100 +173,92 @@ export function useWebViewMessageHandler(
         );
         setCameraState('error');
       }
-    }, 30000);
+    }, MEDIAPIPE_INIT_TIMEOUT_MS);
   }, []);
 
-  const applyAdaptiveInterval = useCallback(
-    (nextInterval: number) => {
-      if (options.onAdaptiveIntervalChange) {
-        options.onAdaptiveIntervalChange(nextInterval);
-      }
-    },
-    [options],
-  );
+  const applyAdaptiveInterval = useCallback((nextInterval: number) => {
+    optionsRef.current.onAdaptiveIntervalChange?.(nextInterval);
+  }, []);
 
   const handleMessage = useCallback(
     (event: WebViewMessageEvent) => {
-      try {
-        const message = JSON.parse(event.nativeEvent.data);
-        switch (message.type) {
-          case 'blobAck': {
-            const filename = String(message.data?.filename || '');
-            const waiter = blobAckWaitersRef.current.get(filename);
-            if (waiter) {
-              blobAckWaitersRef.current.delete(filename);
-              clearTimeout(waiter.timer);
-              if (message.data?.ok) {
-                waiter.resolve();
-              } else {
-                waiter.reject(
-                  new Error(String(message.data?.error || `Blob transfer failed: ${filename}`)),
-                );
-              }
+      const message = parseWebViewMessage(event.nativeEvent.data);
+      if (!message) return;
+
+      switch (message.type) {
+        case WEBVIEW_MESSAGE_TYPES.BLOB_ACK: {
+          const filename = String(message.data?.filename || '');
+          const waiter = blobAckWaitersRef.current.get(filename);
+          if (waiter) {
+            blobAckWaitersRef.current.delete(filename);
+            clearTimeout(waiter.timer);
+            if (message.data?.ok) {
+              waiter.resolve();
+            } else {
+              waiter.reject(
+                new Error(String(message.data?.error || `Blob transfer failed: ${filename}`)),
+              );
             }
-            break;
           }
-          case 'pose':
-            if (message.data) {
-              options.onPoseDetected?.(message.data);
-            }
-            break;
-          case 'perf': {
-            const inferenceMs = Number(message.data?.inferenceMs);
-            const sampleIsActive = Boolean(message.data?.isActive);
-            // 记录到性能监控器
-            if (Number.isFinite(inferenceMs)) {
-              performanceMonitor.recordFrame(inferenceMs, sampleIsActive);
-            }
-            if (Number.isFinite(inferenceMs) && options.adaptiveRuntimeRef?.current) {
-              const nextInterval = options.adaptiveRuntimeRef.current.recordSample({
-                inferenceMs,
-                isActive: sampleIsActive,
-              });
-              applyAdaptiveInterval(nextInterval);
-            }
-            break;
-          }
-          case 'ready':
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-              timeoutRef.current = null;
-            }
-            mediaPipeAssetService.clearMemoryCache();
-            if (isMountedRef.current) setCameraState('ready');
-            options.onReady?.();
-            break;
-          case 'error':
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-              timeoutRef.current = null;
-            }
-            mediaPipeAssetService.clearMemoryCache();
-            console.warn('[CameraView] MediaPipe error:', message.data);
-            if (isMountedRef.current) {
-              setErrorMessage(String(message.data || '未知错误'));
-              setCameraState('error');
-              options.onError?.(String(message.data || '未知错误'));
-            }
-            break;
-          case 'cdnStatus':
-            if (isMountedRef.current && cameraStateRef.current === 'loading') {
-              setLoadingDetail(String(message.data || ''));
-              options.onCdnStatus?.(String(message.data || ''));
-            }
-            break;
-          case 'log':
-            if (__DEV__) {
-              // eslint-disable-next-line no-console
-              console.log('[CameraView]', message.data);
-            }
-            break;
+          break;
         }
-      } catch {
-        // 忽略非 JSON 消息
+        case WEBVIEW_MESSAGE_TYPES.POSE:
+          if (message.data) {
+            optionsRef.current.onPoseDetected?.(message.data);
+          }
+          break;
+        case WEBVIEW_MESSAGE_TYPES.PERF: {
+          const inferenceMs = Number(message.data?.inferenceMs);
+          const sampleIsActive = Boolean(message.data?.isActive);
+          if (Number.isFinite(inferenceMs)) {
+            performanceMonitor.recordFrame(inferenceMs, sampleIsActive);
+          }
+          if (Number.isFinite(inferenceMs) && optionsRef.current.adaptiveRuntimeRef?.current) {
+            const nextInterval = optionsRef.current.adaptiveRuntimeRef.current.recordSample({
+              inferenceMs,
+              isActive: sampleIsActive,
+            });
+            applyAdaptiveInterval(nextInterval);
+          }
+          break;
+        }
+        case WEBVIEW_MESSAGE_TYPES.READY:
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+          mediaPipeAssetService.clearMemoryCache();
+          if (isMountedRef.current) setCameraState('ready');
+          optionsRef.current.onReady?.();
+          break;
+        case WEBVIEW_MESSAGE_TYPES.ERROR:
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+          mediaPipeAssetService.clearMemoryCache();
+          console.warn('[CameraView] MediaPipe error:', message.data);
+          if (isMountedRef.current) {
+            setErrorMessage(String(message.data || '未知错误'));
+            setCameraState('error');
+            optionsRef.current.onError?.(String(message.data || '未知错误'));
+          }
+          break;
+        case WEBVIEW_MESSAGE_TYPES.CDN_STATUS:
+          if (isMountedRef.current && cameraStateRef.current === 'loading') {
+            setLoadingDetail(String(message.data || ''));
+            optionsRef.current.onCdnStatus?.(String(message.data || ''));
+          }
+          break;
+        case WEBVIEW_MESSAGE_TYPES.LOG:
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.log('[CameraView]', message.data);
+          }
+          break;
       }
     },
-    [options, applyAdaptiveInterval],
+    [applyAdaptiveInterval],
   );
 
   const handleLoadEnd = useCallback(
@@ -291,33 +291,18 @@ export function useWebViewMessageHandler(
         enablePreviewPose: boolean;
       },
     ) => {
-      webView?.injectJavaScript(
-        'window.postMessage(JSON.stringify({type:"setModelConfig",modelComplexity:' +
-          config.modelComplexity +
-          '}), "*");' +
-          'window.postMessage(JSON.stringify({type:"setThrottle",interval:' +
-          config.throttleMs +
-          '}), "*");' +
-          'window.postMessage(JSON.stringify({type:"setPreviewThrottle",interval:' +
-          config.previewThrottleMs +
-          '}), "*");' +
-          'window.postMessage(JSON.stringify({type:"setSmoothLandmarks",enabled:false}), "*");' +
-          'window.postMessage(JSON.stringify({type:"setActive",active:' +
-          (config.isActive ? 'true' : 'false') +
-          ',preview:' +
-          (config.enablePreviewPose ? 'true' : 'false') +
-          '}), "*");',
-      );
+      webView?.injectJavaScript(buildRuntimeControlScript(config));
     },
     [],
   );
 
   useEffect(() => {
+    const webView = webViewRef.current;
     return () => {
       isMountedRef.current = false;
-      if (webViewRef.current) {
+      if (webView) {
         try {
-          webViewRef.current.injectJavaScript(buildWebViewCleanupScript());
+          webView.injectJavaScript(buildWebViewCleanupScript());
         } catch {
           // WebView 可能在卸载过程中已销毁，忽略 inject 异常
         }

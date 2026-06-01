@@ -14,5 +14,35 @@ module.exports = {
   moduleNameMapper: {
     '^react-native-svg$': '<rootDir>/src/__mocks__/react-native-svg.tsx',
     '^react-native$': '<rootDir>/src/__mocks__/react-native.tsx',
+    '\\.html$': '<rootDir>/src/mediapipe/__mocks__/htmlModule.js',
+  },
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/__tests__/**',
+    '!src/__mocks__/**',
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text-summary', 'lcov'],
+  // 仅对核心算法与工具层设门槛；screens 等 UI 纳入报告但不卡 CI
+  coverageThreshold: {
+    './src/services/counters/': {
+      lines: 75,
+      statements: 75,
+      functions: 74,
+      branches: 55,
+    },
+    './src/utils/': {
+      lines: 80,
+      statements: 80,
+      functions: 80,
+      branches: 70,
+    },
+    './src/mediapipe/': {
+      lines: 90,
+      statements: 90,
+      functions: 90,
+      branches: 80,
+    },
   },
 };
