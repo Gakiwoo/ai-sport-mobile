@@ -12,6 +12,7 @@
 import { Pose } from '../../types';
 import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
+import { POSE_MIN_SCORE } from '../../constants/exerciseConfig';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
 
 // ── 跳远阶段 ──
@@ -105,6 +106,20 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     return this.phase;
   }
 
+  /** 测量型运动：返回跳远距离 (cm) */
+  getResultValue(): number {
+    return Math.round(this.jumpDistanceCm);
+  }
+
+  getResultUnit(): string {
+    return 'cm';
+  }
+
+  /** 跳远不适合计算"次/分钟"速率 */
+  getRate(): number {
+    return 0;
+  }
+
   isCalibrated(): boolean {
     return this.calibration.calibrated;
   }
@@ -159,7 +174,7 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     )
       return;
 
-    const minScore = 0.3;
+    const minScore = POSE_MIN_SCORE;
     if (
       [
         leftShoulder,

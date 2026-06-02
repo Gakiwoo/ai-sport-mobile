@@ -18,6 +18,7 @@
 import { Pose } from '../../types';
 import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
+import { POSE_MIN_SCORE } from '../../constants/exerciseConfig';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
 
 // ── 开合跳阶段 ──
@@ -56,9 +57,6 @@ export class JumpingJacksCounter extends ExerciseCounter {
   private readonly MIN_CYCLE_FRAMES_30FPS = 10;
   private readonly MAX_CYCLE_FRAMES_30FPS = 90;
 
-  // ── 统计 ──
-  private foulCount = 0;
-
   reset(): void {
     super.reset();
     this.phase = 'idle';
@@ -73,7 +71,6 @@ export class JumpingJacksCounter extends ExerciseCounter {
     this.maxArmAngleInCycle = 0;
     this.maxLegSpreadInCycle = 0;
     this.cycleStartFrame = 0;
-    this.foulCount = 0;
     this.armAngleFilter.reset(60);
     this.legSpreadFilter.reset(1.0);
     this.hipYFilter.reset(0.5);
@@ -116,7 +113,7 @@ export class JumpingJacksCounter extends ExerciseCounter {
     )
       return;
 
-    const minScore = 0.3;
+    const minScore = POSE_MIN_SCORE;
     if (
       [
         leftShoulder,

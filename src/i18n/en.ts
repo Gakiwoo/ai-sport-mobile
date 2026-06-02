@@ -36,6 +36,12 @@ const en: Record<string, string | ((...args: any[]) => string)> = {
   'home.profile': 'Profile',
   'home.selectExercise': 'Select Exercise',
 
+  // ── Navigation ──
+  'nav.workout': 'Workout',
+  'nav.history': 'History',
+  'nav.analytics': 'Analytics',
+  'nav.profile': 'Profile',
+
   // ── Exercise Types ──
   'exercise.jump_rope': 'Jump Rope',
   'exercise.jumping_jacks': 'Jumping Jacks',

@@ -1,4 +1,5 @@
 import { Pose, ExerciseFeedback } from '../types';
+import { POSE_MIN_SCORE } from '../constants/exerciseConfig';
 import PoseDetectionService from './PoseDetectionService';
 
 export type CounterFeedback = ExerciseFeedback;
@@ -61,7 +62,7 @@ export abstract class ExerciseCounter {
     const kpC = this.getKeypoint(pose, c);
 
     if (!kpA || !kpB || !kpC) return null;
-    if ((kpA.score || 0) < 0.3 || (kpB.score || 0) < 0.3 || (kpC.score || 0) < 0.3) return null;
+    if ((kpA.score || 0) < POSE_MIN_SCORE || (kpB.score || 0) < POSE_MIN_SCORE || (kpC.score || 0) < POSE_MIN_SCORE) return null;
 
     return PoseDetectionService.calculateAngle(kpA, kpB, kpC);
   }
@@ -72,5 +73,15 @@ export abstract class ExerciseCounter {
     const fps = 1000 / this.frameIntervalMs;
     const seconds = this.totalFrames / fps;
     return Math.round((this.count / seconds) * 60);
+  }
+
+  /** 返回结果值：计数型运动返回次数，测量型运动返回距离/高度 */
+  getResultValue(): number {
+    return this.count;
+  }
+
+  /** 返回结果单位，子类可覆盖 */
+  getResultUnit(): string {
+    return '次';
   }
 }

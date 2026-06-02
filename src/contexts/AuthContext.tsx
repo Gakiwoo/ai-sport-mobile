@@ -18,19 +18,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>; // 从服务端重新拉取 user
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isLoading: true,
-  isAuthenticating: false,
-  error: null,
-  login: async () => {},
-  loginAsGuest: () => {},
-  register: async () => {},
-  logout: async () => {},
-  clearError: () => {},
-  updateUser: () => {},
-  refreshUser: async () => {},
-});
+const AuthContext = createContext<AuthContextType | null>(null);
 
 // ── Provider ──
 export function AuthProvider({ children }: { children: React.ReactNode }) {

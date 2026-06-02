@@ -28,6 +28,7 @@
 import { Pose } from '../../types';
 import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
+import { POSE_MIN_SCORE } from '../../constants/exerciseConfig';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
 
 // ── 跳绳阶段 ──
@@ -151,7 +152,7 @@ export class JumpRopeCounter extends ExerciseCounter {
     if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return;
     if (!leftWrist || !rightWrist) return;
 
-    const minScore = 0.3;
+    const minScore = POSE_MIN_SCORE;
     if (
       [leftShoulder, rightShoulder, leftWrist, rightWrist, leftHip, rightHip].some(
         (kp) => (kp.score || 0) < minScore,

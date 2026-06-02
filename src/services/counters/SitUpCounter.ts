@@ -24,6 +24,7 @@
 import { Pose } from '../../types';
 import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
+import { POSE_MIN_SCORE } from '../../constants/exerciseConfig';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
 
 // ── 仰卧起坐阶段 ──
@@ -59,6 +60,7 @@ export class SitUpCounter extends ExerciseCounter {
   private readonly CONFIRM_FRAMES_UP_30FPS = 4; // 连续 N 帧保持坐起角度才确认
   private readonly MIN_CYCLE_FRAMES_30FPS = 12; // 一次完整动作最少帧数（防抖，约 0.4s@30fps）
   private readonly MAX_CYCLE_FRAMES_30FPS = 90; // 一次完整动作最多帧数（约 3s@30fps）
+  private readonly DONE_COOLDOWN_FRAMES_30FPS = 6; // done→lying 冷却帧数（约 200ms@30fps）
 
   // ── 臀部离垫检测 ──
   private readonly HIP_LIFT_THRESHOLD = 0.03; // 臀部 Y 上升超过此比例判定离垫
@@ -71,6 +73,7 @@ export class SitUpCounter extends ExerciseCounter {
   private lastFoul: FoulType | null = null; // 最近一次犯规
   private currentTrunkAngle = 180; // 当前躯干角度
   private isInLyingBaseline = false; // 是否已采集仰卧基线
+  private doneCooldownRemaining = 0; // done 阶段冷却帧计数
 
   // ── 方向检测 ──
   private prevAngle = 180;
@@ -103,6 +106,7 @@ export class SitUpCounter extends ExerciseCounter {
     this.lastFoul = null;
     this.currentTrunkAngle = 180;
     this.isInLyingBaseline = false;
+    this.doneCooldownRemaining = 0;
     this.prevAngle = 180;
     this.angleDirection = 'stable';
     this.recentCycles = [];
@@ -142,7 +146,7 @@ export class SitUpCounter extends ExerciseCounter {
     )
       return;
 
-    const minScore = 0.3;
+    const minScore = POSE_MIN_SCORE;
     if (
       [
         leftShoulder,
@@ -236,7 +240,12 @@ export class SitUpCounter extends ExerciseCounter {
         this.handleReturning(smoothAngle);
         break;
       case 'done':
-        // 等待下一次
+        // 帧驱动冷却：倒计时结束后自动进入 lying 等待下一次
+        this.doneCooldownRemaining--;
+        if (this.doneCooldownRemaining <= 0) {
+          this.transitionTo('lying');
+          this.cycleStartFrame = this.totalFrames;
+        }
         break;
     }
   }
@@ -297,15 +306,8 @@ export class SitUpCounter extends ExerciseCounter {
         this.recordValidSitUp();
         this.transitionTo('done');
 
-        // 短暂停顿后进入 lying 等待下一次
-        setTimeout(() => {
-          if (this.phase === 'done') {
-            this.phase = 'lying';
-            this.lastState = 'lying';
-            this.lastPhase = 'lying';
-            this.cycleStartFrame = this.totalFrames;
-          }
-        }, 200); // 200ms 冷却
+        // 设置冷却帧计数（帧驱动替代 setTimeout，确保 reset 安全）
+        this.doneCooldownRemaining = this.framesAt30Fps(this.DONE_COOLDOWN_FRAMES_30FPS);
       }
     }
 

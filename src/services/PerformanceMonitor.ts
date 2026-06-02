@@ -42,6 +42,7 @@ class PerformanceMonitor {
   private sessionStartTime: number = 0;
   private sessionId: string = '';
   private _isRunning: boolean = false;
+  private static readonly MAX_FRAMES = 5000; // 帧数组上限（约 8 分钟 @ 10fps）
 
   /** 开始一个新的监控会话 */
   start(): void {
@@ -68,6 +69,11 @@ class PerformanceMonitor {
       isActive,
       timestamp: Date.now(),
     });
+
+    // 超过上限时保留最近 80% 的数据（丢弃旧帧但保留近期统计精度）
+    if (this.frames.length > PerformanceMonitor.MAX_FRAMES) {
+      this.frames = this.frames.slice(-Math.floor(PerformanceMonitor.MAX_FRAMES * 0.8));
+    }
   }
 
   /** 停止并保存会话报告 */

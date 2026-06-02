@@ -19,6 +19,7 @@
 import { Pose } from '../../types';
 import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
+import { POSE_MIN_SCORE } from '../../constants/exerciseConfig';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
 
 // ── 深蹲阶段 ──
@@ -126,7 +127,7 @@ export class SquatsCounter extends ExerciseCounter {
     )
       return;
 
-    const minScore = 0.3;
+    const minScore = POSE_MIN_SCORE;
     if (
       [
         leftShoulder,

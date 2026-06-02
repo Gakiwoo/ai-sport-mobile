@@ -13,6 +13,7 @@
 import { Pose } from '../../types';
 import { ExerciseFeedback } from '../../types';
 import { ExerciseCounter } from '../ExerciseCounter';
+import { POSE_MIN_SCORE } from '../../constants/exerciseConfig';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
 
 // ── 纵跳阶段 ──
@@ -114,6 +115,20 @@ export class VerticalJumpCounter extends ExerciseCounter {
     return this.phase;
   }
 
+  /** 测量型运动：返回纵跳高度 (cm) */
+  getResultValue(): number {
+    return Math.round(this.maxJumpHeightCm);
+  }
+
+  getResultUnit(): string {
+    return 'cm';
+  }
+
+  /** 纵跳不适合计算"次/分钟"速率 */
+  getRate(): number {
+    return 0;
+  }
+
   isCalibrated(): boolean {
     return this.calibration.calibrated;
   }
@@ -174,7 +189,7 @@ export class VerticalJumpCounter extends ExerciseCounter {
     )
       return;
 
-    const minScore = 0.3;
+    const minScore = POSE_MIN_SCORE;
     if (
       [
         leftShoulder,
@@ -434,7 +449,7 @@ export class VerticalJumpCounter extends ExerciseCounter {
         else if (h >= 25) msg = '继续加油！';
         else msg = '蹬地更有力一些';
 
-        const suffix = h >= best ? ` 最佳: ${best}cm` : ` 最佳: ${best}cm`;
+        const suffix = h >= best ? ` 新纪录! ${best}cm` : ` 最佳: ${best}cm`;
         return { type: 'success', message: `${h}cm ${msg}${suffix}` };
       }
 

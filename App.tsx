@@ -4,7 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import { LocaleProvider } from './src/contexts/LocaleContext';
+import { LocaleProvider, useLocale } from './src/contexts/LocaleContext';
+import { t } from './src/i18n';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -23,6 +24,7 @@ const Stack = createStackNavigator<RootStackParamList>();
 // ── 认证守卫：根据登录状态决定显示哪些页面 ──
 function AuthGate() {
   const { user, isLoading } = useAuth();
+  useLocale(); // 订阅语言变化以触发重新渲染
   const mediaPipePreloadStartedRef = useRef(false);
 
   // 登录/游客入口渲染后后台预热模型，不阻塞首屏。
@@ -67,22 +69,22 @@ function AuthGate() {
           <Stack.Screen
             name="Workout"
             component={WorkoutScreen}
-            options={{ headerShown: true, title: '运动训练', headerTintColor: '#1C1C1E' }}
+            options={{ headerShown: true, title: t('nav.workout'), headerTintColor: '#1C1C1E' }}
           />
           <Stack.Screen
             name="History"
             component={HistoryScreen}
-            options={{ headerShown: true, title: '训练历史', headerTintColor: '#1C1C1E' }}
+            options={{ headerShown: true, title: t('nav.history'), headerTintColor: '#1C1C1E' }}
           />
           <Stack.Screen
             name="Analytics"
             component={AnalyticsScreen}
-            options={{ headerShown: true, title: '数据分析', headerTintColor: '#1C1C1E' }}
+            options={{ headerShown: true, title: t('nav.analytics'), headerTintColor: '#1C1C1E' }}
           />
           <Stack.Screen
             name="Profile"
             component={ProfileScreen}
-            options={{ headerShown: true, title: '我的', headerTintColor: '#1C1C1E' }}
+            options={{ headerShown: true, title: t('nav.profile'), headerTintColor: '#1C1C1E' }}
           />
         </>
       )}

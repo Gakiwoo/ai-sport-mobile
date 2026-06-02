@@ -36,6 +36,12 @@ const zh: Record<string, string | ((...args: any[]) => string)> = {
   'home.profile': '我的',
   'home.selectExercise': '选择运动',
 
+  // ── 导航 ──
+  'nav.workout': '运动训练',
+  'nav.history': '训练历史',
+  'nav.analytics': '数据分析',
+  'nav.profile': '我的',
+
   // ── 运动类型 ──
   'exercise.jump_rope': '跳绳',
   'exercise.jumping_jacks': '开合跳',

@@ -10,6 +10,7 @@ import {
   UsageLog,
 } from '../types/auth';
 import { resolveApiBaseUrl } from '../utils/apiBaseUrl';
+import { withTimeout, TimeoutError } from '../utils/withTimeout';
 import SecureStorageService from './SecureStorageService';
 
 // ── 常量 ──
@@ -40,8 +41,19 @@ export class AuthError extends Error {
   }
 }
 
-// ── 内部：带 Cookie 的 fetch 封装 ──
-// React Native 的 fetch 不自动处理 cookie，需要手动管理
+// ── Token 刷新锁：确保并发 401 只触发一次 refresh ──
+let refreshPromise: Promise<boolean> | null = null;
+
+function refreshOnce(token: string): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = refreshToken(token).finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+// ── 内部：fetch 封装 ──
 async function authFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const tokens = await getStoredTokens();
 
@@ -50,31 +62,20 @@ async function authFetch(path: string, options: RequestInit = {}): Promise<Respo
     ...(options.headers as Record<string, string> | undefined),
   };
 
-  // Access Token 放 Header
+  // Access Token 通过 Authorization Header 传递（统一通道）
   if (tokens?.accessToken) {
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
-  }
-
-  // Cookie 字符串（手动模拟浏览器行为）
-  const cookieParts: string[] = [];
-  if (tokens?.accessToken) {
-    cookieParts.push(`access_token=${tokens.accessToken}`);
-  }
-  if (tokens?.refreshToken) {
-    cookieParts.push(`refresh_token=${tokens.refreshToken}`);
   }
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers,
-    credentials: 'include', // 尝试让浏览器/web 端自动处理 cookie
-    // React Native 忽略 credentials，cookie 需要后端从 header 读取
-    ...(cookieParts.length > 0 ? ({ cookie: cookieParts.join('; ') } as any) : {}),
+    credentials: 'include',
   });
 
-  // 如果 401，尝试 refresh token
+  // 如果 401，尝试 refresh token（通过锁确保并发安全）
   if (res.status === 401 && tokens?.refreshToken && !path.includes('/auth/refresh')) {
-    const refreshed = await refreshToken(tokens.refreshToken);
+    const refreshed = await refreshOnce(tokens.refreshToken);
     if (refreshed) {
       // 用新 token 重试
       return authFetch(path, options);
@@ -126,34 +127,14 @@ async function clearSession(): Promise<void> {
   await clearUser();
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new AuthError('请求超时', 408));
-    }, timeoutMs);
-
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      },
-    );
-  });
-}
-
 // ── Refresh Token ──
 async function refreshToken(refreshTokenStr: string): Promise<boolean> {
   try {
-    const cookieStr = `refresh_token=${refreshTokenStr}`;
     const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: cookieStr,
+        Authorization: `Bearer ${refreshTokenStr}`,
       },
       credentials: 'include',
     });
@@ -185,10 +166,17 @@ async function refreshToken(refreshTokenStr: string): Promise<boolean> {
   }
 }
 
-// 从 Set-Cookie 头提取指定 cookie 值
-function extractCookie(setCookieHeader: string, name: string): string | null {
-  const match = setCookieHeader.match(new RegExp(`${name}=([^;]+)`));
-  return match ? match[1] : null;
+// 从 Set-Cookie 头提取指定 cookie 值（支持多个 Set-Cookie 头拼接）
+function extractCookie(setCookieHeaders: string | null, name: string): string | null {
+  if (!setCookieHeaders) return null;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`${escaped}=([^;\\s]+)`, 'g');
+  let match: RegExpExecArray | null;
+  let lastValue: string | null = null;
+  while ((match = regex.exec(setCookieHeaders)) !== null) {
+    lastValue = match[1];
+  }
+  return lastValue;
 }
 
 // ── 公共 API ──
@@ -262,17 +250,18 @@ const AuthService = {
   async logout(): Promise<void> {
     try {
       const tokens = await getStoredTokens();
-      const cookieParts: string[] = [];
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      // 通过 Authorization Header 传递 token 用于后端注销
       if (tokens?.refreshToken) {
-        cookieParts.push(`refresh_token=${tokens.refreshToken}`);
+        headers['Authorization'] = `Bearer ${tokens.refreshToken}`;
       }
 
       await fetch(`${BASE_URL}/api/auth/logout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(cookieParts.length > 0 ? { Cookie: cookieParts.join('; ') } : {}),
-        },
+        headers,
         credentials: 'include',
       });
     } finally {
