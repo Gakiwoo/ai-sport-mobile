@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Sentry from 'sentry-expo';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { LocaleProvider, useLocale } from './src/contexts/LocaleContext';
 import { t } from './src/i18n';
@@ -18,6 +19,14 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import { RootStackParamList } from './src/types/navigation';
 import { mediaPipeAssetService } from './src/services/MediaPipeAssetService';
 import { shouldPreloadMediaPipeAssets } from './src/utils/mediaPipeCdnPolicy';
+
+// ── Sentry 初始化 ──
+Sentry.init({
+  dsn: 'YOUR_SENTRY_DSN_HERE',
+  enableInExpoDevelopment: false,
+  debug: __DEV__,
+  tracesSampleRate: __DEV__ ? 0 : 1.0,
+});
 
 const Stack = createStackNavigator<RootStackParamList>();
 

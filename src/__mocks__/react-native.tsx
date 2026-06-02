@@ -68,8 +68,72 @@ const Platform: any = {
   select: (obj: any) => obj.default ?? obj.web ?? obj.ios ?? obj.android ?? null,
 };
 
+// ── Dimensions ──
+const Dimensions: any = {
+  get: (_dim: string) => ({ width: 390, height: 844 }),
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+};
+
+// ── Animated ──
+// Animated.Value 需要是可 new 的构造函数
+class AnimatedValue {
+  _value: number;
+  constructor(initialValue: number) {
+    this._value = initialValue;
+  }
+  setValue = jest.fn();
+  interpolate = jest.fn(() => ({ interpolate: jest.fn() }));
+  addListener = jest.fn();
+  removeListener = jest.fn();
+  removeAllListeners = jest.fn();
+}
+
+const Animated: any = {
+  Value: AnimatedValue,
+  View: createView,
+  Text: createText,
+  Image: createImage,
+  ScrollView: createScrollView,
+  timing: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
+  spring: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
+  decay: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
+  sequence: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
+  parallel: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
+  delay: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
+  event: jest.fn(),
+  createAnimatedComponent: (component: any) => component,
+};
+
+// ── FlatList ──
+const createFlatList = (props: any) => {
+  const { data, renderItem, ListEmptyComponent, keyExtractor, ...rest } = props;
+  const children: any[] = [];
+
+  if (data && data.length > 0) {
+    data.forEach((item: any, index: number) => {
+      children.push(renderItem?.({ item, index }));
+    });
+  } else if (ListEmptyComponent) {
+    if (typeof ListEmptyComponent === 'function') {
+      children.push(React.createElement(ListEmptyComponent));
+    } else {
+      children.push(ListEmptyComponent);
+    }
+  }
+
+  return React.createElement('FlatList', rest, ...children);
+};
+
+// ── Modal ──
+const createModal = (props: any) => {
+  const { children, visible, ...rest } = props;
+  if (!visible) return null;
+  return React.createElement('Modal', rest, children);
+};
+
 // ── Alert ──
-const alertMock: any = { alert: jest.fn() };
+const Alert: any = { alert: jest.fn() };
 
 const rnMock: any = {};
 rnMock.View = createView;
@@ -81,9 +145,13 @@ rnMock.KeyboardAvoidingView = createKeyboardAvoidingView;
 rnMock.StatusBar = createStatusBar;
 rnMock.ActivityIndicator = createActivityIndicator;
 rnMock.Image = createImage;
+rnMock.FlatList = createFlatList;
+rnMock.Modal = createModal;
 rnMock.StyleSheet = StyleSheet;
 rnMock.Platform = Platform;
-rnMock.Alert = alertMock;
+rnMock.Dimensions = Dimensions;
+rnMock.Animated = Animated;
+rnMock.Alert = Alert;
 rnMock.default = rnMock;
 rnMock.__esModule = true;
 
@@ -97,5 +165,6 @@ export const KeyboardAvoidingView = createKeyboardAvoidingView;
 export const StatusBar = createStatusBar;
 export const ActivityIndicator = createActivityIndicator;
 export const Image = createImage;
-export { StyleSheet, Platform };
-export const Alert = alertMock;
+export const FlatList = createFlatList;
+export const Modal = createModal;
+export { StyleSheet, Platform, Dimensions, Animated, Alert };

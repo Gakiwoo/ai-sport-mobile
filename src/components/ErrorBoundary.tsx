@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import * as SentryExpo from 'sentry-expo';
 
 interface Props {
   children: ReactNode;
@@ -43,6 +44,16 @@ class ErrorBoundary extends Component<Props, State> {
     console.error('ErrorBoundary caught:', error, errorInfo);
     console.error('Error Report:', JSON.stringify(errorReport, null, 2));
 
+    // ── 上报 Sentry（开发环境由 init 配置自动屏蔽） ──
+    if (!__DEV__) {
+      SentryExpo.Native.captureException(error, {
+        extra: {
+          componentStack: errorInfo.componentStack ?? undefined,
+          errorReport,
+        },
+      });
+    }
+
     this.setState({ error, errorInfo });
 
     this.logErrorToStorage(errorReport);
@@ -54,7 +65,7 @@ class ErrorBoundary extends Component<Props, State> {
     return {
       timestamp: new Date().toISOString(),
       platform: Platform.OS,
-      version: '1.0.0',
+      version: '1.1.0',
       os: Platform.Version?.toString() || 'unknown',
       error: {
         name: error.name,
@@ -156,7 +167,7 @@ export function useGlobalErrorHandler(): void {
         const errorReport: ErrorReport = {
           timestamp: new Date().toISOString(),
           platform: Platform.OS,
-          version: '1.0.0',
+          version: '1.1.0',
           os: Platform.Version?.toString() || 'unknown',
           error: {
             name: 'GlobalError',
@@ -166,6 +177,13 @@ export function useGlobalErrorHandler(): void {
         };
 
         console.error('Global Error:', errorReport);
+
+        // ── 上报 Sentry（开发环境由 init 配置自动屏蔽） ──
+        if (!__DEV__) {
+          SentryExpo.Native.captureException(error, {
+            extra: { isFatal, errorReport },
+          });
+        }
 
         if (originalHandler) {
           return originalHandler(error, isFatal);

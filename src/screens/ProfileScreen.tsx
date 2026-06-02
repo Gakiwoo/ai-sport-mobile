@@ -229,7 +229,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
           <View style={styles.menuItem}>
             <Text style={styles.menuText}>{t('profile.version')}</Text>
-            <Text style={styles.menuValue}>1.0.0</Text>
+            <Text style={styles.menuValue}>1.1.0</Text>
           </View>
         </View>
 

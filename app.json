@@ -43,7 +43,14 @@
     },
     "owner": "gakiwoo1006",
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "sentry-expo",
+        {
+          "organization": "YOUR_ORG_SLUG",
+          "project": "YOUR_PROJECT_SLUG"
+        }
+      ]
     ]
   }
 }

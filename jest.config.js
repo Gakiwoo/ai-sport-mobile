@@ -14,6 +14,7 @@ module.exports = {
   moduleNameMapper: {
     '^react-native-svg$': '<rootDir>/src/__mocks__/react-native-svg.tsx',
     '^react-native$': '<rootDir>/src/__mocks__/react-native.tsx',
+    '^sentry-expo$': '<rootDir>/src/__mocks__/sentry-expo.ts',
     '\\.html$': '<rootDir>/src/mediapipe/__mocks__/htmlModule.js',
   },
   collectCoverageFrom: [
