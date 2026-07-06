@@ -21,6 +21,7 @@
 import { workoutRepository } from './WorkoutRepository';
 import { authService } from './AuthService';
 import { LocalWorkoutRecord } from '../types';
+import { getEnvVar } from '../utils/getEnv';
 
 // ── 配置 ──
 const SYNC_API_PATH = '/api/workouts/sync';
@@ -30,21 +31,15 @@ const SYNC_RETRY_MAX_DELAY_MS = 300000; // 最大重试延迟 5min
 const SYNC_MAX_RETRIES = 5; // 最大重试次数
 const SYNC_FETCH_TIMEOUT_MS = 15000; // fetch 超时 15s
 
-function getSyncEnv(): Record<string, string | undefined> {
-  return (
-    (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process
-      ?.env ?? {}
-  );
-}
-
 function isCloudSyncEnabled(): boolean {
-  return getSyncEnv().EXPO_PUBLIC_ENABLE_CLOUD_SYNC === 'true';
+  return getEnvVar('EXPO_PUBLIC_ENABLE_CLOUD_SYNC') === 'true';
 }
 
 function getSyncApiUrl(): string {
-  const env = getSyncEnv();
-  if (env.EXPO_PUBLIC_SYNC_API_URL) return env.EXPO_PUBLIC_SYNC_API_URL;
-  if (env.EXPO_PUBLIC_API_BASE_URL) return `${env.EXPO_PUBLIC_API_BASE_URL}${SYNC_API_PATH}`;
+  const syncUrl = getEnvVar('EXPO_PUBLIC_SYNC_API_URL');
+  if (syncUrl) return syncUrl;
+  const baseUrl = getEnvVar('EXPO_PUBLIC_API_BASE_URL');
+  if (baseUrl) return `${baseUrl}${SYNC_API_PATH}`;
   return SYNC_API_PATH;
 }
 

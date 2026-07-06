@@ -11,15 +11,12 @@ import {
 } from '../types/auth';
 import { resolveApiBaseUrl } from '../utils/apiBaseUrl';
 import { withTimeout, TimeoutError } from '../utils/withTimeout';
+import { getEnvVar, isDevMode } from '../utils/getEnv';
 import SecureStorageService from './SecureStorageService';
 
 // ── 常量 ──
-const isDev = (globalThis as unknown as { __DEV__?: boolean }).__DEV__ ?? false;
-const envBaseUrl = (
-  globalThis as unknown as {
-    process?: { env?: { EXPO_PUBLIC_API_BASE_URL?: string } };
-  }
-).process?.env?.EXPO_PUBLIC_API_BASE_URL;
+const isDev = isDevMode();
+const envBaseUrl = getEnvVar('EXPO_PUBLIC_API_BASE_URL');
 
 const BASE_URL = resolveApiBaseUrl({
   isDev,

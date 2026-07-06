@@ -173,7 +173,9 @@ export function useWorkout(exerciseType: ExerciseType) {
     try {
       const saved = await workoutRepository.save(session);
       // 训练后异步触发同步（fire-and-forget，不阻塞 UI）
-      syncService.syncAfterWorkout().catch(() => {});
+      syncService.syncAfterWorkout().catch((err) => {
+        console.warn('[useWorkout] Post-workout sync failed:', err);
+      });
       return { session, saved };
     } catch (error) {
       console.error('保存训练记录失败:', error);

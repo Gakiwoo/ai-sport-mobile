@@ -17,6 +17,7 @@ import {
 } from '../utils/mediaPipeManifest';
 import { runWithConcurrency } from '../utils/asyncPool';
 import { buildMediaPipeCdnBases, prioritizeMediaPipeCdnBases } from '../utils/mediaPipeCdnPolicy';
+import { getEnvVar } from '../utils/getEnv';
 
 // MediaPipe 资源文件列表
 const MEDIAPIPE_FILES = [
@@ -170,11 +171,7 @@ class MediaPipeAssetService {
   }
 
   private getEnvCdnBases(): string | undefined {
-    return (
-      globalThis as unknown as {
-        process?: { env?: Record<string, string | undefined> };
-      }
-    ).process?.env?.EXPO_PUBLIC_MEDIAPIPE_CDN_BASES;
+    return getEnvVar('EXPO_PUBLIC_MEDIAPIPE_CDN_BASES');
   }
 
   private async getPrioritizedCdnBases(): Promise<string[]> {
