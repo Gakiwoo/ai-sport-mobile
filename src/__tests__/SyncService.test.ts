@@ -6,10 +6,33 @@ jest.mock('../services/WorkoutRepository', () => ({
   workoutRepository: {
     getPendingSync: jest.fn(),
     markSynced: jest.fn(),
+    batchMarkSynced: jest.fn(() => Promise.resolve(1)),
     getAll: jest.fn(),
   },
   LocalWorkoutRepository: jest.fn(),
 }));
+
+// Mock SecureStorageService：阻断 expo-secure-store 的 ESM 转译链路
+// （SyncService → AuthService → SecureStorageService → expo-secure-store）
+jest.mock('../services/SecureStorageService', () => {
+  const store = new Map<string, string>();
+  return {
+    __esModule: true,
+    __store: store,
+    default: {
+      getItem: jest.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
+      setItem: jest.fn((key: string, value: string) => {
+        store.set(key, value);
+        return Promise.resolve();
+      }),
+      removeItem: jest.fn((key: string) => {
+        store.delete(key);
+        return Promise.resolve();
+      }),
+      isAvailable: jest.fn(() => Promise.resolve(true)),
+    },
+  };
+});
 
 function makeSession(overrides: Partial<WorkoutSession> = {}): WorkoutSession {
   return {
@@ -114,7 +137,10 @@ describe('SyncService', () => {
       expect(result.synced).toBe(1);
       expect(result.failed).toBe(0);
       expect(result.skipped).toBe(0);
-      expect(workoutRepository.markSynced).toHaveBeenCalledWith('r1', 'server-r1');
+      expect(workoutRepository.batchMarkSynced).toHaveBeenCalledWith(
+        ['r1'],
+        new Map([['r1', 'server-r1']]),
+      );
     });
   });
 
