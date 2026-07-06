@@ -48,6 +48,30 @@ export class KalmanFilter1D {
 
 // ── 滑动窗口（固定长度的环形缓冲区）──
 
+export class MultiPointKalman {
+  private readonly filters = new Map<string, KalmanFilter1D>();
+
+  constructor(
+    private readonly processNoise = 0.01,
+    private readonly measurementNoise = 0.1,
+  ) {}
+
+  update(key: string, measurement: number): number {
+    let filter = this.filters.get(key);
+    if (!filter) {
+      filter = new KalmanFilter1D(this.processNoise, this.measurementNoise);
+      filter.reset(measurement);
+      this.filters.set(key, filter);
+      return measurement;
+    }
+    return filter.filter(measurement);
+  }
+
+  reset(): void {
+    this.filters.clear();
+  }
+}
+
 export class SlidingWindow {
   private readonly buffer: number[] = [];
   constructor(private maxSize: number = 30) {}
@@ -66,6 +90,18 @@ export class SlidingWindow {
     if (this.buffer.length < 2) return Infinity;
     const m = this.mean();
     return this.buffer.reduce((s, v) => s + (v - m) ** 2, 0) / this.buffer.length;
+  }
+
+  stddev(): number {
+    const variance = this.variance();
+    return Number.isFinite(variance) ? Math.sqrt(variance) : Infinity;
+  }
+
+  median(): number {
+    if (this.buffer.length === 0) return 0;
+    const sorted = [...this.buffer].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
   }
 
   min(): number {

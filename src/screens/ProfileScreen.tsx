@@ -18,6 +18,19 @@ import AuthService from '../services/AuthService';
 import { ProfileScreenProps } from '../types/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message) {
+      return message;
+    }
+  }
+  return fallback;
+}
+
 export default function ProfileScreen({ navigation }: ProfileScreenProps) {
   const { user, logout, updateUser } = useAuth();
   const { locale, switchLocale } = useLocale();
@@ -53,8 +66,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       updateUser(updatedUser); // 同步全局 user（头像字母等立即更新）
       setIsEditing(false);
       Alert.alert('成功', '昵称已更新');
-    } catch (err: any) {
-      Alert.alert('失败', err.message || '更新失败');
+    } catch (err: unknown) {
+      Alert.alert('失败', getErrorMessage(err, '更新失败'));
     } finally {
       setIsSaving(false);
     }
@@ -86,8 +99,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       setConfirmNewPassword('');
       // changePassword 成功后自动登出
       Alert.alert('成功', '密码已修改，请重新登录');
-    } catch (err: any) {
-      setPasswordError(err.message || '密码修改失败');
+    } catch (err: unknown) {
+      setPasswordError(getErrorMessage(err, '密码修改失败'));
     } finally {
       setIsChangingPassword(false);
     }
@@ -116,7 +129,12 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
       {/* 顶栏 */}
       <View style={[styles.topbar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          accessibilityLabel={t('common.back')}
+          accessibilityRole="button"
+        >
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.topbarTitle}>我的</Text>
@@ -144,15 +162,25 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                   value={nickname}
                   onChangeText={setNickname}
                   autoFocus
+                  accessibilityLabel={t('profile.nickname')}
                 />
-                <TouchableOpacity onPress={handleSaveNickname} disabled={isSaving}>
+                <TouchableOpacity
+                  onPress={handleSaveNickname}
+                  disabled={isSaving}
+                  accessibilityLabel={t('a11y.saveNickname')}
+                  accessibilityRole="button"
+                >
                   <Text style={styles.editAction}>{isSaving ? '...' : '保存'}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.editRow}>
                 <Text style={styles.infoValue}>{user?.nickname}</Text>
-                <TouchableOpacity onPress={() => setIsEditing(true)}>
+                <TouchableOpacity
+                  onPress={() => setIsEditing(true)}
+                  accessibilityLabel={t('a11y.editNickname')}
+                  accessibilityRole="button"
+                >
                   <Text style={styles.editAction}>修改</Text>
                 </TouchableOpacity>
               </View>
@@ -172,7 +200,12 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <View style={styles.card}>
             <Text style={styles.cardLabel}>安全设置</Text>
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => setShowPasswordModal(true)}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setShowPasswordModal(true)}
+              accessibilityLabel={t('a11y.changePassword')}
+              accessibilityRole="button"
+            >
               <Text style={styles.menuText}>修改密码</Text>
               <Text style={styles.menuArrow}>›</Text>
             </TouchableOpacity>
@@ -186,6 +219,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('PrivacyPolicy')}
+            accessibilityLabel={t('profile.privacyPolicy')}
+            accessibilityRole="button"
           >
             <Text style={styles.menuText}>{t('profile.privacyPolicy')}</Text>
             <Text style={styles.menuArrow}>›</Text>
@@ -194,6 +229,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => setShowLangPicker(!showLangPicker)}
+            accessibilityLabel={t('a11y.selectLanguage')}
+            accessibilityRole="button"
           >
             <Text style={styles.menuText}>{t('profile.language')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -212,6 +249,9 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                     switchLocale(l.code as 'zh' | 'en');
                     setShowLangPicker(false);
                   }}
+                  accessibilityLabel={t('a11y.languageOption', l.localName)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: locale === l.code }}
                 >
                   <Text
                     style={[
@@ -234,7 +274,12 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
         </View>
 
         {/* 登出按钮 */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={handleLogout}
+          accessibilityLabel={isGuest ? t('a11y.guestLogout') : t('a11y.logout')}
+          accessibilityRole="button"
+        >
           <Text style={styles.logoutText}>{isGuest ? '退出本地模式' : '退出登录'}</Text>
         </TouchableOpacity>
 
@@ -263,6 +308,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               secureTextEntry
               value={currentPassword}
               onChangeText={setCurrentPassword}
+              accessibilityLabel={t('profile.currentPassword')}
             />
             <TextInput
               style={styles.modalInput}
@@ -271,6 +317,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               secureTextEntry
               value={newPassword}
               onChangeText={setNewPassword}
+              accessibilityLabel={t('profile.newPassword')}
             />
             <TextInput
               style={styles.modalInput}
@@ -280,6 +327,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}
               onSubmitEditing={handleChangePassword}
+              accessibilityLabel={t('profile.confirmPassword')}
             />
 
             <View style={styles.modalActions}>
@@ -289,6 +337,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                   setShowPasswordModal(false);
                   setPasswordError('');
                 }}
+                accessibilityLabel={t('common.cancel')}
+                accessibilityRole="button"
               >
                 <Text style={styles.modalCancelText}>取消</Text>
               </TouchableOpacity>
@@ -296,6 +346,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
                 style={[styles.modalConfirm, isChangingPassword && styles.buttonDisabled]}
                 onPress={handleChangePassword}
                 disabled={isChangingPassword}
+                accessibilityLabel={t('profile.changePassword')}
+                accessibilityRole="button"
               >
                 <Text style={styles.modalConfirmText}>
                   {isChangingPassword ? '修改中...' : '确认修改'}

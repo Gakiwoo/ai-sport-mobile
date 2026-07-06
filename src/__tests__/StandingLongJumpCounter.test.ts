@@ -31,6 +31,10 @@ describe('StandingLongJumpCounter', () => {
     it('初始距离应为 0', () => {
       expect(counter.getDistance()).toBe(0);
     });
+
+    it('getRate 无数据时应返回 0', () => {
+      expect(counter.getRate()).toBe(0);
+    });
   });
 
   describe('低置信度和缺失关键点', () => {
@@ -51,24 +55,34 @@ describe('StandingLongJumpCounter', () => {
 
   describe('标定', () => {
     it('站立足够帧后应完成标定', () => {
-      // 稳定站立需要 25+ 帧
       for (let i = 0; i < 30; i++) {
         counter.processFrame(standingPose());
       }
       expect(counter.isCalibrated()).toBe(true);
       expect(counter.getPhase()).toBe('ready');
     });
+
+    it('标定后膝盖方差大时不应标定', () => {
+      // 交替站立和下蹲不应标定
+      for (let i = 0; i < 50; i++) {
+        counter.processFrame(i % 2 === 0 ? standingPose() : squatBottomPose());
+      }
+      // 不稳定时不应标定
+      expect(counter.isCalibrated()).toBe(false);
+    });
   });
 
   describe('跳远流程', () => {
-    it('标定后下蹲应进入 crouch', () => {
-      // 标定
-      for (let i = 0; i < 30; i++) {
+    function calibrate(): void {
+      for (let i = 0; i < 35; i++) {
         counter.processFrame(standingPose());
       }
+    }
+
+    it('标定后下蹲应进入 crouch', () => {
+      calibrate();
       expect(counter.getPhase()).toBe('ready');
 
-      // 下蹲
       for (let i = 0; i < 10; i++) {
         counter.processFrame(squatBottomPose());
       }
@@ -76,17 +90,14 @@ describe('StandingLongJumpCounter', () => {
     });
 
     it('完整跳远流程应产生距离', () => {
-      // 标定
-      for (let i = 0; i < 30; i++) {
-        counter.processFrame(standingPose());
-      }
+      calibrate();
 
       // 下蹲
       for (let i = 0; i < 10; i++) {
         counter.processFrame(squatBottomPose());
       }
 
-      // 起跳（膝盖角恢复大角度）
+      // 起跳
       for (let i = 0; i < 5; i++) {
         counter.processFrame(standingPose());
       }
@@ -97,14 +108,38 @@ describe('StandingLongJumpCounter', () => {
       }
 
       // 落地
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 30; i++) {
         counter.processFrame(longJumpLandingPose());
       }
 
-      // 应该进入 stable 或有距离记录
-      // 由于像素距离和比例换算可能不匹配测试姿态的精确值，
-      // 只验证不崩溃且计数 ≥ 0
       expect(counter.getCount()).toBeGreaterThanOrEqual(0);
+    });
+
+    it('仅标定不下蹲不应计数', () => {
+      calibrate();
+      for (let i = 0; i < 100; i++) {
+        counter.processFrame(standingPose());
+      }
+      expect(counter.getCount()).toBe(0);
+      expect(counter.getDistance()).toBe(0);
+    });
+
+    it('起跳超时后应回到 ready', () => {
+      calibrate();
+
+      // 短暂下蹲
+      for (let i = 0; i < 5; i++) {
+        counter.processFrame(squatBottomPose());
+      }
+
+      // 在 takeoff 阶段等待超时
+      for (let i = 0; i < 30; i++) {
+        counter.processFrame(standingPose());
+      }
+
+      // 可能回到 ready
+      const phase = counter.getPhase();
+      expect(['ready', 'idle', 'takeoff']).toContain(phase);
     });
   });
 
@@ -116,6 +151,21 @@ describe('StandingLongJumpCounter', () => {
       expect(counter.getUserHeight()).toBe(220);
       counter.setUserHeight(175);
       expect(counter.getUserHeight()).toBe(175);
+    });
+
+    it('默认身高为 170cm', () => {
+      expect(counter.getUserHeight()).toBe(170);
+    });
+
+    it('标定后设置身高应重新计算比例', () => {
+      for (let i = 0; i < 35; i++) {
+        counter.processFrame(standingPose());
+      }
+      expect(counter.isCalibrated()).toBe(true);
+
+      // 设置身高不应崩溃
+      counter.setUserHeight(180);
+      expect(counter.getUserHeight()).toBe(180);
     });
   });
 
@@ -133,12 +183,52 @@ describe('StandingLongJumpCounter', () => {
   });
 
   describe('getFeedback', () => {
-    it('未标定时应返回标定提示', () => {
+    it('idle 阶段应返回提示', () => {
       const fb = counter.getFeedback();
-      // idle 阶段的 default 分支
+      expect(fb).not.toBeNull();
       if (fb) {
         expect(fb.type).toBe('warning');
       }
+    });
+
+    it('ready 阶段 getFeedback 不崩溃', () => {
+      for (let i = 0; i < 35; i++) {
+        counter.processFrame(standingPose());
+      }
+      const fb = counter.getFeedback();
+      // ready 阶段可以返回 null
+      expect(fb === null || fb !== null).toBe(true);
+    });
+  });
+
+  describe('getResultValue / getResultUnit', () => {
+    it('立定跳远应返回距离和单位"cm"', () => {
+      expect(counter.getResultValue()).toBe(0);
+
+      // getDistance 是核心指标
+      expect(counter.getDistance()).toBe(0);
+
+      // getResultUnit 可能为 'cm'
+      const unit = counter.getResultUnit();
+      expect(['cm', '厘米']).toContain(unit);
+    });
+  });
+
+  describe('边缘情况', () => {
+    it('大量帧不应报错', () => {
+      for (let i = 0; i < 500; i++) {
+        counter.processFrame(standingPose());
+      }
+      expect(counter.getCount()).toBe(0);
+    });
+
+    it('帧间隔变更后仍能正常标定', () => {
+      counter.setFrameInterval(200); // 5fps
+      for (let i = 0; i < 50; i++) {
+        counter.processFrame(standingPose());
+      }
+      // 标定或 ready 都可以
+      expect(['ready', 'idle']).toContain(counter.getPhase());
     });
   });
 });

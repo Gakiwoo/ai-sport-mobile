@@ -11,8 +11,9 @@ import zh from './zh';
 import en from './en';
 
 export type Locale = 'zh' | 'en';
+export type TranslationValue = string | ((...args: any[]) => string);
 
-const translations: Record<Locale, Record<string, string | ((...args: any[]) => string)>> = {
+const translations: Record<Locale, Record<string, TranslationValue>> = {
   zh,
   en,
 };
@@ -37,7 +38,7 @@ export function setLocale(locale: Locale): void {
 }
 
 /** 获取当前语言（对外公开 API，供 LocaleContext 使用） */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export function getLocale(): Locale {
   return currentLocale;
 }
@@ -55,16 +56,16 @@ export function getSupportedLocales(): { code: Locale; name: string; localName: 
  * @param key 翻译键
  * @param args 可选参数（用于函数翻译）
  */
-export function t(key: string, ...args: any[]): string {
+export function t(key: string, ...args: unknown[]): string {
   const dict = translations[currentLocale];
   const value = dict[key];
   if (value === undefined) {
     // 回退到中文
     const zhValue = zh[key];
     if (zhValue === undefined) return key;
-    if (typeof zhValue === 'function') return (zhValue as Function)(...args);
+    if (typeof zhValue === 'function') return zhValue(...args);
     return zhValue as string;
   }
-  if (typeof value === 'function') return (value as Function)(...args);
+  if (typeof value === 'function') return value(...args);
   return value as string;
 }

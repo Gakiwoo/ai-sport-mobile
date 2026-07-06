@@ -3,7 +3,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as Sentry from 'sentry-expo';
+import * as Sentry from '@sentry/react-native';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { LocaleProvider, useLocale } from './src/contexts/LocaleContext';
 import { t } from './src/i18n';
@@ -14,19 +14,29 @@ import HomeScreen from './src/screens/HomeScreen';
 import WorkoutScreen from './src/screens/WorkoutScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import AnalyticsScreen from './src/screens/AnalyticsScreen';
+import PilotScreen from './src/screens/PilotScreen';
 import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { RootStackParamList } from './src/types/navigation';
 import { mediaPipeAssetService } from './src/services/MediaPipeAssetService';
+import { syncService } from './src/services/SyncService';
 import { shouldPreloadMediaPipeAssets } from './src/utils/mediaPipeCdnPolicy';
 
 // ── Sentry 初始化 ──
-Sentry.init({
-  dsn: 'YOUR_SENTRY_DSN_HERE',
-  enableInExpoDevelopment: false,
-  debug: __DEV__,
-  tracesSampleRate: __DEV__ ? 0 : 1.0,
-});
+// 设置环境变量 EXPO_PUBLIC_SENTRY_DSN 或在下方填入你的 DSN
+// 详见 docs/deployment/sentry-config.md
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN || '';
+
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    enabled: !__DEV__,
+    debug: __DEV__,
+    tracesSampleRate: __DEV__ ? 0 : 1.0,
+  });
+} else if (!__DEV__) {
+  console.warn('[App] Sentry DSN not configured. Crash reporting disabled.');
+}
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -46,6 +56,16 @@ function AuthGate() {
       mediaPipeAssetService.preload().catch((err) => {
         console.log('[App] MediaPipe preload skipped:', err?.message ?? err);
       });
+    }
+  }, [isLoading, user]);
+
+  // AuthGate 挂载后启动 SyncService（延迟执行，不阻塞首屏）
+  useEffect(() => {
+    if (!isLoading && user) {
+      syncService.start();
+      return () => {
+        syncService.stop();
+      };
     }
   }, [isLoading, user]);
 
@@ -89,6 +109,11 @@ function AuthGate() {
             name="Analytics"
             component={AnalyticsScreen}
             options={{ headerShown: true, title: t('nav.analytics'), headerTintColor: '#1C1C1E' }}
+          />
+          <Stack.Screen
+            name="Pilot"
+            component={PilotScreen}
+            options={{ headerShown: true, title: '校园试点', headerTintColor: '#1C1C1E' }}
           />
           <Stack.Screen
             name="Profile"

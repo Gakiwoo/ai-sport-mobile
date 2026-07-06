@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { LoginScreenProps } from '../types/navigation';
 import { E2E_TEST_IDS } from '../constants/e2eTestIds';
+import { t } from '../i18n';
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { login, loginAsGuest, isAuthenticating, error, clearError } = useAuth();
@@ -53,7 +54,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity onPress={clearError}>
+              <TouchableOpacity
+                onPress={clearError}
+                accessibilityLabel={t('a11y.dismissError')}
+                accessibilityRole="button"
+              >
                 <Text style={styles.errorDismiss}>×</Text>
               </TouchableOpacity>
             </View>
@@ -69,6 +74,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             value={email}
             onChangeText={setEmail}
             editable={!isAuthenticating}
+            accessibilityLabel={t('auth.email')}
           />
 
           <TextInput
@@ -80,6 +86,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             onChangeText={setPassword}
             editable={!isAuthenticating}
             onSubmitEditing={handleLogin}
+            accessibilityLabel={t('auth.password')}
           />
 
           <TouchableOpacity
@@ -87,6 +94,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             onPress={handleLogin}
             activeOpacity={0.8}
             disabled={isAuthenticating}
+            accessibilityLabel={t('auth.login')}
+            accessibilityRole="button"
           >
             <Text style={styles.buttonText}>{isAuthenticating ? '登录中...' : '登录'}</Text>
           </TouchableOpacity>
@@ -97,6 +106,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             onPress={loginAsGuest}
             activeOpacity={0.8}
             disabled={isAuthenticating}
+            accessibilityLabel={t('a11y.guestMode')}
+            accessibilityRole="button"
           >
             <Text style={styles.localButtonText}>游客模式，本地训练</Text>
           </TouchableOpacity>
@@ -104,6 +115,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           <TouchableOpacity
             style={styles.switchLink}
             onPress={() => navigation.navigate('Register')}
+            accessibilityLabel={t('a11y.goToRegister')}
+            accessibilityRole="link"
           >
             <Text style={styles.switchText}>
               没有账号？<Text style={styles.switchHighlight}>立即注册</Text>

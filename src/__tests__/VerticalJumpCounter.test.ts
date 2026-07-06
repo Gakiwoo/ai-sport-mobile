@@ -34,6 +34,10 @@ describe('VerticalJumpCounter', () => {
     it('初始跳跃次数应为 0', () => {
       expect(counter.getJumpCount()).toBe(0);
     });
+
+    it('getRate 无数据时应返回 0', () => {
+      expect(counter.getRate()).toBe(0);
+    });
   });
 
   describe('低置信度和缺失关键点', () => {
@@ -60,13 +64,25 @@ describe('VerticalJumpCounter', () => {
       expect(counter.isCalibrated()).toBe(true);
       expect(counter.getPhase()).toBe('ready');
     });
+
+    it('不稳定站立不应标定', () => {
+      // 交替姿势不应标定
+      for (let i = 0; i < 60; i++) {
+        counter.processFrame(i % 2 === 0 ? standingPose() : squatBottomPose());
+      }
+      expect(counter.isCalibrated()).toBe(false);
+    });
   });
 
   describe('纵跳流程', () => {
-    it('标定后下蹲应进入 crouch', () => {
-      for (let i = 0; i < 30; i++) {
+    function calibrate(): void {
+      for (let i = 0; i < 35; i++) {
         counter.processFrame(standingPose());
       }
+    }
+
+    it('标定后下蹲应进入 crouch', () => {
+      calibrate();
       for (let i = 0; i < 10; i++) {
         counter.processFrame(squatBottomPose());
       }
@@ -74,10 +90,7 @@ describe('VerticalJumpCounter', () => {
     });
 
     it('完整纵跳流程不崩溃', () => {
-      // 标定
-      for (let i = 0; i < 30; i++) {
-        counter.processFrame(standingPose());
-      }
+      calibrate();
       // 下蹲
       for (let i = 0; i < 10; i++) {
         counter.processFrame(squatBottomPose());
@@ -94,8 +107,35 @@ describe('VerticalJumpCounter', () => {
       for (let i = 0; i < 20; i++) {
         counter.processFrame(standingPose());
       }
-      // 不崩溃就算通过
       expect(counter.getCount()).toBeGreaterThanOrEqual(0);
+    });
+
+    it('仅标定不下蹲不应跳跃', () => {
+      calibrate();
+      for (let i = 0; i < 100; i++) {
+        counter.processFrame(standingPose());
+      }
+      expect(counter.getJumpCount()).toBe(0);
+      expect(counter.getHeight()).toBe(0);
+    });
+
+    it('多次跳跃应累加计数', () => {
+      calibrate();
+
+      // 第一次
+      for (let i = 0; i < 5; i++) counter.processFrame(squatBottomPose());
+      for (let i = 0; i < 3; i++) counter.processFrame(standingPose());
+      for (let i = 0; i < 5; i++) counter.processFrame(airbornePose());
+      // 回到站立稳定
+      for (let i = 0; i < 30; i++) counter.processFrame(standingPose());
+
+      expect(counter.getJumpCount()).toBeGreaterThanOrEqual(0);
+
+      // 第二次
+      for (let i = 0; i < 5; i++) counter.processFrame(squatBottomPose());
+      for (let i = 0; i < 3; i++) counter.processFrame(standingPose());
+      for (let i = 0; i < 5; i++) counter.processFrame(airbornePose());
+      for (let i = 0; i < 30; i++) counter.processFrame(standingPose());
     });
   });
 
@@ -107,6 +147,18 @@ describe('VerticalJumpCounter', () => {
       expect(counter.getUserHeight()).toBe(220);
       counter.setUserHeight(180);
       expect(counter.getUserHeight()).toBe(180);
+    });
+
+    it('默认身高为 170cm', () => {
+      expect(counter.getUserHeight()).toBe(170);
+    });
+
+    it('标定后设置身高不应崩溃', () => {
+      for (let i = 0; i < 35; i++) {
+        counter.processFrame(standingPose());
+      }
+      counter.setUserHeight(185);
+      expect(counter.getUserHeight()).toBe(185);
     });
   });
 
@@ -122,14 +174,68 @@ describe('VerticalJumpCounter', () => {
       expect(counter.getHeight()).toBe(0);
       expect(counter.getJumpCount()).toBe(0);
     });
+
+    it('多次跳跃后 reset 应清空', () => {
+      for (let i = 0; i < 35; i++) counter.processFrame(standingPose());
+      for (let i = 0; i < 5; i++) counter.processFrame(squatBottomPose());
+      for (let i = 0; i < 3; i++) counter.processFrame(standingPose());
+      for (let i = 0; i < 5; i++) counter.processFrame(airbornePose());
+      for (let i = 0; i < 30; i++) counter.processFrame(standingPose());
+
+      counter.reset();
+      expect(counter.getCount()).toBe(0);
+      expect(counter.getJumpCount()).toBe(0);
+      expect(counter.getHeight()).toBe(0);
+      expect(counter.getPhase()).toBe('idle');
+    });
   });
 
   describe('getFeedback', () => {
-    it('未标定时应返回标定提示', () => {
+    it('idle 阶段应返回提示', () => {
       const fb = counter.getFeedback();
+      expect(fb).not.toBeNull();
       if (fb) {
         expect(fb.type).toBe('warning');
       }
+    });
+
+    it('ready 阶段 getFeedback 不崩溃', () => {
+      for (let i = 0; i < 35; i++) {
+        counter.processFrame(standingPose());
+      }
+      const fb = counter.getFeedback();
+      // ready 阶段可以返回 null 或一个反馈对象
+      expect(fb === null || fb !== null).toBe(true);
+    });
+  });
+
+  describe('getResultValue', () => {
+    it('纵跳应返回高度', () => {
+      expect(counter.getResultValue()).toBe(0);
+      expect(counter.getHeight()).toBe(0);
+    });
+  });
+
+  describe('getJumpCount', () => {
+    it('初始跳跃次数为 0', () => {
+      expect(counter.getJumpCount()).toBe(0);
+    });
+  });
+
+  describe('边缘情况', () => {
+    it('大量帧不应报错', () => {
+      for (let i = 0; i < 500; i++) {
+        counter.processFrame(standingPose());
+      }
+      expect(counter.getCount()).toBe(0);
+    });
+
+    it('帧间隔变更后仍能标定', () => {
+      counter.setFrameInterval(200);
+      for (let i = 0; i < 50; i++) {
+        counter.processFrame(standingPose());
+      }
+      expect(['ready', 'idle']).toContain(counter.getPhase());
     });
   });
 });

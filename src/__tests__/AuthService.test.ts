@@ -46,15 +46,26 @@ jest.mock('../services/SecureStorageService', () => {
 const USER_KEY = '@auth_user';
 const TOKEN_KEY = '@auth_tokens';
 
+type TestGlobal = Omit<typeof globalThis, 'fetch'> & {
+  __DEV__?: boolean;
+  fetch: jest.Mock;
+};
+
+const testGlobal = globalThis as any as TestGlobal;
+
 // ── Helpers ──
 
 /** Get references to the in-memory stores for test setup/teardown */
 function getAsyncStore(): Map<string, string> {
-  return (require('@react-native-async-storage/async-storage') as any).__store;
+  return (require('@react-native-async-storage/async-storage') as {
+    __store: Map<string, string>;
+  }).__store;
 }
 
 function getSecureStore(): Map<string, string> {
-  return (require('../services/SecureStorageService') as any).__store;
+  return (require('../services/SecureStorageService') as {
+    __store: Map<string, string>;
+  }).__store;
 }
 
 /** Build a mock fetch Response with optional Set-Cookie header */
@@ -71,7 +82,7 @@ function mockResponse(ok: boolean, status: number, body: unknown, setCookie?: st
 
 /** Build a mock fetch that returns the given response */
 function mockFetch(res: Response) {
-  (globalThis as any).fetch = jest.fn(() => Promise.resolve(res));
+  testGlobal.fetch = jest.fn(() => Promise.resolve(res));
 }
 
 /** Pre-store tokens in secure store for tests that need authFetch */
@@ -89,7 +100,7 @@ function clearAllStores() {
 
 describe('AuthService.restoreSession', () => {
   beforeEach(() => {
-    (globalThis as any).__DEV__ = true;
+    testGlobal.__DEV__ = true;
     clearAllStores();
     jest.clearAllMocks();
     jest.useRealTimers();
@@ -102,7 +113,7 @@ describe('AuthService.restoreSession', () => {
       JSON.stringify({ id: 'u1', email: 'u@example.com', nickname: 'U' }),
     );
     getSecureStore().set(TOKEN_KEY, JSON.stringify({ accessToken: 'a', refreshToken: 'r' }));
-    (globalThis as any).fetch = jest.fn(() => new Promise(() => {}));
+    testGlobal.fetch = jest.fn(() => new Promise(() => {}));
 
     const restore = AuthService.restoreSession();
     await Promise.resolve();
@@ -119,7 +130,7 @@ describe('AuthService.restoreSession', () => {
       JSON.stringify({ id: 'u1', email: 'u@example.com', nickname: 'U' }),
     );
     getSecureStore().set(TOKEN_KEY, JSON.stringify({ accessToken: 'a', refreshToken: 'r' }));
-    (globalThis as any).fetch = jest.fn(() =>
+    testGlobal.fetch = jest.fn(() =>
       Promise.resolve({
         ok: false,
         status: 401,
@@ -137,7 +148,7 @@ describe('AuthService.restoreSession', () => {
 
 describe('AuthService.register', () => {
   beforeEach(() => {
-    (globalThis as any).__DEV__ = true;
+    testGlobal.__DEV__ = true;
     clearAllStores();
     jest.clearAllMocks();
     jest.useRealTimers();
@@ -178,7 +189,7 @@ describe('AuthService.register', () => {
 
 describe('AuthService.login', () => {
   beforeEach(() => {
-    (globalThis as any).__DEV__ = true;
+    testGlobal.__DEV__ = true;
     clearAllStores();
     jest.clearAllMocks();
     jest.useRealTimers();
@@ -213,7 +224,7 @@ describe('AuthService.login', () => {
 
 describe('AuthService.logout', () => {
   beforeEach(() => {
-    (globalThis as any).__DEV__ = true;
+    testGlobal.__DEV__ = true;
     clearAllStores();
     jest.clearAllMocks();
     jest.useRealTimers();
@@ -230,7 +241,7 @@ describe('AuthService.logout', () => {
 
     await AuthService.logout();
 
-    const fetchMock = (globalThis as any).fetch as jest.Mock;
+    const fetchMock = testGlobal.fetch;
     expect(fetchMock).toHaveBeenCalled();
     const fetchUrl = fetchMock.mock.calls[0][0] as string;
     expect(fetchUrl).toContain('/api/auth/logout');
@@ -246,7 +257,7 @@ describe('AuthService.logout', () => {
       JSON.stringify({ id: 'u1', email: 'u@test.com', nickname: 'U', createdAt: '2025-01-01' }),
     );
 
-    (globalThis as any).fetch = jest.fn(() => Promise.reject(new Error('Network error')));
+    testGlobal.fetch = jest.fn(() => Promise.reject(new Error('Network error')));
 
     await expect(AuthService.logout()).rejects.toThrow('Network error');
 
@@ -259,7 +270,7 @@ describe('AuthService.logout', () => {
 
 describe('AuthService.getMe', () => {
   beforeEach(() => {
-    (globalThis as any).__DEV__ = true;
+    testGlobal.__DEV__ = true;
     clearAllStores();
     jest.clearAllMocks();
     jest.useRealTimers();
@@ -289,7 +300,7 @@ describe('AuthService.getMe', () => {
 
 describe('AuthService.updateNickname', () => {
   beforeEach(() => {
-    (globalThis as any).__DEV__ = true;
+    testGlobal.__DEV__ = true;
     clearAllStores();
     jest.clearAllMocks();
     jest.useRealTimers();
@@ -310,7 +321,7 @@ describe('AuthService.updateNickname', () => {
     expect(result).toEqual(user);
     await expect(AsyncStorage.getItem(USER_KEY)).resolves.toEqual(JSON.stringify(user));
 
-    const fetchMock = (globalThis as any).fetch as jest.Mock;
+    const fetchMock = testGlobal.fetch;
     expect(fetchMock).toHaveBeenCalled();
     const [, options] = fetchMock.mock.calls[0];
     expect(options.method).toBe('PUT');
@@ -322,7 +333,7 @@ describe('AuthService.updateNickname', () => {
 
 describe('AuthService.changePassword', () => {
   beforeEach(() => {
-    (globalThis as any).__DEV__ = true;
+    testGlobal.__DEV__ = true;
     clearAllStores();
     jest.clearAllMocks();
     jest.useRealTimers();
@@ -338,7 +349,7 @@ describe('AuthService.changePassword', () => {
 
     await AuthService.changePassword({ currentPassword: 'old', newPassword: 'new' });
 
-    const fetchMock = (globalThis as any).fetch as jest.Mock;
+    const fetchMock = testGlobal.fetch;
     expect(fetchMock).toHaveBeenCalled();
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toContain('/api/auth/me/password');
@@ -371,7 +382,7 @@ describe('AuthService.changePassword', () => {
 
 describe('AuthService.getUsage', () => {
   beforeEach(() => {
-    (globalThis as any).__DEV__ = true;
+    testGlobal.__DEV__ = true;
     clearAllStores();
     jest.clearAllMocks();
     jest.useRealTimers();

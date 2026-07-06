@@ -2,7 +2,7 @@
   "expo": {
     "name": "AI运动助手",
     "slug": "ai-motion-tracker",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -28,7 +28,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.aimotion.tracker",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "CAMERA"
       ]
@@ -44,13 +44,9 @@
     "owner": "gakiwoo1006",
     "plugins": [
       "expo-secure-store",
-      [
-        "sentry-expo",
-        {
-          "organization": "YOUR_ORG_SLUG",
-          "project": "YOUR_PROJECT_SLUG"
-        }
-      ]
+      "@sentry/react-native",
+      "expo-localization",
+      "expo-sharing"
     ]
   }
 }

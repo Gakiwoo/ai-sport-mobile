@@ -4,6 +4,7 @@
  * 覆盖：渲染不崩溃、表单元素、游客模式按钮、注册导航
  */
 import React from 'react';
+import type { ReactTestInstance } from 'react-test-renderer';
 import { renderToJSON, createWithAct } from './testRenderer';
 
 // ── 导航 mock ──
@@ -47,6 +48,18 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
+// ── i18n mock ──
+jest.mock('../i18n', () => ({
+  t: (key: string) => key,
+  setLocale: jest.fn(),
+  getLocale: () => 'zh',
+  getDeviceLocale: () => 'zh',
+  getSupportedLocales: () => [
+    { code: 'zh', name: 'Chinese', localName: '中文' },
+    { code: 'en', name: 'English', localName: 'English' },
+  ],
+}));
+
 import LoginScreen from '../screens/LoginScreen';
 
 describe('LoginScreen', () => {
@@ -58,14 +71,20 @@ describe('LoginScreen', () => {
 
   it('渲染不崩溃', async () => {
     const tree = await renderToJSON(
-      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <LoginScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(tree).toBeDefined();
   });
 
   it('包含品牌标题', async () => {
     const tree = await renderToJSON(
-      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <LoginScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('AI SPORT');
@@ -74,7 +93,10 @@ describe('LoginScreen', () => {
 
   it('包含登录按钮和游客模式按钮', async () => {
     const tree = await renderToJSON(
-      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <LoginScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('登录');
@@ -83,7 +105,10 @@ describe('LoginScreen', () => {
 
   it('包含注册链接', async () => {
     const tree = await renderToJSON(
-      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <LoginScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('立即注册');
@@ -91,11 +116,14 @@ describe('LoginScreen', () => {
 
   it('点击游客模式按钮触发 loginAsGuest', async () => {
     const instance = await createWithAct(
-      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <LoginScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
 
     const guestBtn = instance.root.findAll(
-      (el: any) => el.props?.testID === 'login-guest-button',
+      (el: ReactTestInstance) => el.props?.testID === 'login-guest-button',
     );
 
     if (guestBtn.length > 0) {
@@ -106,7 +134,10 @@ describe('LoginScreen', () => {
 
   it('包含注册链接文本', async () => {
     const tree = await renderToJSON(
-      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <LoginScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('立即注册');

@@ -4,9 +4,11 @@ import type { ReactTestRenderer } from 'react-test-renderer';
 
 export const flushPendingWork = () =>
   new Promise<void>((resolve) => {
-    const defer = (globalThis as typeof globalThis & {
-      setImmediate?: (callback: () => void) => void;
-    }).setImmediate;
+    const defer = (
+      globalThis as typeof globalThis & {
+        setImmediate?: (callback: () => void) => void;
+      }
+    ).setImmediate;
 
     if (defer) {
       defer(resolve);
@@ -32,7 +34,9 @@ export async function createWithAct(element: React.ReactElement): Promise<ReactT
   return instance;
 }
 
-export async function renderToJSON(element: React.ReactElement): Promise<ReturnType<ReactTestRenderer['toJSON']>> {
+export async function renderToJSON(
+  element: React.ReactElement,
+): Promise<ReturnType<ReactTestRenderer['toJSON']>> {
   const instance = await createWithAct(element);
   return instance.toJSON();
 }

@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import * as SentryExpo from 'sentry-expo';
+import * as Sentry from '@sentry/react-native';
 
 interface Props {
   children: ReactNode;
@@ -46,7 +46,7 @@ class ErrorBoundary extends Component<Props, State> {
 
     // ── 上报 Sentry（开发环境由 init 配置自动屏蔽） ──
     if (!__DEV__) {
-      SentryExpo.Native.captureException(error, {
+      Sentry.captureException(error, {
         extra: {
           componentStack: errorInfo.componentStack ?? undefined,
           errorReport,
@@ -137,6 +137,8 @@ class ErrorBoundary extends Component<Props, State> {
             <TouchableOpacity
               style={[styles.button, styles.primaryButton]}
               onPress={this.handleReload}
+              accessibilityLabel="重新加载"
+              accessibilityRole="button"
             >
               <Text style={styles.primaryButtonText}>重新加载</Text>
             </TouchableOpacity>
@@ -144,6 +146,8 @@ class ErrorBoundary extends Component<Props, State> {
             <TouchableOpacity
               style={[styles.button, styles.secondaryButton]}
               onPress={this.handleRetry}
+              accessibilityLabel="重试"
+              accessibilityRole="button"
             >
               <Text style={styles.secondaryButtonText}>重试</Text>
             </TouchableOpacity>
@@ -180,7 +184,7 @@ export function useGlobalErrorHandler(): void {
 
         // ── 上报 Sentry（开发环境由 init 配置自动屏蔽） ──
         if (!__DEV__) {
-          SentryExpo.Native.captureException(error, {
+          Sentry.captureException(error, {
             extra: { isFatal, errorReport },
           });
         }

@@ -13,7 +13,11 @@ jest.mock('../components/workout/workoutStyles', () => ({
   },
 }));
 
-import { formatCountdown, getElapsedSeconds, getFeedbackBoxStyle } from '../components/workout/workoutFormat';
+import {
+  formatCountdown,
+  getElapsedSeconds,
+  getFeedbackBoxStyle,
+} from '../components/workout/workoutFormat';
 
 describe('workoutFormat', () => {
   describe('formatCountdown', () => {

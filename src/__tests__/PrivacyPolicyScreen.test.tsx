@@ -31,14 +31,20 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 describe('PrivacyPolicyScreen', () => {
   it('渲染不崩溃', async () => {
     const tree = await renderToJSON(
-      <PrivacyPolicyScreen navigation={{ navigate: jest.fn(), goBack: jest.fn() } as any} route={{ params: {} } as any} />,
+      <PrivacyPolicyScreen
+        navigation={{ navigate: jest.fn(), goBack: jest.fn() } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(tree).toBeDefined();
   });
 
   it('包含隐私政策标题', async () => {
     const tree = await renderToJSON(
-      <PrivacyPolicyScreen navigation={{ navigate: jest.fn(), goBack: jest.fn() } as any} route={{ params: {} } as any} />,
+      <PrivacyPolicyScreen
+        navigation={{ navigate: jest.fn(), goBack: jest.fn() } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('隐私政策');

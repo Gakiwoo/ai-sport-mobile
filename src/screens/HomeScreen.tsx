@@ -99,6 +99,9 @@ function ExerciseCard({
         onPressIn={pressIn}
         onPressOut={pressOut}
         activeOpacity={1}
+        accessibilityLabel={t(`exercise.${exercise.type}`)}
+        accessibilityRole="button"
+        accessibilityHint={t('a11y.startExercise')}
       >
         <View
           style={[
@@ -159,6 +162,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             style={styles.avatarBtn}
             onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.7}
+            accessibilityLabel={t('a11y.profile')}
+            accessibilityRole="button"
           >
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarText}>
@@ -168,8 +173,19 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.navBtn}
+            onPress={() => navigation.navigate('Pilot')}
+            activeOpacity={0.7}
+            accessibilityLabel="校园试点"
+            accessibilityRole="button"
+          >
+            <Text style={styles.navBtnText}>试点</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navBtn}
             onPress={() => navigation.navigate('History')}
             activeOpacity={0.7}
+            accessibilityLabel={t('nav.history')}
+            accessibilityRole="button"
           >
             <Text style={styles.navBtnText}>历史</Text>
           </TouchableOpacity>
@@ -177,6 +193,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             style={[styles.navBtn, styles.navBtnPrimary]}
             onPress={() => navigation.navigate('Analytics')}
             activeOpacity={0.7}
+            accessibilityLabel={t('nav.analytics')}
+            accessibilityRole="button"
           >
             <Text style={[styles.navBtnText, styles.navBtnTextLight]}>分析</Text>
           </TouchableOpacity>

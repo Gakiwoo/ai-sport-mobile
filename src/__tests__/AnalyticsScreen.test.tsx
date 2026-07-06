@@ -21,10 +21,9 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// ── StorageService mock ──
-jest.mock('../services/StorageService', () => ({
+jest.mock('../services/WorkoutRepository', () => ({
   __esModule: true,
-  default: {
+  workoutRepository: {
     getAnalytics: jest.fn(() =>
       Promise.resolve({
         totalWorkouts: 5,

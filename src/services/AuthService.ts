@@ -42,9 +42,9 @@ export class AuthError extends Error {
 }
 
 // ── Token 刷新锁：确保并发 401 只触发一次 refresh ──
-let refreshPromise: Promise<boolean> | null = null;
+let refreshPromise: Promise<AuthTokens | null> | null = null;
 
-function refreshOnce(token: string): Promise<boolean> {
+function refreshOnce(token: string): Promise<AuthTokens | null> {
   if (!refreshPromise) {
     refreshPromise = refreshToken(token).finally(() => {
       refreshPromise = null;
@@ -56,7 +56,15 @@ function refreshOnce(token: string): Promise<boolean> {
 // ── 内部：fetch 封装 ──
 async function authFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const tokens = await getStoredTokens();
+  return authFetchWithTokens(path, options, tokens);
+}
 
+/** 带显式 tokens 的 fetch。重试时直接用 refreshOnce 返回的内存 token 对象。 */
+async function authFetchWithTokens(
+  path: string,
+  options: RequestInit = {},
+  tokens: AuthTokens | null,
+): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> | undefined),
@@ -75,10 +83,10 @@ async function authFetch(path: string, options: RequestInit = {}): Promise<Respo
 
   // 如果 401，尝试 refresh token（通过锁确保并发安全）
   if (res.status === 401 && tokens?.refreshToken && !path.includes('/auth/refresh')) {
-    const refreshed = await refreshOnce(tokens.refreshToken);
-    if (refreshed) {
-      // 用新 token 重试
-      return authFetch(path, options);
+    const newTokens = await refreshOnce(tokens.refreshToken);
+    if (newTokens) {
+      // 用新 token 重试（内存对象，不依赖存储可见性）
+      return authFetchWithTokens(path, options, newTokens);
     }
   }
 
@@ -128,7 +136,7 @@ async function clearSession(): Promise<void> {
 }
 
 // ── Refresh Token ──
-async function refreshToken(refreshTokenStr: string): Promise<boolean> {
+async function refreshToken(refreshTokenStr: string): Promise<AuthTokens | null> {
   try {
     const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
       method: 'POST',
@@ -142,7 +150,7 @@ async function refreshToken(refreshTokenStr: string): Promise<boolean> {
     if (!res.ok) {
       // refresh 失败，清除本地登录状态
       await clearSession();
-      return false;
+      return null;
     }
 
     // 从响应头提取新 token
@@ -150,8 +158,12 @@ async function refreshToken(refreshTokenStr: string): Promise<boolean> {
     const newAccessToken = extractCookie(setCookie, 'access_token');
     const newRefreshToken = extractCookie(setCookie, 'refresh_token');
 
-    if (newAccessToken && newRefreshToken) {
-      await storeTokens({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+    const tokens =
+      newAccessToken && newRefreshToken
+        ? { accessToken: newAccessToken, refreshToken: newRefreshToken }
+        : null;
+    if (tokens) {
+      await storeTokens(tokens);
     }
 
     // 同时解析 user
@@ -160,9 +172,9 @@ async function refreshToken(refreshTokenStr: string): Promise<boolean> {
       await storeUser(data.user);
     }
 
-    return true;
+    return tokens;
   } catch {
-    return false;
+    return null;
   }
 }
 

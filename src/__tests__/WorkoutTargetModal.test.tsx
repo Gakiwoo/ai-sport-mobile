@@ -42,17 +42,13 @@ describe('WorkoutTargetModal', () => {
   });
 
   it('定数模式显示目标次数设置', async () => {
-    const tree = await renderToJSON(
-      <WorkoutTargetModal {...defaultProps} isTimed={false} />,
-    );
+    const tree = await renderToJSON(<WorkoutTargetModal {...defaultProps} isTimed={false} />);
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('目标次数');
   });
 
   it('定时模式显示目标时长设置', async () => {
-    const tree = await renderToJSON(
-      <WorkoutTargetModal {...defaultProps} isTimed={true} />,
-    );
+    const tree = await renderToJSON(<WorkoutTargetModal {...defaultProps} isTimed={true} />);
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('目标时长');
     // 60 and s are rendered as separate children
@@ -61,9 +57,7 @@ describe('WorkoutTargetModal', () => {
   });
 
   it('不可见时不渲染内容', async () => {
-    const tree = await renderToJSON(
-      <WorkoutTargetModal {...defaultProps} visible={false} />,
-    );
+    const tree = await renderToJSON(<WorkoutTargetModal {...defaultProps} visible={false} />);
     // Modal visible=false 时可能渲染 null 或空
     expect(tree).toBeDefined();
   });

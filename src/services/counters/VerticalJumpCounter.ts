@@ -386,8 +386,10 @@ export class VerticalJumpCounter extends ExerciseCounter {
     // 更新最佳成绩
     if (heightCm > this.maxJumpHeightCm) {
       this.maxJumpHeightCm = heightCm;
-      this.count = Math.round(heightCm);
     }
+
+    // count 字段存完成次数（jumpCount），高度通过 exerciseResult.heightCm 传递
+    this.count = this.jumpCount;
 
     // 重置本次跳跃参数
     this.crouchKneeMin = 180;

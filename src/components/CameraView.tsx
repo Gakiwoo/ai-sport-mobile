@@ -148,14 +148,20 @@ export default function CameraView({
           style={styles.webview}
           javaScriptEnabled={true}
           domStorageEnabled={true}
-          allowFileAccess={true}
+          allowFileAccess={false}
           startInLoadingState={false}
           onMessage={handleMessage}
           onLoadEnd={handleLoadEnd}
           allowsInlineMediaPlayback={true}
           mediaPlaybackRequiresUserAction={false}
           sharedCookiesEnabled={false}
-          originWhitelist={['*']}
+          originWhitelist={[
+            'https://localhost',
+            'https://gakiwoo.com',
+            'https://registry.npmmirror.com',
+            'https://cdn.jsdelivr.net',
+            'https://unpkg.com',
+          ]}
           cacheEnabled={true}
           androidLayerType="hardware"
           onError={(syntheticEvent) => {
@@ -187,10 +193,20 @@ export default function CameraView({
           <ScrollView style={styles.errorScroll} contentContainerStyle={styles.errorScrollContent}>
             <Text style={styles.errorDetail}>{errorMessage || '请确认已授予相机权限'}</Text>
           </ScrollView>
-          <TouchableOpacity style={styles.settingsButton} onPress={handleOpenSettings}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={handleOpenSettings}
+            accessibilityLabel="打开系统设置"
+            accessibilityRole="button"
+          >
             <Text style={styles.settingsButtonText}>打开设置</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.retryButton} onPress={handleReload}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={handleReload}
+            accessibilityLabel="重试"
+            accessibilityRole="button"
+          >
             <Text style={styles.retryButtonText}>重试</Text>
           </TouchableOpacity>
         </View>
@@ -209,6 +225,7 @@ export default function CameraView({
           <Text style={styles.fpsSubText}>
             {performanceMonitor.getAverageInferenceMs().toFixed(0)} ms
           </Text>
+          <Text style={styles.fpsSubText}>{performanceMonitor.getCurrentTier()}</Text>
         </View>
       )}
     </View>

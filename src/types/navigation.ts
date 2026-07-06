@@ -11,6 +11,7 @@ export type RootStackParamList = {
   Workout: { exerciseType: ExerciseType };
   History: undefined;
   Analytics: undefined;
+  Pilot: undefined;
   PrivacyPolicy: undefined;
 };
 
@@ -21,4 +22,5 @@ export type HomeScreenProps = StackScreenProps<RootStackParamList, 'Home'>;
 export type WorkoutScreenProps = StackScreenProps<RootStackParamList, 'Workout'>;
 export type HistoryScreenProps = StackScreenProps<RootStackParamList, 'History'>;
 export type AnalyticsScreenProps = StackScreenProps<RootStackParamList, 'Analytics'>;
+export type PilotScreenProps = StackScreenProps<RootStackParamList, 'Pilot'>;
 export type PrivacyPolicyScreenProps = StackScreenProps<RootStackParamList, 'PrivacyPolicy'>;

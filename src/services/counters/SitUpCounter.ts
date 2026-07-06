@@ -403,9 +403,10 @@ export class SitUpCounter extends ExerciseCounter {
     const baselineHipAnkleDist = this.baselineAnkleY - this.baselineHipY;
 
     // 如果臀部相对脚踝的距离显著减小 → 臀部上抬
+    // 与 Desktop 端保持一致，不使用 *3 宽松系数
     if (baselineHipAnkleDist > 0) {
       const liftRatio = (baselineHipAnkleDist - currentHipAnkleDist) / baselineHipAnkleDist;
-      if (liftRatio > this.HIP_LIFT_THRESHOLD * 3) {
+      if (liftRatio > this.HIP_LIFT_THRESHOLD) {
         this.lastFoul = 'hip_lift';
       }
     }
@@ -415,6 +416,14 @@ export class SitUpCounter extends ExerciseCounter {
 
   getPhase(): SitUpPhase {
     return this.phase;
+  }
+
+  getResultValue(): number {
+    return this.count;
+  }
+
+  getResultUnit(): string {
+    return '次';
   }
 
   getTrunkAngle(): number {

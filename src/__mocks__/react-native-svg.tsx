@@ -7,9 +7,20 @@
 import React from 'react';
 import { View } from 'react-native';
 
+type SvgMockProps = Record<string, unknown> & {
+  children?: React.ReactNode;
+};
+
 function createMockComponent(name: string) {
-  return ({ children, ...props }: any) =>
-    React.createElement(View, { ...props, 'data-svg-mock': name }, children);
+  return ({ children, ...props }: SvgMockProps = {}) => {
+    const MockView = View as React.ComponentType<Record<string, unknown>>;
+    const viewProps: Record<string, unknown> = {
+      ...props,
+      'data-svg-mock': name,
+    };
+
+    return React.createElement(MockView, viewProps, children);
+  };
 }
 
 export const Svg = createMockComponent('Svg');

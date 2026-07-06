@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { WebViewMessageEvent } from 'react-native-webview';
+import type { WebView, WebViewMessageEvent } from 'react-native-webview';
 import {
   buildBlobAppendScript,
   buildBlobBeginScript,
@@ -19,8 +19,10 @@ import {
   parseWebViewMessage,
 } from '../mediapipe/mediapipeBridge';
 import { Pose } from '../types';
+import { AdaptivePoseRuntime } from '../utils/adaptivePoseRuntime';
 
 type CameraState = 'idle' | 'loading' | 'ready' | 'error';
+type WebViewBridge = Pick<WebView, 'injectJavaScript'> & Partial<Pick<WebView, 'reload'>>;
 type BlobAckWaiter = {
   resolve: () => void;
   reject: (error: Error) => void;
@@ -33,7 +35,7 @@ interface UseWebViewMessageHandlerOptions {
   onReady?: () => void;
   onError?: (message: string) => void;
   onCdnStatus?: (message: string) => void;
-  adaptiveRuntimeRef?: React.MutableRefObject<any>;
+  adaptiveRuntimeRef?: React.MutableRefObject<AdaptivePoseRuntime>;
 }
 
 interface UseWebViewMessageHandlerReturn {
@@ -47,9 +49,9 @@ interface UseWebViewMessageHandlerReturn {
   ) => void;
   handleMessage: (event: WebViewMessageEvent) => void;
   handleReload: () => void;
-  injectBlobFile: (webView: any) => Promise<void>;
+  injectBlobFile: (webView: WebViewBridge) => Promise<void>;
   injectRuntimeControls: (
-    webView: any,
+    webView: WebViewBridge,
     options: {
       isActive: boolean;
       modelComplexity: number;
@@ -59,7 +61,7 @@ interface UseWebViewMessageHandlerReturn {
     },
   ) => void;
   rejectPendingBlobAcks: (reason: string) => void;
-  webViewRef: React.RefObject<any>;
+  webViewRef: React.RefObject<WebView | null>;
 }
 
 export function useWebViewMessageHandler(
@@ -69,7 +71,7 @@ export function useWebViewMessageHandler(
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [loadingDetail, setLoadingDetail] = useState<string>('准备中...');
 
-  const webViewRef = useRef<any>(null);
+  const webViewRef = useRef<WebView | null>(null);
   const isMountedRef = useRef(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraStateRef = useRef<CameraState>('idle');
@@ -108,12 +110,11 @@ export function useWebViewMessageHandler(
   }, []);
 
   const injectBlobFile = useCallback(
-    async (webView: any): Promise<void> => {
+    async (webView: WebViewBridge): Promise<void> => {
       try {
         const files = mediaPipeAssetService.getFiles();
 
         for (const filename of files) {
-          if (filename === 'pose.js') continue;
           const base64 = await mediaPipeAssetService.getFileBase64(filename);
           const mimeType = mediaPipeAssetService.getMimeType(filename);
 
@@ -133,16 +134,6 @@ export function useWebViewMessageHandler(
           }
 
           await ackPromise;
-        }
-
-        try {
-          const poseJsBase64 = await mediaPipeAssetService.getFileBase64('pose.js');
-          webView.injectJavaScript(
-            'window.__evalPoseJs(' + JSON.stringify(poseJsBase64) + ');true;',
-          );
-        } catch (err) {
-          console.warn('[CameraView] Failed to inject pose.js:', err);
-          throw err;
         }
 
         webView.injectJavaScript('init();true;');
@@ -277,12 +268,12 @@ export function useWebViewMessageHandler(
     setCameraState('loading');
     injectionDoneRef.current = false;
     startTimeout();
-    webViewRef.current?.reload();
+    webViewRef.current?.reload?.();
   }, [startTimeout]);
 
   const injectRuntimeControls = useCallback(
     (
-      webView: any,
+      webView: WebViewBridge,
       config: {
         isActive: boolean;
         modelComplexity: number;
@@ -291,7 +282,7 @@ export function useWebViewMessageHandler(
         enablePreviewPose: boolean;
       },
     ) => {
-      webView?.injectJavaScript(buildRuntimeControlScript(config));
+      webView.injectJavaScript(buildRuntimeControlScript(config));
     },
     [],
   );

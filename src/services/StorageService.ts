@@ -1,7 +1,11 @@
+/**
+ * @deprecated 请使用 WorkoutRepository (src/services/WorkoutRepository.ts) 代替。
+ *             此类仅保留用于向后兼容，使用独立存储 key 避免与 WorkoutRepository 冲突。
+ */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WorkoutSession } from '../types';
 
-const STORAGE_KEY = '@workout_history';
+const STORAGE_KEY = '@workout_history_legacy';
 const MAX_RECENT_WORKOUTS = 10;
 const MAX_STORED_WORKOUTS = 1000;
 

@@ -61,6 +61,7 @@ export class StandingLongJumpCounter extends ExerciseCounter {
   private landingAnkleY = 0; // 落地脚踝 Y
   private peakDistancePx = 0; // 最大水平位移（像素）
   private jumpDistanceCm = 0; // 最终距离（厘米）
+  private jumpCount = 0; // 完成次数（跳远属测量型运动，count 字段存次数而非距离）
 
   // ── 配置 ──
   private readonly CROUCH_ANGLE_THRESHOLD = 100; // 膝盖角 < 此值判定蹲下
@@ -143,6 +144,7 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     this.landingAnkleY = 0;
     this.peakDistancePx = 0;
     this.jumpDistanceCm = 0;
+    this.jumpCount = 0;
     this.stabilityWindow.clear();
     this.calibrationRequired = true;
     this.calibration.calibrated = false;
@@ -357,7 +359,9 @@ export class StandingLongJumpCounter extends ExerciseCounter {
     if (distanceCm < 50 || distanceCm > 400) return;
 
     this.jumpDistanceCm = distanceCm;
-    this.count = Math.round(distanceCm);
+    // 修复：count 字段存完成次数，不存距离；距离通过 exerciseResult.distanceCm 传递
+    this.jumpCount++;
+    this.count = this.jumpCount;
 
     // 重置动作参数，准备下一次
     this.crouchMaxDepth = 0;

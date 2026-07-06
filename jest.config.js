@@ -6,15 +6,20 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.jest.json',
-    }],
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.jest.json',
+      },
+    ],
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^react-native-svg$': '<rootDir>/src/__mocks__/react-native-svg.tsx',
     '^react-native$': '<rootDir>/src/__mocks__/react-native.tsx',
-    '^sentry-expo$': '<rootDir>/src/__mocks__/sentry-expo.ts',
+    '^@sentry/react-native$': '<rootDir>/src/__mocks__/sentry-react-native.ts',
+    '^expo-file-system/legacy$': '<rootDir>/src/__mocks__/expo-file-system-legacy.ts',
+    '^expo-sharing$': '<rootDir>/src/__mocks__/expo-sharing.ts',
     '\\.html$': '<rootDir>/src/mediapipe/__mocks__/htmlModule.js',
   },
   collectCoverageFrom: [

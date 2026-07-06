@@ -26,10 +26,10 @@ export default function WorkoutControls({
           style={[styles.startButton, startCountdown !== null && styles.disabledButton]}
           onPress={onStart}
           disabled={startCountdown !== null}
+          accessibilityLabel={startCountdown !== null ? '准备中' : '开始'}
+          accessibilityRole="button"
         >
-          <Text style={styles.buttonText}>
-            {startCountdown !== null ? '准备中...' : '开始'}
-          </Text>
+          <Text style={styles.buttonText}>{startCountdown !== null ? '准备中...' : '开始'}</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
@@ -37,6 +37,8 @@ export default function WorkoutControls({
           style={[styles.stopButton, isSaving && styles.disabledButton]}
           onPress={onConfirmStop}
           disabled={isSaving}
+          accessibilityLabel={isSaving ? '保存中' : '停止'}
+          accessibilityRole="button"
         >
           <Text style={[styles.buttonText, styles.stopButtonText]}>
             {isSaving ? '保存中...' : '停止'}

@@ -301,6 +301,14 @@ export class JumpingJacksCounter extends ExerciseCounter {
     return this.calibrated;
   }
 
+  getResultValue(): number {
+    return this.count;
+  }
+
+  getResultUnit(): string {
+    return '次';
+  }
+
   getFeedback(_pose?: Pose): ExerciseFeedback | null {
     switch (this.phase) {
       case 'idle':

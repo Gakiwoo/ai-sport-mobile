@@ -1,7 +1,7 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { useWorkout } from '../hooks/useWorkout';
-import StorageService from '../services/StorageService';
+import { workoutRepository } from '../services/WorkoutRepository';
 import { standingPose } from './testHelpers';
 
 const mockCounter = {
@@ -9,16 +9,27 @@ const mockCounter = {
   reset: jest.fn(),
   setFrameInterval: jest.fn(),
   processFrame: jest.fn(),
+  processFrameResult: jest.fn(),
+  startSession: jest.fn(),
+  getSessionResult: jest.fn(),
 };
 
 jest.mock('../services/counters/SquatsCounter', () => ({
   SquatsCounter: jest.fn(() => mockCounter),
 }));
 
-jest.mock('../services/StorageService', () => ({
-  __esModule: true,
-  default: {
-    saveWorkout: jest.fn().mockResolvedValue(true),
+jest.mock('../services/WorkoutRepository', () => ({
+  workoutRepository: {
+    save: jest.fn().mockResolvedValue(true),
+    getAll: jest.fn().mockResolvedValue([]),
+  },
+}));
+
+jest.mock('../services/SyncService', () => ({
+  syncService: {
+    syncAfterWorkout: jest.fn().mockResolvedValue(undefined),
+    start: jest.fn(),
+    stop: jest.fn(),
   },
 }));
 
@@ -59,6 +70,20 @@ describe('useWorkout flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCounter.getCount.mockReturnValue(0);
+    mockCounter.getSessionResult.mockReturnValue({
+      sessionId: 'session-flow',
+      exerciseType: 'squats',
+      reps: 0,
+      validCount: 0,
+      invalidCount: 0,
+      foulCount: 0,
+      confidence: 0,
+      durationMs: 0,
+      feedback: [],
+      algorithmLog: [],
+      startedAt: '2026-07-01T00:00:00.000Z',
+      endedAt: '2026-07-01T00:00:01.000Z',
+    });
   });
 
   it('start activates workout and resets counter', () => {
@@ -71,6 +96,13 @@ describe('useWorkout flow', () => {
 
     expect(harness.api.isActive).toBe(true);
     expect(mockCounter.reset).toHaveBeenCalled();
+    expect(mockCounter.startSession).toHaveBeenCalledWith(
+      'squats',
+      expect.objectContaining({
+        sessionId: expect.any(String),
+        startedAt: expect.any(String),
+      }),
+    );
   });
 
   it('processFrame updates count while active', () => {
@@ -87,7 +119,7 @@ describe('useWorkout flow', () => {
     });
     harness.rerender();
 
-    expect(mockCounter.processFrame).toHaveBeenCalled();
+    expect(mockCounter.processFrameResult).toHaveBeenCalled();
     expect(harness.api.count).toBe(5);
   });
 
@@ -100,6 +132,20 @@ describe('useWorkout flow', () => {
     harness.rerender();
 
     mockCounter.getCount.mockReturnValue(12);
+    mockCounter.getSessionResult.mockReturnValue({
+      sessionId: 'session-flow',
+      exerciseType: 'squats',
+      reps: 12,
+      validCount: 12,
+      invalidCount: 0,
+      foulCount: 0,
+      confidence: 1,
+      durationMs: 1000,
+      feedback: [],
+      algorithmLog: [],
+      startedAt: '2026-07-01T00:00:00.000Z',
+      endedAt: '2026-07-01T00:00:01.000Z',
+    });
 
     let result!: Awaited<ReturnType<typeof harness.api.stop>>;
     await act(async () => {
@@ -107,10 +153,16 @@ describe('useWorkout flow', () => {
     });
     harness.rerender();
 
-    expect(StorageService.saveWorkout).toHaveBeenCalled();
+    expect(workoutRepository.save).toHaveBeenCalled();
     expect(result.saved).toBe(true);
     expect(result.session?.count).toBe(12);
     expect(result.session?.exerciseType).toBe('squats');
+    expect(result.session?.exerciseResult).toMatchObject({
+      exerciseType: 'squats',
+      reps: 12,
+      validCount: 12,
+      confidence: 1,
+    });
     expect(harness.api.isActive).toBe(false);
   });
 
@@ -129,7 +181,7 @@ describe('useWorkout flow', () => {
       result = await harness.api.stop();
     });
 
-    expect(StorageService.saveWorkout).not.toHaveBeenCalled();
+    expect(workoutRepository.save).not.toHaveBeenCalled();
     expect(result.session).toBeNull();
     expect(result.saved).toBe(false);
   });

@@ -21,6 +21,8 @@ export interface PerfFrameRecord {
   timestamp: number;
 }
 
+export type DevicePerformanceTier = 'high' | 'balanced' | 'constrained';
+
 export interface PerfSessionReport {
   sessionId: string;
   startTime: number;
@@ -34,7 +36,21 @@ export interface PerfSessionReport {
   avgFps: number;
   lowFpsCount: number;
   lowFpsRatio: number; // 0-1
+  performanceTier: DevicePerformanceTier;
   deviceInfo?: string;
+}
+
+export function classifyPerformanceTier(input: {
+  avgInferenceMs: number;
+  lowFpsRatio: number;
+}): DevicePerformanceTier {
+  if (input.avgInferenceMs <= 30 && input.lowFpsRatio <= 0.15) {
+    return 'high';
+  }
+  if (input.avgInferenceMs <= 55 && input.lowFpsRatio <= 0.35) {
+    return 'balanced';
+  }
+  return 'constrained';
 }
 
 class PerformanceMonitor {
@@ -106,6 +122,18 @@ class PerformanceMonitor {
     return sum / window.length;
   }
 
+  /** 当前真机性能档位，用于调试展示和后续运行策略降级 */
+  getCurrentTier(): DevicePerformanceTier {
+    const window = this.frames.slice(-FPS_WINDOW_SIZE).filter((frame) => frame.isActive);
+    if (window.length === 0) return 'balanced';
+
+    const avgInferenceMs =
+      window.reduce((sum, frame) => sum + frame.inferenceMs, 0) / window.length;
+    const lowFpsCount = window.filter((frame) => frame.inferenceMs > 1000 / FPS_TARGET).length;
+    const lowFpsRatio = lowFpsCount / window.length;
+    return classifyPerformanceTier({ avgInferenceMs, lowFpsRatio });
+  }
+
   /** 是否正在运行 */
   get isRunning(): boolean {
     return this._isRunning;
@@ -144,6 +172,8 @@ class PerformanceMonitor {
       return f.inferenceMs > 1000 / FPS_TARGET;
     }).length;
     const lowFpsRatio = activeFrames.length > 0 ? lowFpsCount / activeFrames.length : 0;
+    const roundedAvgInferenceMs = Math.round(avgInferenceMs * 10) / 10;
+    const roundedLowFpsRatio = Math.round(lowFpsRatio * 100) / 100;
 
     const now = Date.now();
     return {
@@ -152,13 +182,17 @@ class PerformanceMonitor {
       endTime: now,
       durationMs: now - this.sessionStartTime,
       totalFrames: this.frames.length,
-      avgInferenceMs: Math.round(avgInferenceMs * 10) / 10,
+      avgInferenceMs: roundedAvgInferenceMs,
       medianInferenceMs: Math.round(medianInferenceMs * 10) / 10,
       p95InferenceMs: Math.round(p95InferenceMs * 10) / 10,
       maxInferenceMs: Math.round(maxInferenceMs * 10) / 10,
       avgFps: Math.round(avgFps * 10) / 10,
       lowFpsCount,
-      lowFpsRatio: Math.round(lowFpsRatio * 100) / 100,
+      lowFpsRatio: roundedLowFpsRatio,
+      performanceTier: classifyPerformanceTier({
+        avgInferenceMs: roundedAvgInferenceMs,
+        lowFpsRatio: roundedLowFpsRatio,
+      }),
     };
   }
 

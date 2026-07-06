@@ -1,4 +1,8 @@
-import { performanceMonitor, FPS_LOW_THRESHOLD } from '../services/PerformanceMonitor';
+import {
+  classifyPerformanceTier,
+  performanceMonitor,
+  FPS_LOW_THRESHOLD,
+} from '../services/PerformanceMonitor';
 
 // Mock AsyncStorage — store defined inside factory for Jest hoisting compliance
 jest.mock('@react-native-async-storage/async-storage', () => {
@@ -19,7 +23,9 @@ jest.mock('@react-native-async-storage/async-storage', () => {
 
 /** Access the in-memory store from the mock */
 function getStore(): Map<string, string> {
-  return (require('@react-native-async-storage/async-storage') as any).__store;
+  return (require('@react-native-async-storage/async-storage') as {
+    __store: Map<string, string>;
+  }).__store;
 }
 
 describe('PerformanceMonitor', () => {
@@ -80,6 +86,7 @@ describe('PerformanceMonitor', () => {
     expect(report).not.toBeNull();
     expect(report!.totalFrames).toBe(10);
     expect(report!.avgInferenceMs).toBeGreaterThan(0);
+    expect(report!.performanceTier).toBe('high');
     expect(report!.sessionId).toContain('perf_');
     expect(report!.durationMs).toBeGreaterThanOrEqual(0);
   });
@@ -117,5 +124,19 @@ describe('PerformanceMonitor', () => {
 
   it('FPS_LOW_THRESHOLD 导出正确', () => {
     expect(FPS_LOW_THRESHOLD).toBe(15);
+  });
+
+  it('classifyPerformanceTier 按推理耗时和低帧率比例分档', () => {
+    expect(classifyPerformanceTier({ avgInferenceMs: 24, lowFpsRatio: 0.05 })).toBe('high');
+    expect(classifyPerformanceTier({ avgInferenceMs: 42, lowFpsRatio: 0.2 })).toBe('balanced');
+    expect(classifyPerformanceTier({ avgInferenceMs: 80, lowFpsRatio: 0.7 })).toBe('constrained');
+  });
+
+  it('getCurrentTier 根据最近活跃帧返回实时档位', () => {
+    performanceMonitor.start();
+    performanceMonitor.recordFrame(70, true);
+    performanceMonitor.recordFrame(75, true);
+    performanceMonitor.recordFrame(80, true);
+    expect(performanceMonitor.getCurrentTier()).toBe('constrained');
   });
 });

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { RegisterScreenProps } from '../types/navigation';
+import { t } from '../i18n';
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const { register, isAuthenticating, error, clearError } = useAuth();
@@ -66,7 +67,11 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity onPress={clearError}>
+              <TouchableOpacity
+                onPress={clearError}
+                accessibilityLabel={t('a11y.dismissError')}
+                accessibilityRole="button"
+              >
                 <Text style={styles.errorDismiss}>×</Text>
               </TouchableOpacity>
             </View>
@@ -80,6 +85,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             value={nickname}
             onChangeText={setNickname}
             editable={!isAuthenticating}
+            accessibilityLabel={t('auth.nickname')}
           />
 
           <TextInput
@@ -92,6 +98,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             value={email}
             onChangeText={setEmail}
             editable={!isAuthenticating}
+            accessibilityLabel={t('auth.email')}
           />
 
           <TextInput
@@ -102,6 +109,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             value={password}
             onChangeText={setPassword}
             editable={!isAuthenticating}
+            accessibilityLabel={t('auth.password')}
           />
 
           <TextInput
@@ -113,6 +121,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             onChangeText={setConfirmPassword}
             editable={!isAuthenticating}
             onSubmitEditing={handleRegister}
+            accessibilityLabel={t('a11y.confirmPassword')}
           />
 
           <TouchableOpacity
@@ -120,11 +129,18 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             onPress={handleRegister}
             activeOpacity={0.8}
             disabled={isAuthenticating}
+            accessibilityLabel={t('auth.register')}
+            accessibilityRole="button"
           >
             <Text style={styles.buttonText}>{isAuthenticating ? '注册中...' : '注册'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.switchLink} onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity
+            style={styles.switchLink}
+            onPress={() => navigation.navigate('Login')}
+            accessibilityLabel={t('a11y.goToLogin')}
+            accessibilityRole="link"
+          >
             <Text style={styles.switchText}>
               已有账号？<Text style={styles.switchHighlight}>立即登录</Text>
             </Text>

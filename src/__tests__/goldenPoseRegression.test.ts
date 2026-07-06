@@ -1,11 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { GoldenPoseFixture } from './fixtures/goldenPoses/types';
-import {
-  assertGoldenExpectation,
-  poseFromPreset,
-  runGoldenPoseFixture,
-} from './goldenPoseRunner';
+import { assertGoldenExpectation, poseFromPreset, runGoldenPoseFixture } from './goldenPoseRunner';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures', 'goldenPoses');
 

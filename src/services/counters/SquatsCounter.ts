@@ -1,344 +1,161 @@
-/**
- * SquatsCounter V2
- *
- * 算法核心：基于膝盖角度 + 躯干稳定性的深蹲检测
- *
- * 参考方案：
- * - MediaPipe Fitness: squat counter by knee angle
- * - 中考体考深蹲标准：大腿平行地面（膝盖角 ≈ 90°）
- *
- * 精度优化：
- * 1. Kalman 滤波平滑膝盖角度和背部角度
- * 2. 完整状态机：idle → standing → descending → bottom → ascending → standing
- * 3. 状态确认防抖（需保持 N 帧才切换状态）
- * 4. 犯规检测：背部过度前倾、膝盖内扣、蹲深不够
- * 5. 动作反馈系统（实时指导）
- * 6. 自适应深度阈值（基于用户站立时的基线角度）
- */
-
-import { Pose } from '../../types';
-import { ExerciseFeedback } from '../../types';
-import { ExerciseCounter } from '../ExerciseCounter';
+import { ExerciseFeedback, Keypoint, Pose } from '../../types';
 import { POSE_MIN_SCORE } from '../../constants/exerciseConfig';
+import { ExerciseCounter } from '../ExerciseCounter';
 import { KalmanFilter1D, SlidingWindow } from '../../utils/filters';
 
-// ── 深蹲阶段 ──
 type SquatPhase = 'idle' | 'standing' | 'descending' | 'bottom' | 'ascending';
-
-// ── 犯规类型 ──
 type FoulType = 'shallow_squat' | 'back_lean' | 'knee_valgus' | 'too_fast';
 
+interface SquatKeypoints {
+  leftShoulder: Keypoint;
+  rightShoulder: Keypoint;
+  leftHip: Keypoint;
+  rightHip: Keypoint;
+  leftKnee: Keypoint;
+  rightKnee: Keypoint;
+  leftAnkle: Keypoint;
+  rightAnkle: Keypoint;
+}
+
 export class SquatsCounter extends ExerciseCounter {
-  // ── 滤波器 ──
-  private kneeAngleFilter = new KalmanFilter1D(0.008, 0.06); // 膝盖角度滤波
-  private backAngleFilter = new KalmanFilter1D(0.01, 0.08); // 背部角度滤波
-  private hipYFilter = new KalmanFilter1D(0.005, 0.03); // 髋部 Y 滤波
+  private readonly leftKneeFilter = new KalmanFilter1D(0.3, 4);
+  private readonly rightKneeFilter = new KalmanFilter1D(0.3, 4);
+  private readonly leftHipFilter = new KalmanFilter1D(0.3, 4);
+  private readonly rightHipFilter = new KalmanFilter1D(0.3, 4);
+  private readonly centerYFilter = new KalmanFilter1D(0.5, 6);
 
-  // ── 历史窗口 ──
-  private kneeAngleHistory = new SlidingWindow(20);
-  private backAngleHistory = new SlidingWindow(20);
+  private readonly kneeAngleWindow = new SlidingWindow(7);
+  private readonly hipAngleWindow = new SlidingWindow(7);
+  private readonly stabilityWindow = new SlidingWindow(10);
+  private readonly calibrationKnees: number[] = [];
+  private readonly calibrationHips: number[] = [];
+  private readonly calibrationCenters: number[] = [];
+  private readonly calibrationHeights: number[] = [];
 
-  // ── 状态机 ──
   private phase: SquatPhase = 'idle';
   private phaseFrameCount = 0;
-  private lastPhase: SquatPhase = 'idle';
+  private standingKneeAngle = 170;
+  private standingHipAngle = 160;
+  private standingCenterY = 0;
+  private bodyHeight = 1;
+  private calibrated = false;
 
-  // ── 动作参数 ──
-  private standingKneeAngle = 175; // 站立时的膝盖角度基线
-  private minKneeAngleInCycle = 180; // 本次下蹲最小膝盖角度
-  private backAngleAtBottom = 90; // 蹲底时的背部角度
-  private hipBaselineY = 0; // 髋部 Y 基线
-  private baselineWindow = new SlidingWindow(30);
-
-  // ── 判定阈值 ──
-  private readonly DOWN_ANGLE = 100; // 膝盖角 < 此值 → 蹲到底
-  private readonly UP_ANGLE = 155; // 膝盖角 > 此值 → 站起来
-  private readonly MIN_SQUAT_ANGLE = 110; // 有效深蹲最大角度（蹲得不够深）
-  private readonly BACK_LEAN_THRESHOLD = 60; // 背部角度 < 此值 → 过度前倾
-  private readonly CONFIRM_FRAMES_DOWN_30FPS = 4;
-  private readonly CONFIRM_FRAMES_UP_30FPS = 4;
-  private readonly MIN_CYCLE_FRAMES_30FPS = 15;
-  private readonly MAX_CYCLE_FRAMES_30FPS = 120;
-
-  // ── 统计 ──
+  private pendingDown = false;
   private cycleStartFrame = 0;
+  private minKneeAngleInCycle = 180;
+  private maxDepthScoreInCycle = 0;
+  private currentKneeAngle = 180;
+  private currentHipAngle = 180;
+  private currentDepthScore = 0;
   private foulCount = 0;
   private lastFoul: FoulType | null = null;
-  private currentKneeAngle = 175;
 
-  // ── 膝盖内扣检测 ──
-  private kneeTrackingAngle = 0; // 膝盖追踪角（正面看膝盖朝向）
+  private readonly CALIBRATION_REQUIRED = 3;
+  private readonly STABLE_KNEE_STDDEV = 3;
+  private readonly DESCEND_THRESHOLD = 0.32;
+  private readonly DOWN_THRESHOLD = 0.55;
+  private readonly UP_THRESHOLD = 0.22;
+  private readonly MIN_VALID_DEPTH = 0.52;
+  private readonly MIN_VALID_KNEE_ANGLE = 120;
+  private readonly MIN_CYCLE_FRAMES_30FPS = 8;
+  private readonly MAX_CYCLE_FRAMES_30FPS = 150;
+
+  constructor() {
+    super();
+    this.reset();
+  }
 
   reset(): void {
     super.reset();
     this.phase = 'idle';
     this.phaseFrameCount = 0;
-    this.lastPhase = 'idle';
-    this.standingKneeAngle = 175;
-    this.minKneeAngleInCycle = 180;
-    this.backAngleAtBottom = 90;
-    this.hipBaselineY = 0;
+    this.standingKneeAngle = 170;
+    this.standingHipAngle = 160;
+    this.standingCenterY = 0;
+    this.bodyHeight = 1;
+    this.calibrated = false;
+    this.pendingDown = false;
     this.cycleStartFrame = 0;
+    this.minKneeAngleInCycle = 180;
+    this.maxDepthScoreInCycle = 0;
+    this.currentKneeAngle = 180;
+    this.currentHipAngle = 180;
+    this.currentDepthScore = 0;
     this.foulCount = 0;
     this.lastFoul = null;
-    this.currentKneeAngle = 175;
-    this.kneeTrackingAngle = 0;
-    this.kneeAngleFilter.reset(175);
-    this.backAngleFilter.reset(90);
-    this.hipYFilter.reset(0.5);
-    this.resizeTimingWindows();
-    this.kneeAngleHistory.clear();
-    this.backAngleHistory.clear();
-    this.baselineWindow.clear();
+    this.leftKneeFilter.reset(170);
+    this.rightKneeFilter.reset(170);
+    this.leftHipFilter.reset(160);
+    this.rightHipFilter.reset(160);
+    this.centerYFilter.reset(0);
+    this.calibrationKnees.length = 0;
+    this.calibrationHips.length = 0;
+    this.calibrationCenters.length = 0;
+    this.calibrationHeights.length = 0;
+    this.resizeWindows();
+    this.kneeAngleWindow.clear();
+    this.hipAngleWindow.clear();
+    this.stabilityWindow.clear();
   }
 
   protected onFrameIntervalChanged(): void {
-    this.resizeTimingWindows();
-  }
-
-  private resizeTimingWindows(): void {
-    this.kneeAngleHistory.resize(this.framesAt30Fps(20));
-    this.backAngleHistory.resize(this.framesAt30Fps(20));
-    this.baselineWindow.resize(this.framesAt30Fps(30));
+    this.resizeWindows();
   }
 
   processFrame(pose: Pose): void {
     this.totalFrames++;
 
-    // ── 获取关键点 ──
-    const leftShoulder = this.getKeypoint(pose, 'left_shoulder');
-    const rightShoulder = this.getKeypoint(pose, 'right_shoulder');
-    const leftHip = this.getKeypoint(pose, 'left_hip');
-    const rightHip = this.getKeypoint(pose, 'right_hip');
-    const leftKnee = this.getKeypoint(pose, 'left_knee');
-    const rightKnee = this.getKeypoint(pose, 'right_knee');
-    const leftAnkle = this.getKeypoint(pose, 'left_ankle');
-    const rightAnkle = this.getKeypoint(pose, 'right_ankle');
+    const points = this.getRequiredKeypoints(pose);
+    if (!points) return;
 
-    if (
-      !leftShoulder ||
-      !rightShoulder ||
-      !leftHip ||
-      !rightHip ||
-      !leftKnee ||
-      !rightKnee ||
-      !leftAnkle ||
-      !rightAnkle
-    )
-      return;
-
-    const minScore = POSE_MIN_SCORE;
-    if (
-      [
-        leftShoulder,
-        rightShoulder,
-        leftHip,
-        rightHip,
-        leftKnee,
-        rightKnee,
-        leftAnkle,
-        rightAnkle,
-      ].some((kp) => (kp.score || 0) < minScore)
-    )
-      return;
-
-    // ── 计算中值 ──
-    const hipMidY = (leftHip.y + rightHip.y) / 2;
-    const shoulderMidX = (leftShoulder.x + rightShoulder.x) / 2;
-    const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
-    const hipMidX = (leftHip.x + rightHip.x) / 2;
-
-    // ── 膝盖角度（髋-膝-踝）──
     const leftKneeAngle = this.calculateAngle(pose, 'left_hip', 'left_knee', 'left_ankle');
     const rightKneeAngle = this.calculateAngle(pose, 'right_hip', 'right_knee', 'right_ankle');
-    if (leftKneeAngle === null || rightKneeAngle === null) return;
+    const leftHipAngle = this.calculateAngle(pose, 'left_shoulder', 'left_hip', 'left_knee');
+    const rightHipAngle = this.calculateAngle(pose, 'right_shoulder', 'right_hip', 'right_knee');
+    if (
+      leftKneeAngle === null ||
+      rightKneeAngle === null ||
+      leftHipAngle === null ||
+      rightHipAngle === null
+    ) {
+      return;
+    }
 
-    const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+    const rawCenterY = this.calculateBodyCenterY(points);
+    const rawBodyHeight = this.calculateBodyHeight(points, rawCenterY);
+    const smoothKneeAngle =
+      (this.leftKneeFilter.filter(leftKneeAngle) + this.rightKneeFilter.filter(rightKneeAngle)) / 2;
+    const smoothHipAngle =
+      (this.leftHipFilter.filter(leftHipAngle) + this.rightHipFilter.filter(rightHipAngle)) / 2;
+    const smoothCenterY = this.centerYFilter.filter(rawCenterY);
 
-    // ── 背部角度（肩-髋-垂直线）
-    // 用髋部到肩部的向量与垂直方向的夹角
-    const backAngle = this.calculateBackAngle(shoulderMidX, shoulderMidY, hipMidX, hipMidY);
+    this.kneeAngleWindow.push(smoothKneeAngle);
+    this.hipAngleWindow.push(smoothHipAngle);
+    this.currentKneeAngle = this.kneeAngleWindow.mean();
+    this.currentHipAngle = this.hipAngleWindow.mean();
 
-    // ── 膝盖内扣检测（正面拍摄时有效）──
-    // 膝盖X应该在脚踝X的外侧（或对齐），如果膝盖X在内侧则为内扣
-    const leftKneeValgus = leftKnee.x < leftAnkle.x ? 1 : 0;
-    const rightKneeValgus = rightKnee.x > rightAnkle.x ? 1 : 0;
-    this.kneeTrackingAngle = (leftKneeValgus + rightKneeValgus) * 10;
-
-    // ── 滤波 ──
-    const smoothKneeAngle = this.kneeAngleFilter.filter(avgKneeAngle);
-    const smoothBackAngle = this.backAngleFilter.filter(backAngle);
-    const smoothHipY = this.hipYFilter.filter(hipMidY);
-
-    this.currentKneeAngle = smoothKneeAngle;
-
-    // ── 记录历史 ──
-    this.kneeAngleHistory.push(smoothKneeAngle);
-    this.backAngleHistory.push(smoothBackAngle);
-
-    // ── 状态机驱动 ──
     this.phaseFrameCount++;
 
-    switch (this.phase) {
-      case 'idle':
-        this.handleIdle(smoothKneeAngle, smoothHipY);
-        break;
-      case 'standing':
-        this.handleStanding(smoothKneeAngle, smoothHipY);
-        break;
-      case 'descending':
-        this.handleDescending(smoothKneeAngle, smoothBackAngle);
-        break;
-      case 'bottom':
-        this.handleBottom(smoothKneeAngle, smoothBackAngle);
-        break;
-      case 'ascending':
-        this.handleAscending(smoothKneeAngle, smoothBackAngle);
-        break;
-    }
-  }
-
-  // ── 状态处理 ──
-
-  private handleIdle(kneeAngle: number, hipY: number): void {
-    // 采集站立基线
-    this.baselineWindow.push(kneeAngle);
-    if (this.baselineWindow.isFull && this.baselineWindow.variance() < 20) {
-      this.standingKneeAngle = this.baselineWindow.mean();
-      this.hipBaselineY = hipY;
-      this.transitionTo('standing');
-    }
-  }
-
-  private handleStanding(kneeAngle: number, hipY: number): void {
-    // 更新基线
-    this.baselineWindow.push(kneeAngle);
-    if (this.baselineWindow.isFull && this.baselineWindow.variance() < 20) {
-      this.standingKneeAngle = this.baselineWindow.mean();
-      this.hipBaselineY = hipY;
-    }
-
-    // 膝盖角度开始减小 → 开始下蹲
-    if (kneeAngle < this.standingKneeAngle - 15) {
-      this.cycleStartFrame = this.totalFrames;
-      this.minKneeAngleInCycle = 180;
-      this.transitionTo('descending');
-    }
-  }
-
-  private handleDescending(kneeAngle: number, backAngle: number): void {
-    // 追踪最小膝盖角度
-    if (kneeAngle < this.minKneeAngleInCycle) {
-      this.minKneeAngleInCycle = kneeAngle;
-      this.backAngleAtBottom = backAngle;
-    }
-
-    // 检测犯规：背部过度前倾
-    if (backAngle < this.BACK_LEAN_THRESHOLD) {
-      this.lastFoul = 'back_lean';
-    }
-
-    // 检测到达底部
-    if (kneeAngle < this.DOWN_ANGLE) {
-      if (this.phaseFrameCount >= this.framesAt30Fps(this.CONFIRM_FRAMES_DOWN_30FPS)) {
-        this.transitionTo('bottom');
-      }
-    }
-
-    // 如果角度又增大（没蹲下去就站起来了）→ 回到 standing
-    if (this.phaseFrameCount > this.framesAt30Fps(5) && kneeAngle > this.standingKneeAngle - 10) {
-      this.transitionTo('standing');
-    }
-  }
-
-  private handleBottom(kneeAngle: number, backAngle: number): void {
-    // 持续追踪最深处
-    if (kneeAngle < this.minKneeAngleInCycle) {
-      this.minKneeAngleInCycle = kneeAngle;
-      this.backAngleAtBottom = backAngle;
-    }
-
-    // 检测犯规：蹲深不够
-    if (this.minKneeAngleInCycle > this.MIN_SQUAT_ANGLE) {
-      this.lastFoul = 'shallow_squat';
-    }
-
-    // 膝盖角度开始增大 → 开始起身
-    if (kneeAngle > this.DOWN_ANGLE + 10) {
-      this.transitionTo('ascending');
-    }
-  }
-
-  private handleAscending(kneeAngle: number, _backAngle: number): void {
-    // 追踪是否站直
-    if (kneeAngle > this.UP_ANGLE) {
-      if (this.phaseFrameCount >= this.framesAt30Fps(this.CONFIRM_FRAMES_UP_30FPS)) {
-        this.recordSquat();
-        this.transitionTo('standing');
-      }
-    }
-
-    // 如果角度又减小（没站直又蹲下去了）→ 回到 descending
-    if (this.phaseFrameCount > this.framesAt30Fps(5) && kneeAngle < this.DOWN_ANGLE) {
-      this.transitionTo('descending');
-    }
-  }
-
-  private transitionTo(newPhase: SquatPhase): void {
-    this.lastPhase = this.phase;
-    this.phase = newPhase;
-    this.phaseFrameCount = 0;
-    this.lastState = newPhase;
-  }
-
-  // ── 记录有效深蹲 ──
-
-  private recordSquat(): void {
-    const cycleFrames = this.totalFrames - this.cycleStartFrame;
-
-    if (cycleFrames < this.framesAt30Fps(this.MIN_CYCLE_FRAMES_30FPS)) {
-      this.lastFoul = 'too_fast';
-      this.foulCount++;
+    if (!this.calibrated) {
+      this.collectCalibrationSample(smoothCenterY, rawBodyHeight);
       return;
     }
 
-    if (cycleFrames > this.framesAt30Fps(this.MAX_CYCLE_FRAMES_30FPS)) {
-      // 超时可能中间停顿了
-      return;
-    }
-
-    // 检查蹲深是否足够
-    if (this.minKneeAngleInCycle > this.MIN_SQUAT_ANGLE) {
-      // 蹲得不够深，犯规但不阻止计数（中考场景下仍然计但扣分）
-      this.lastFoul = 'shallow_squat';
-      this.foulCount++;
-    } else {
-      this.lastFoul = null;
-    }
-
-    // ✅ 有效计数
-    this.count++;
+    this.currentDepthScore = this.calculateDepthScore(smoothCenterY);
+    this.trackFouls(points);
+    this.runStateMachine();
   }
-
-  // ── 背部角度计算 ──
-  // 返回肩-髋连线与垂直方向的夹角（度）
-  // 90° = 站直，< 90° = 前倾
-  private calculateBackAngle(
-    sx: number,
-    sy: number, // shoulder mid
-    hx: number,
-    hy: number, // hip mid
-  ): number {
-    const dx = sx - hx;
-    const dy = hy - sy; // 注意 Y 轴反转
-    const angle = (Math.atan2(Math.abs(dx), dy) * 180) / Math.PI;
-    return angle;
-  }
-
-  // ── 公共接口 ──
 
   getPhase(): SquatPhase {
     return this.phase;
+  }
+
+  getResultValue(): number {
+    return this.count;
+  }
+
+  getResultUnit(): string {
+    return '次';
   }
 
   getKneeAngle(): number {
@@ -358,48 +175,231 @@ export class SquatsCounter extends ExerciseCounter {
   }
 
   getFeedback(_pose?: Pose): ExerciseFeedback | null {
-    switch (this.phase) {
-      case 'idle':
-        return {
-          type: 'warning',
-          message: '请站直面对摄像头...',
-        };
-
-      case 'standing':
-        return null;
-
-      case 'descending': {
-        if (this.lastFoul === 'back_lean') {
-          return {
-            type: 'error',
-            message: '背部不要过度前倾！',
-          };
-        }
-        return null;
-      }
-
-      case 'bottom': {
-        if (this.lastFoul === 'shallow_squat') {
-          return {
-            type: 'warning',
-            message: '蹲深不够，大腿要平行地面',
-          };
-        }
-        return null;
-      }
-
-      case 'ascending': {
-        if (this.phaseFrameCount > this.framesAt30Fps(20)) {
-          return {
-            type: 'warning',
-            message: '起身太慢，注意发力',
-          };
-        }
-        return null;
-      }
-
-      default:
-        return null;
+    if (!this.calibrated) {
+      return { type: 'warning', message: '请站直并保持稳定，正在校准' };
     }
+    if (this.lastFoul === 'back_lean') {
+      return { type: 'error', message: '背部保持挺直，不要过度前倾' };
+    }
+    if (this.lastFoul === 'knee_valgus') {
+      return { type: 'warning', message: '膝盖对准脚尖，避免内扣' };
+    }
+    if (this.phase === 'descending' && this.currentDepthScore < this.DOWN_THRESHOLD) {
+      return { type: 'warning', message: '继续下蹲，深度还不够' };
+    }
+    if (this.phase === 'bottom') {
+      return { type: 'success', message: '深度到位，准备起身' };
+    }
+    return null;
+  }
+
+  protected getKeyMetrics(): Record<string, number> {
+    return {
+      ...super.getKeyMetrics(),
+      kneeAngle: Math.round(this.currentKneeAngle),
+      hipAngle: Math.round(this.currentHipAngle),
+      depthScore: Math.round(this.currentDepthScore * 100) / 100,
+      foulCount: this.foulCount,
+    };
+  }
+
+  private resizeWindows(): void {
+    this.kneeAngleWindow.resize(this.framesAt30Fps(7));
+    this.hipAngleWindow.resize(this.framesAt30Fps(7));
+    this.stabilityWindow.resize(this.framesAt30Fps(10));
+  }
+
+  private getRequiredKeypoints(pose: Pose): SquatKeypoints | null {
+    const leftShoulder = this.getKeypoint(pose, 'left_shoulder');
+    const rightShoulder = this.getKeypoint(pose, 'right_shoulder');
+    const leftHip = this.getKeypoint(pose, 'left_hip');
+    const rightHip = this.getKeypoint(pose, 'right_hip');
+    const leftKnee = this.getKeypoint(pose, 'left_knee');
+    const rightKnee = this.getKeypoint(pose, 'right_knee');
+    const leftAnkle = this.getKeypoint(pose, 'left_ankle');
+    const rightAnkle = this.getKeypoint(pose, 'right_ankle');
+
+    if (
+      !leftShoulder ||
+      !rightShoulder ||
+      !leftHip ||
+      !rightHip ||
+      !leftKnee ||
+      !rightKnee ||
+      !leftAnkle ||
+      !rightAnkle
+    ) {
+      return null;
+    }
+
+    const points = [
+      leftShoulder,
+      rightShoulder,
+      leftHip,
+      rightHip,
+      leftKnee,
+      rightKnee,
+      leftAnkle,
+      rightAnkle,
+    ];
+    if (points.some((point) => (point.score ?? 0) < POSE_MIN_SCORE)) {
+      return null;
+    }
+
+    return {
+      leftShoulder,
+      rightShoulder,
+      leftHip,
+      rightHip,
+      leftKnee,
+      rightKnee,
+      leftAnkle,
+      rightAnkle,
+    };
+  }
+
+  private collectCalibrationSample(centerY: number, bodyHeight: number): void {
+    this.stabilityWindow.push(this.currentKneeAngle);
+    if (!this.stabilityWindow.isFull || this.stabilityWindow.stddev() > this.STABLE_KNEE_STDDEV) {
+      return;
+    }
+
+    this.calibrationKnees.push(this.currentKneeAngle);
+    this.calibrationHips.push(this.currentHipAngle);
+    this.calibrationCenters.push(centerY);
+    this.calibrationHeights.push(bodyHeight);
+    this.stabilityWindow.clear();
+
+    if (this.calibrationKnees.length < this.CALIBRATION_REQUIRED) return;
+
+    this.standingKneeAngle = this.average(this.calibrationKnees);
+    this.standingHipAngle = this.average(this.calibrationHips);
+    this.standingCenterY = this.average(this.calibrationCenters);
+    this.bodyHeight = Math.max(1, this.average(this.calibrationHeights));
+    this.calibrated = true;
+    this.transitionTo('standing');
+  }
+
+  private runStateMachine(): void {
+    this.maxDepthScoreInCycle = Math.max(this.maxDepthScoreInCycle, this.currentDepthScore);
+    this.minKneeAngleInCycle = Math.min(this.minKneeAngleInCycle, this.currentKneeAngle);
+
+    switch (this.phase) {
+      case 'standing':
+      case 'idle':
+        if (this.currentDepthScore >= this.DESCEND_THRESHOLD) {
+          this.pendingDown = false;
+          this.cycleStartFrame = this.totalFrames;
+          this.minKneeAngleInCycle = this.currentKneeAngle;
+          this.maxDepthScoreInCycle = this.currentDepthScore;
+          this.transitionTo('descending');
+        }
+        break;
+      case 'descending':
+        if (this.currentDepthScore >= this.DOWN_THRESHOLD) {
+          this.pendingDown = true;
+          this.transitionTo('bottom');
+        } else if (this.currentDepthScore <= this.UP_THRESHOLD) {
+          this.transitionTo('standing');
+        }
+        break;
+      case 'bottom':
+        if (this.currentDepthScore < this.DOWN_THRESHOLD * 0.82) {
+          this.transitionTo('ascending');
+        }
+        break;
+      case 'ascending':
+        if (this.currentDepthScore <= this.UP_THRESHOLD) {
+          this.recordSquatIfValid();
+          this.transitionTo('standing');
+        } else if (this.currentDepthScore >= this.DOWN_THRESHOLD) {
+          this.transitionTo('bottom');
+        }
+        break;
+    }
+  }
+
+  private recordSquatIfValid(): void {
+    const cycleFrames = this.totalFrames - this.cycleStartFrame;
+    if (cycleFrames < this.framesAt30Fps(this.MIN_CYCLE_FRAMES_30FPS)) {
+      this.lastFoul = 'too_fast';
+      this.foulCount++;
+      return;
+    }
+    if (cycleFrames > this.framesAt30Fps(this.MAX_CYCLE_FRAMES_30FPS)) {
+      return;
+    }
+    if (
+      !this.pendingDown ||
+      this.maxDepthScoreInCycle < this.MIN_VALID_DEPTH ||
+      this.minKneeAngleInCycle > this.MIN_VALID_KNEE_ANGLE
+    ) {
+      this.lastFoul = 'shallow_squat';
+      return;
+    }
+
+    this.count++;
+    this.pendingDown = false;
+    if (this.lastFoul === 'shallow_squat' || this.lastFoul === 'too_fast') {
+      this.lastFoul = null;
+    }
+  }
+
+  private calculateDepthScore(centerY: number): number {
+    const kneeRange = Math.max(30, this.standingKneeAngle - 60);
+    const hipRange = Math.max(20, this.standingHipAngle - 45);
+    const yRange = Math.max(1, this.bodyHeight * 0.18);
+
+    const kneeScore = this.clamp01((this.standingKneeAngle - this.currentKneeAngle) / kneeRange);
+    const hipScore = this.clamp01((this.standingHipAngle - this.currentHipAngle) / hipRange);
+    const yScore = this.clamp01((centerY - this.standingCenterY) / yRange);
+
+    return kneeScore * 0.5 + hipScore * 0.3 + yScore * 0.2;
+  }
+
+  private trackFouls(points: SquatKeypoints): void {
+    const shoulderMidX = (points.leftShoulder.x + points.rightShoulder.x) / 2;
+    const hipMidX = (points.leftHip.x + points.rightHip.x) / 2;
+    const hipWidth = Math.abs(points.rightHip.x - points.leftHip.x);
+    if (hipWidth > 0 && Math.abs(shoulderMidX - hipMidX) > hipWidth * 0.65) {
+      this.lastFoul = 'back_lean';
+      this.foulCount++;
+      return;
+    }
+
+    const leftValgus = points.leftKnee.x < points.leftAnkle.x - hipWidth * 0.08;
+    const rightValgus = points.rightKnee.x > points.rightAnkle.x + hipWidth * 0.08;
+    if (leftValgus || rightValgus) {
+      this.lastFoul = 'knee_valgus';
+    }
+  }
+
+  private transitionTo(nextPhase: SquatPhase): void {
+    if (this.phase !== nextPhase) {
+      this.phaseFrameCount = 0;
+    }
+    this.phase = nextPhase;
+    this.lastState = nextPhase;
+  }
+
+  private calculateBodyCenterY(points: SquatKeypoints): number {
+    const shoulderY = (points.leftShoulder.y + points.rightShoulder.y) / 2;
+    const hipY = (points.leftHip.y + points.rightHip.y) / 2;
+    const ankleY = (points.leftAnkle.y + points.rightAnkle.y) / 2;
+    return shoulderY * 0.2 + hipY * 0.5 + ankleY * 0.3;
+  }
+
+  private calculateBodyHeight(points: SquatKeypoints, centerY: number): number {
+    const ankleY = (points.leftAnkle.y + points.rightAnkle.y) / 2;
+    return Math.max(1, Math.abs(ankleY - centerY));
+  }
+
+  private average(values: number[]): number {
+    return values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
+  }
+
+  private clamp01(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(1, value));
   }
 }

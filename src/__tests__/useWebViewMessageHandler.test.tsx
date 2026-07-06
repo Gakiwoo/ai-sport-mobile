@@ -60,6 +60,16 @@ function mountHandler(options: Parameters<typeof useWebViewMessageHandler>[0]) {
 }
 
 describe('useWebViewMessageHandler', () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
   it('forwards pose messages to onPoseDetected', () => {
     const onPoseDetected = jest.fn();
     const pose: Pose = standingPose();

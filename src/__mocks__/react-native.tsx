@@ -5,83 +5,72 @@
  */
 import React from 'react';
 
-// ── 基础组件 ──
-const createView = (props: any) => {
-  const { children, ...rest } = props;
-  return React.createElement('View', rest, children);
+type MockProps = Record<string, unknown> & {
+  children?: React.ReactNode;
 };
 
-const createText = (props: any) => {
-  const { children, ...rest } = props;
-  return React.createElement('Text', rest, children);
-};
+type AnimatedCallback = (result: { finished: boolean }) => void;
 
-const createTouchableOpacity = (props: any) => {
-  const { children, ...rest } = props;
-  return React.createElement(
+const createView = ({ children, ...rest }: MockProps = {}) =>
+  React.createElement('View', rest, children);
+
+const createText = ({ children, ...rest }: MockProps = {}) =>
+  React.createElement('Text', rest, children);
+
+const createTouchableOpacity = ({ children, ...rest }: MockProps = {}) =>
+  React.createElement(
     'TouchableOpacity',
     {
       ...rest,
-      onClick: rest.onPress,
+      onClick: rest.onPress as (() => void) | undefined,
     },
     children,
   );
-};
 
-const createTextInput = (props: any) => {
-  const { children, ...rest } = props;
-  return React.createElement('TextInput', rest, children);
-};
+const createTextInput = ({ children, ...rest }: MockProps = {}) =>
+  React.createElement('TextInput', rest, children);
 
-const createScrollView = (props: any) => {
-  const { children, ...rest } = props;
-  return React.createElement('ScrollView', rest, children);
-};
+const createScrollView = ({ children, ...rest }: MockProps = {}) =>
+  React.createElement('ScrollView', rest, children);
 
-const createKeyboardAvoidingView = (props: any) => {
-  const { children, ...rest } = props;
-  return React.createElement('KeyboardAvoidingView', rest, children);
-};
+const createKeyboardAvoidingView = ({ children, ...rest }: MockProps = {}) =>
+  React.createElement('KeyboardAvoidingView', rest, children);
 
-const createStatusBar = (_props: any) => null;
+const createStatusBar = (_props: MockProps = {}) => null;
 
-const createActivityIndicator = (_props: any) => React.createElement('ActivityIndicator', null);
+const createActivityIndicator = (_props: MockProps = {}) =>
+  React.createElement('ActivityIndicator', null);
 
-const createImage = (props: any) => {
-  const { children, ...rest } = props;
-  return React.createElement('Image', rest, children);
-};
+const createImage = ({ children, ...rest }: MockProps = {}) =>
+  React.createElement('Image', rest, children);
 
-// ── StyleSheet ──
-const StyleSheet: any = {
-  create: (styles: any) => styles,
+const StyleSheet = {
+  create: <T extends Record<string, unknown>>(styles: T) => styles,
   hairlineWidth: 0.5,
   absoluteFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   absoluteFillObject: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  flatten: (style: any) => style,
+  flatten: (style: unknown) => style,
 };
 
-// ── Platform ──
-const Platform: any = {
+const Platform = {
   OS: 'web',
   Version: 0,
-  select: (obj: any) => obj.default ?? obj.web ?? obj.ios ?? obj.android ?? null,
+  select: (obj: Record<string, unknown>) => obj.default ?? obj.web ?? obj.ios ?? obj.android ?? null,
 };
 
-// ── Dimensions ──
-const Dimensions: any = {
+const Dimensions = {
   get: (_dim: string) => ({ width: 390, height: 844 }),
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
 };
 
-// ── Animated ──
-// Animated.Value 需要是可 new 的构造函数
 class AnimatedValue {
   _value: number;
+
   constructor(initialValue: number) {
     this._value = initialValue;
   }
+
   setValue = jest.fn();
   interpolate = jest.fn(() => ({ interpolate: jest.fn() }));
   addListener = jest.fn();
@@ -89,30 +78,41 @@ class AnimatedValue {
   removeAllListeners = jest.fn();
 }
 
-const Animated: any = {
+const runAnimatedCallback = (cb?: AnimatedCallback) => cb?.({ finished: true });
+
+const Animated = {
   Value: AnimatedValue,
   View: createView,
   Text: createText,
   Image: createImage,
   ScrollView: createScrollView,
-  timing: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
-  spring: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
-  decay: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
-  sequence: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
-  parallel: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
-  delay: jest.fn(() => ({ start: jest.fn((cb?: any) => cb?.({ finished: true })) })),
+  timing: jest.fn(() => ({ start: jest.fn(runAnimatedCallback) })),
+  spring: jest.fn(() => ({ start: jest.fn(runAnimatedCallback) })),
+  decay: jest.fn(() => ({ start: jest.fn(runAnimatedCallback) })),
+  sequence: jest.fn(() => ({ start: jest.fn(runAnimatedCallback) })),
+  parallel: jest.fn(() => ({ start: jest.fn(runAnimatedCallback) })),
+  delay: jest.fn(() => ({ start: jest.fn(runAnimatedCallback) })),
   event: jest.fn(),
-  createAnimatedComponent: (component: any) => component,
+  createAnimatedComponent: (component: unknown) => component,
 };
 
-// ── FlatList ──
-const createFlatList = (props: any) => {
-  const { data, renderItem, ListEmptyComponent, keyExtractor, ...rest } = props;
-  const children: any[] = [];
+const createFlatList = ({
+  data,
+  renderItem,
+  ListEmptyComponent,
+  keyExtractor: _keyExtractor,
+  ...rest
+}: MockProps & {
+  data?: unknown[];
+  renderItem?: (args: { item: unknown; index: number }) => React.ReactNode;
+  ListEmptyComponent?: React.ComponentType | React.ReactNode;
+  keyExtractor?: (item: unknown, index: number) => string;
+} = {}) => {
+  const children: React.ReactNode[] = [];
 
   if (data && data.length > 0) {
-    data.forEach((item: any, index: number) => {
-      children.push(renderItem?.({ item, index }));
+    data.forEach((item, index) => {
+      children.push(renderItem?.({ item, index }) ?? null);
     });
   } else if (ListEmptyComponent) {
     if (typeof ListEmptyComponent === 'function') {
@@ -125,17 +125,14 @@ const createFlatList = (props: any) => {
   return React.createElement('FlatList', rest, ...children);
 };
 
-// ── Modal ──
-const createModal = (props: any) => {
-  const { children, visible, ...rest } = props;
+const createModal = ({ children, visible, ...rest }: MockProps & { visible?: boolean } = {}) => {
   if (!visible) return null;
   return React.createElement('Modal', rest, children);
 };
 
-// ── Alert ──
-const Alert: any = { alert: jest.fn() };
+const Alert = { alert: jest.fn() };
 
-const rnMock: any = {};
+const rnMock: Record<string, unknown> = {};
 rnMock.View = createView;
 rnMock.Text = createText;
 rnMock.TouchableOpacity = createTouchableOpacity;

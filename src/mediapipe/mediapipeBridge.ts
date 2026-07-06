@@ -20,8 +20,7 @@ export const RUNTIME_CONTROL_TYPES = {
   SET_ACTIVE: 'setActive',
 } as const;
 
-export type WebViewMessageType =
-  (typeof WEBVIEW_MESSAGE_TYPES)[keyof typeof WEBVIEW_MESSAGE_TYPES];
+export type WebViewMessageType = (typeof WEBVIEW_MESSAGE_TYPES)[keyof typeof WEBVIEW_MESSAGE_TYPES];
 
 export const BLOB_ACK_TIMEOUT_MS = 30_000;
 export const MEDIAPIPE_INIT_TIMEOUT_MS = 30_000;

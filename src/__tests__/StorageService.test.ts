@@ -18,7 +18,7 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
-const STORAGE_KEY = '@workout_history';
+const STORAGE_KEY = '@workout_history_legacy';
 
 function session(id: number): WorkoutSession {
   return {
@@ -33,7 +33,7 @@ function session(id: number): WorkoutSession {
 
 describe('StorageService', () => {
   beforeEach(() => {
-    (AsyncStorage as any).__store.clear();
+    (AsyncStorage as typeof AsyncStorage & { __store: Map<string, string> }).__store.clear();
     jest.clearAllMocks();
   });
 

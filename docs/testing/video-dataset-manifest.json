@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "requiredTotal": 500,
+  "rootDir": "test-data/videos",
+  "statusOrder": ["planned", "recorded", "annotated", "approved"],
+  "coverage": [
+    {
+      "exerciseType": "jump_rope",
+      "requiredCount": 100,
+      "scenarios": ["normal", "fast", "slow", "partial_body", "low_light", "side_angle"]
+    },
+    {
+      "exerciseType": "squats",
+      "requiredCount": 100,
+      "scenarios": ["normal_depth", "shallow", "fast", "knee_valgus", "back_lean", "side_angle"]
+    },
+    {
+      "exerciseType": "sit_ups",
+      "requiredCount": 75,
+      "scenarios": ["standard", "incomplete", "hand_assisted", "low_light"]
+    },
+    {
+      "exerciseType": "jumping_jacks",
+      "requiredCount": 75,
+      "scenarios": ["standard", "low_arm_raise", "narrow_leg_spread", "fast"]
+    },
+    {
+      "exerciseType": "standing_long_jump",
+      "requiredCount": 75,
+      "scenarios": ["standard", "foul_takeoff", "unstable_landing", "side_angle"]
+    },
+    {
+      "exerciseType": "vertical_jump",
+      "requiredCount": 75,
+      "scenarios": ["standard", "arm_swing", "low_jump", "occlusion"]
+    }
+  ],
+  "videos": []
+}

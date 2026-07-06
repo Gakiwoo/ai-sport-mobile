@@ -4,6 +4,7 @@
  * 覆盖：渲染不崩溃、登出按钮、用户信息展示
  */
 import React from 'react';
+import type { ReactTestInstance } from 'react-test-renderer';
 import { renderToJSON, createWithAct } from './testRenderer';
 
 // ── 导航 mock ──
@@ -65,7 +66,14 @@ jest.mock('../i18n', () => ({
 jest.mock('../services/AuthService', () => ({
   __esModule: true,
   default: {
-    updateNickname: jest.fn(() => Promise.resolve({ id: '1', nickname: '新昵称', email: 'test@test.com', createdAt: '2025-01-01' })),
+    updateNickname: jest.fn(() =>
+      Promise.resolve({
+        id: '1',
+        nickname: '新昵称',
+        email: 'test@test.com',
+        createdAt: '2025-01-01',
+      }),
+    ),
     changePassword: jest.fn(() => Promise.resolve()),
   },
   AuthError: class AuthError extends Error {},
@@ -87,14 +95,20 @@ describe('ProfileScreen', () => {
 
   it('渲染不崩溃', async () => {
     const tree = await renderToJSON(
-      <ProfileScreen navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any} route={{ params: {} } as any} />,
+      <ProfileScreen
+        navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(tree).toBeDefined();
   });
 
   it('显示用户信息', async () => {
     const tree = await renderToJSON(
-      <ProfileScreen navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any} route={{ params: {} } as any} />,
+      <ProfileScreen
+        navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('test@test.com');
@@ -103,7 +117,10 @@ describe('ProfileScreen', () => {
 
   it('登出按钮存在', async () => {
     const tree = await renderToJSON(
-      <ProfileScreen navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any} route={{ params: {} } as any} />,
+      <ProfileScreen
+        navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('退出登录');
@@ -111,13 +128,18 @@ describe('ProfileScreen', () => {
 
   it('返回按钮存在', async () => {
     const instance = await createWithAct(
-      <ProfileScreen navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any} route={{ params: {} } as any} />,
+      <ProfileScreen
+        navigation={{ navigate: mockNavigate, goBack: mockGoBack } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(instance).toBeDefined();
 
     // 查找返回按钮并模拟点击
     const backBtns = instance.root.findAll(
-      (el: any) => el.props?.onClick !== undefined && el.type === 'TouchableOpacity',
+      (el: ReactTestInstance) =>
+        el.props?.onClick !== undefined &&
+        (el.type as string) === 'TouchableOpacity',
     );
 
     if (backBtns.length > 0) {

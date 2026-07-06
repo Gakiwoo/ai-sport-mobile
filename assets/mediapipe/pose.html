@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; script-src 'self' 'unsafe-inline' blob: https://gakiwoo.com https://registry.npmmirror.com https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' blob: https://gakiwoo.com https://registry.npmmirror.com https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' blob: data:; media-src 'self' blob:;">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
@@ -123,18 +124,6 @@
         throw e;
       }
       return true;
-    };
-
-    window.__evalPoseJs = function(base64Data) {
-      try {
-        var jsCode = atob(base64Data);
-        post('log', 'Evaluating pose.js (' + jsCode.length + ' chars)');
-        eval(jsCode);
-        post('log', 'pose.js evaluated successfully');
-      } catch(e) {
-        post('log', 'Failed to eval pose.js: ' + e.message);
-        throw e;
-      }
     };
 
     function drawResults(results) {
@@ -296,8 +285,13 @@
     }
 
     async function initFromLocal() {
+      if (typeof Pose === 'undefined' && blobRegistry['pose.js']) {
+        post('log', 'Loading pose.js from local blob URL');
+        await loadScript(blobRegistry['pose.js'], 10000);
+      }
+
       if (typeof Pose === 'undefined') {
-        throw new Error('Pose class not loaded - pose.js was not injected');
+        throw new Error('Pose class not loaded - pose.js was not available in local cache');
       }
 
       post('cdnStatus', '鍒濆鍖?AI 妯″瀷锛堟湰鍦帮級...');
@@ -374,7 +368,7 @@
         post('log', 'Starting MediaPipe initialization...');
         post('log', 'Blob registry has ' + Object.keys(blobRegistry).length + ' files');
 
-        if (Object.keys(blobRegistry).length > 0 && typeof Pose !== 'undefined') {
+        if (Object.keys(blobRegistry).length > 0) {
           post('log', 'Local blobs available, using local cache');
           try {
             await initFromLocal();

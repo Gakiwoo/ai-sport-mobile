@@ -46,6 +46,18 @@ jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
+// ── i18n mock ──
+jest.mock('../i18n', () => ({
+  t: (key: string) => key,
+  setLocale: jest.fn(),
+  getLocale: () => 'zh',
+  getDeviceLocale: () => 'zh',
+  getSupportedLocales: () => [
+    { code: 'zh', name: 'Chinese', localName: '中文' },
+    { code: 'en', name: 'English', localName: 'English' },
+  ],
+}));
+
 import RegisterScreen from '../screens/RegisterScreen';
 
 describe('RegisterScreen', () => {
@@ -56,14 +68,20 @@ describe('RegisterScreen', () => {
 
   it('渲染不崩溃', async () => {
     const tree = await renderToJSON(
-      <RegisterScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <RegisterScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(tree).toBeDefined();
   });
 
   it('包含标题和副标题', async () => {
     const tree = await renderToJSON(
-      <RegisterScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <RegisterScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('创建账号');
@@ -72,7 +90,10 @@ describe('RegisterScreen', () => {
 
   it('包含登录链接', async () => {
     const tree = await renderToJSON(
-      <RegisterScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <RegisterScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('立即登录');
@@ -80,7 +101,10 @@ describe('RegisterScreen', () => {
 
   it('包含登录链接文本', async () => {
     const tree = await renderToJSON(
-      <RegisterScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <RegisterScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('立即登录');

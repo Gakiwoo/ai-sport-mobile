@@ -1,7 +1,9 @@
 /**
  * English translations
  */
-const en: Record<string, string | ((...args: any[]) => string)> = {
+import type { TranslationValue } from './index';
+
+const en: Record<string, TranslationValue> = {
   // ── General ──
   'app.name': 'AI Sport Trainer',
   'common.loading': 'Loading...',
@@ -127,6 +129,33 @@ const en: Record<string, string | ((...args: any[]) => string)> = {
   'lang.zh': '中文',
   'lang.en': 'English',
   'lang.current': 'Current Language',
+
+  // ── Accessibility ──
+  'a11y.profile': 'Profile',
+  'a11y.startExercise': 'Tap to start workout',
+  'a11y.dismissError': 'Dismiss error',
+  'a11y.guestMode': 'Guest mode, local training',
+  'a11y.goToRegister': "Don't have an account, go to register",
+  'a11y.goToLogin': 'Already have an account, go to login',
+  'a11y.confirmPassword': 'Confirm password',
+  'a11y.openSettings': 'Open system settings',
+  'a11y.setTarget': 'Set target',
+  'a11y.editNickname': 'Edit nickname',
+  'a11y.saveNickname': 'Save nickname',
+  'a11y.changePassword': 'Change password',
+  'a11y.selectLanguage': 'Select language',
+  'a11y.languageOption': (name: string) => `Select language: ${name}`,
+  'a11y.logout': 'Log out',
+  'a11y.guestLogout': 'Exit guest mode',
+  'a11y.reload': 'Reload',
+  'a11y.workoutCount': (n: number) => `Current count: ${n}`,
+  'a11y.countdown': (n: number) => `Countdown: ${n}`,
+  'a11y.timer': (t: string) => `Time remaining: ${t}`,
+  'a11y.feedback': 'Form feedback',
+  'a11y.targetInput': 'Enter target count',
+  'a11y.durationInput': 'Enter target duration in seconds',
+  'a11y.quickDuration': (d: number) => `${d} seconds`,
+  'a11y.historyItem': (name: string, count: number) => `${name}, ${count} reps`,
 };
 
 export default en;

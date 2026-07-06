@@ -4,6 +4,7 @@
  * 覆盖：按钮渲染、回调触发、状态切换
  */
 import React from 'react';
+import type { ReactTestInstance } from 'react-test-renderer';
 import { createWithAct, renderToJSON } from './testRenderer';
 
 // ── 导航 mock ──
@@ -69,7 +70,7 @@ describe('WorkoutControls', () => {
 
     // 查找开始按钮（TouchableOpacity with testID = workout-start-button）
     const startBtns = instance.root.findAll(
-      (el: any) => el.props?.testID === 'workout-start-button',
+      (el: ReactTestInstance) => el.props?.testID === 'workout-start-button',
     );
 
     if (startBtns.length > 0) {
@@ -91,7 +92,7 @@ describe('WorkoutControls', () => {
 
     // 查找停止按钮（TouchableOpacity with testID = workout-stop-button）
     const stopBtns = instance.root.findAll(
-      (el: any) => el.props?.testID === 'workout-stop-button',
+      (el: ReactTestInstance) => el.props?.testID === 'workout-stop-button',
     );
 
     if (stopBtns.length > 0) {

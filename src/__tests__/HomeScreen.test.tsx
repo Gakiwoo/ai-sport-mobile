@@ -4,6 +4,7 @@
  * 覆盖：渲染不崩溃、运动卡片数量、导航按钮
  */
 import React from 'react';
+import type { ReactTestInstance } from 'react-test-renderer';
 import { renderToJSON, createWithAct } from './testRenderer';
 
 // ── 导航 mock ──
@@ -79,14 +80,20 @@ describe('HomeScreen', () => {
 
   it('渲染不崩溃', async () => {
     const tree = await renderToJSON(
-      <HomeScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <HomeScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(tree).toBeDefined();
   });
 
   it('包含运动卡片区域', async () => {
     const tree = await renderToJSON(
-      <HomeScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <HomeScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(tree).toBeDefined();
     // 验证渲染了内容，结构完整
@@ -97,7 +104,10 @@ describe('HomeScreen', () => {
 
   it('导航按钮存在（历史、分析）', async () => {
     const tree = await renderToJSON(
-      <HomeScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <HomeScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(tree).toBeDefined();
     const jsonStr = JSON.stringify(tree);
@@ -108,21 +118,27 @@ describe('HomeScreen', () => {
 
   it('点击运动卡片触发 navigate', async () => {
     const instance = await createWithAct(
-      <HomeScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
+      <HomeScreen
+        navigation={{ navigate: mockNavigate } as any}
+        route={{ params: {} } as any}
+      />,
     );
     expect(instance).toBeDefined();
 
     // 查找带 testID 的 TouchableOpacity 并模拟点击
-    const testInstances = instance.root.findAll(
-      (el: any) => el.props?.testID?.startsWith('home-exercise-'),
+    const testInstances = instance.root.findAll((el: ReactTestInstance) =>
+      el.props?.testID?.startsWith('home-exercise-'),
     );
 
     if (testInstances.length > 0) {
       const first = testInstances[0];
       first.props.onPress();
-      expect(mockNavigate).toHaveBeenCalledWith('Workout', expect.objectContaining({
-        exerciseType: expect.any(String),
-      }));
+      expect(mockNavigate).toHaveBeenCalledWith(
+        'Workout',
+        expect.objectContaining({
+          exerciseType: expect.any(String),
+        }),
+      );
     }
   });
 });

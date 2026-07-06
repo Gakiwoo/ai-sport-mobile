@@ -36,7 +36,9 @@ describe('BarChart', () => {
   });
 
   it('不崩溃', async () => {
-    const tree = await renderToJSON(<BarChart data={[{ label: 'A', value: 5 }]} title="我的图表" />);
+    const tree = await renderToJSON(
+      <BarChart data={[{ label: 'A', value: 5 }]} title="我的图表" />,
+    );
     expect(tree).toBeDefined();
   });
 });

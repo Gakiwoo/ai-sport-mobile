@@ -18,10 +18,7 @@ import {
   squatBottomPose,
   standingPose,
 } from './testHelpers';
-import {
-  GoldenPoseFixture,
-  GoldenPosePreset,
-} from './fixtures/goldenPoses/types';
+import { GoldenPoseFixture, GoldenPosePreset } from './fixtures/goldenPoses/types';
 
 const PRESET_BUILDERS: Record<GoldenPosePreset, () => Pose> = {
   standing: standingPose,

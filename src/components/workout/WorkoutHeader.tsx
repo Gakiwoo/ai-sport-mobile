@@ -32,7 +32,12 @@ export default function WorkoutHeader({
           <Text style={styles.exerciseName}>{exerciseName}</Text>
         </View>
         {!isActive && (
-          <TouchableOpacity style={styles.targetButton} onPress={onOpenTargetModal}>
+          <TouchableOpacity
+            style={styles.targetButton}
+            onPress={onOpenTargetModal}
+            accessibilityLabel="设置目标"
+            accessibilityRole="button"
+          >
             <Text style={styles.targetButtonText}>
               {isTimed ? `⏰ ${formatCountdown(targetDuration)}` : `🎯 ${targetCount}`}
             </Text>
@@ -45,6 +50,9 @@ export default function WorkoutHeader({
           <TouchableOpacity
             style={[styles.modeBtn, mode === 'count' && styles.modeBtnActive]}
             onPress={() => onSwitchMode('count')}
+            accessibilityLabel="定数模式"
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === 'count' }}
           >
             <Text style={[styles.modeBtnText, mode === 'count' && styles.modeBtnTextActive]}>
               🎯 定数模式
@@ -53,6 +61,9 @@ export default function WorkoutHeader({
           <TouchableOpacity
             style={[styles.modeBtn, mode === 'timed' && styles.modeBtnActive]}
             onPress={() => onSwitchMode('timed')}
+            accessibilityLabel="定时模式"
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === 'timed' }}
           >
             <Text style={[styles.modeBtnText, mode === 'timed' && styles.modeBtnTextActive]}>
               ⏰ 定时模式

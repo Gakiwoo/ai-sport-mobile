@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Motion Tracker — 全面项目评估报告 v3</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a2e;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-light: #dbeafe;
+    --severe: #dc2626;
+    --severe-bg: #fef2f2;
+    --warning: #d97706;
+    --warning-bg: #fffbeb;
+    --suggest: #059669;
+    --suggest-bg: #ecfdf5;
+    --card-bg: #f9fafb;
+    --score-high: #059669;
+    --score-mid: #d97706;
+    --score-low: #dc2626;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 2rem; border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 8px; }
+  h2 { font-size: 1.5rem; margin-top: 40px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.15rem; margin-top: 24px; color: var(--text); }
+  h4 { font-size: 1rem; margin-top: 16px; }
+  .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+  .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 24px 0; }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card .label { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .card .value { font-size: 2.2rem; font-weight: 700; margin: 4px 0; }
+  .card .detail { font-size: 0.85rem; color: var(--muted); }
+  .score-high { color: var(--score-high); }
+  .score-mid { color: var(--score-mid); }
+  .score-low { color: var(--score-low); }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: var(--card-bg); font-weight: 600; white-space: nowrap; }
+  tr:hover { background: var(--accent-light); }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-severe { background: var(--severe-bg); color: var(--severe); }
+  .badge-warn { background: var(--warning-bg); color: var(--warning); }
+  .badge-suggest { background: var(--suggest-bg); color: var(--suggest); }
+  .issue-list { list-style: none; padding: 0; }
+  .issue-list li {
+    padding: 12px 16px;
+    margin: 8px 0;
+    border-left: 4px solid;
+    border-radius: 0 8px 8px 0;
+    background: var(--card-bg);
+  }
+  .issue-list li.severe { border-color: var(--severe); background: var(--severe-bg); }
+  .issue-list li.warn { border-color: var(--warning); background: var(--warning-bg); }
+  .issue-list li.suggest { border-color: var(--suggest); background: var(--suggest-bg); }
+  .issue-list .title { font-weight: 600; }
+  .issue-list .desc { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+  .priority-order { counter-reset: priority; }
+  .priority-order li { counter-increment: priority; }
+  .priority-order li::before {
+    content: counter(priority);
+    display: inline-block;
+    width: 24px; height: 24px;
+    line-height: 24px;
+    text-align: center;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    margin-right: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .bar { height: 8px; border-radius: 4px; background: var(--border); margin: 4px 0; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+  .bar-fill.high { background: var(--score-high); }
+  .bar-fill.mid { background: var(--score-mid); }
+  .bar-fill.low { background: var(--score-low); }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
+  .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 16px 0; }
+  @media (max-width: 700px) { .section-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>AI Motion Tracker — 全面项目评估报告 v3</h1>
+<p class="meta">
+  评估日期：2026-06-30 &nbsp;|&nbsp; 项目版本：v1.2.0 (buildCode 3) &nbsp;|&nbsp;
+  技术栈：Expo 55 + React Native 0.83.6 + TypeScript 5.5 strict<br>
+  评估范围：代码质量、架构设计、性能、安全、依赖、测试、文档 7 个维度
+</p>
+
+<!-- ============ OVERVIEW ============ -->
+<h2>一、项目概览</h2>
+
+<div class="summary-cards">
+  <div class="card">
+    <div class="label">综合评分</div>
+    <div class="value score-high">4.1<span style="font-size:1.2rem">/5</span></div>
+    <div class="detail">工程化水平良好，处于活跃迭代中</div>
+  </div>
+  <div class="card">
+    <div class="label">源码规模</div>
+    <div class="value">58</div>
+    <div class="detail">个源文件（.ts / .tsx），约 7,000+ 行</div>
+  </div>
+  <div class="card">
+    <div class="label">测试规模</div>
+    <div class="value">346+</div>
+    <div class="detail">测试用例 / 48 套件，核心模块有阈值保障</div>
+  </div>
+  <div class="card">
+    <div class="label">覆盖率</div>
+    <div class="value score-mid">61.7%</div>
+    <div class="detail">Lines 覆盖率（Branches: 46.9%）</div>
+  </div>
+  <div class="card">
+    <div class="label">ESLint</div>
+    <div class="value score-high">0</div>
+    <div class="detail">Errors · 11 Warnings (9 文件)</div>
+  </div>
+  <div class="card">
+    <div class="label">依赖项</div>
+    <div class="value">43</div>
+    <div class="detail">25 生产 / 18 开发 · 20 个可升级 Major</div>
+  </div>
+</div>
+
+<p>
+  AI Motion Tracker 是一款基于 MediaPipe Pose 的实时运动追踪 App（Android/iOS），
+  支持跳绳、开合跳、深蹲、立定跳远、纵跳摸高、仰卧起坐 6 种运动。
+  采用 <strong>WebView + Blob URL 注入</strong> 架构运行 MediaPipe WASM，
+  以 <strong>策略模式</strong> 组织计数器，使用 <strong>Repository 模式</strong> 抽象数据层。
+  项目整体工程化水平高，CI/CD、ADR、i18n、Sentry 监控、Maestro E2E 均已落地。
+</p>
+
+<h3>架构分层</h3>
+<code style="display:block;padding:12px;white-space:pre;font-size:0.85rem;">
+Screens (页面编排)
+  └── Hooks (状态 & 逻辑复用: useWorkout, useWebViewMessageHandler, useExerciseFeedback)
+        └── Services (业务逻辑: Counter 策略模式, Auth, Storage, Sync, MediaPipe)
+              └── Utils (工具: Kalman 滤波, 自适应帧率, CDN 策略, 姿态质量)
+                    └── Types (完整类型定义体系)
+</code>
+
+<h3>Coverage 各模块覆盖率</h3>
+<table>
+  <tr><th>模块</th><th>Statements</th><th>Branches</th><th>Functions</th><th>Lines</th><th>评级</th></tr>
+  <tr><td>mediapipe/</td><td style="color:var(--score-high)">100%</td><td style="color:var(--score-high)">100%</td><td style="color:var(--score-high)">100%</td><td style="color:var(--score-high)">100%</td><td>🟢 优秀</td></tr>
+  <tr><td>constants/</td><td style="color:var(--score-high)">100%</td><td style="color:var(--score-high)">100%</td><td style="color:var(--score-high)">77%</td><td style="color:var(--score-high)">100%</td><td>🟢 优秀</td></tr>
+  <tr><td>utils/</td><td style="color:var(--score-high)">92%</td><td style="color:var(--score-high)">75%</td><td style="color:var(--score-high)">91%</td><td style="color:var(--score-high)">94%</td><td>🟢 优秀</td></tr>
+  <tr><td>components/workout/</td><td style="color:var(--score-high)">91%</td><td style="color:var(--score-high)">88%</td><td style="color:var(--score-high)">75%</td><td style="color:var(--score-high)">91%</td><td>🟢 良好</td></tr>
+  <tr><td>services/counters/</td><td style="color:var(--score-high)">77%</td><td style="color:var(--score-mid)">58%</td><td style="color:var(--score-high)">79%</td><td style="color:var(--score-high)">78%</td><td>🟡 良好</td></tr>
+  <tr><td>services/</td><td style="color:var(--score-mid)">61%</td><td style="color:var(--score-mid)">51%</td><td style="color:var(--score-mid)">69%</td><td style="color:var(--score-mid)">62%</td><td>🟡 中等</td></tr>
+  <tr><td>screens/</td><td style="color:var(--score-mid)">56%</td><td style="color:var(--score-low)">25%</td><td style="color:var(--score-mid)">44%</td><td style="color:var(--score-mid)">56%</td><td>🟡 中等</td></tr>
+  <tr><td>components/</td><td style="color:var(--score-mid)">47%</td><td style="color:var(--score-low)">34%</td><td style="color:var(--score-mid)">43%</td><td style="color:var(--score-mid)">46%</td><td>🟠 需改进</td></tr>
+  <tr><td>i18n/</td><td style="color:var(--score-mid)">45%</td><td style="color:var(--score-mid)">57%</td><td style="color:var(--score-low)">14%</td><td style="color:var(--score-mid)">45%</td><td>🟠 需改进</td></tr>
+  <tr><td>hooks/</td><td style="color:var(--score-low)">26%</td><td style="color:var(--score-low)">13%</td><td style="color:var(--score-low)">25%</td><td style="color:var(--score-low)">27%</td><td>🔴 严重不足</td></tr>
+  <tr><td>contexts/</td><td style="color:var(--score-low)">0%</td><td style="color:var(--score-low)">0%</td><td style="color:var(--score-low)">0%</td><td style="color:var(--score-low)">0%</td><td>🔴 无覆盖</td></tr>
+</table>
+
+<!-- ============ CODE QUALITY ============ -->
+<h2>二、代码质量与规范性</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="label">评分</div>
+    <div class="value score-high">4.5<span style="font-size:1rem">/5</span></div>
+    <div class="detail">TypeScript strict 全开 · 0 ESLint Errors · 11 Warnings</div>
+  </div>
+</div>
+
+<h3>✅ 优势</h3>
+<ul>
+  <li><strong>严格类型安全</strong> — <code>tsconfig.json</code> 启用 <code>"strict": true</code>，无显式 <code>any</code> 类型使用</li>
+  <li><strong>ESLint 配置成熟</strong> — Flat Config (ESLint 10) + TypeScript + Prettier + React Hooks 四合一，规则合理</li>
+  <li><strong>ESLint 零 Error</strong> — 仅 11 个 Warning 散布在 9 个文件中，主要是未使用变量和 Hook 依赖</li>
+  <li><strong>命名规范统一</strong> — 文件名 kebab-case / PascalCase 各得其所，导出符号清晰</li>
+  <li><strong>错误处理完善</strong> — <code>ErrorBoundary</code> + Sentry + 全局异常 + 本地日志四层兜底</li>
+  <li><strong>Prettier 格式化</strong> — 配置了 <code>npm run format</code> 脚本，ESLint + Prettier 集成</li>
+</ul>
+
+<h3>⚠️ 问题清单</h3>
+<ul class="issue-list">
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">1 处调试 console.log 残留</div>
+    <div class="desc"><code>src/hooks/useWebViewMessageHandler.ts:256</code> — <code>console.log('[CameraView]', message.data)</code> · 应移除或改为条件输出</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">2 处 React Hook 依赖缺失</div>
+    <div class="desc"><code>HomeScreen.tsx:87,150</code> — <code>useEffect</code> 缺少 <code>index</code> / <code>opacity</code> / <code>fadeAnim</code> 依赖</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">6 个测试文件中存在未使用的导入</div>
+    <div class="desc"><code>createWithAct</code>, <code>airbornePose</code>, <code>AutoStartPhase</code> 等在测试中未使用</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">ProfileScreen.tsx (585 行) 体积偏大</div>
+    <div class="desc">单个页面组件过长，建议拆分为子组件或自定义 Hook</div>
+  </li>
+</ul>
+
+<!-- ============ ARCHITECTURE ============ -->
+<h2>三、架构设计合理性与可扩展性</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="label">评分</div>
+    <div class="value score-high">4.5<span style="font-size:1rem">/5</span></div>
+    <div class="detail">分层清晰 · 策略模式 + Repository · 无循环依赖</div>
+  </div>
+</div>
+
+<h3>✅ 优势</h3>
+<ul>
+  <li><strong>策略模式 (ExerciseCounter)</strong> — 新增运动只需继承基类实现 5 个抽象方法，设计文档完备 (ADR-002)</li>
+  <li><strong>Repository 模式 (IWorkoutRepository)</strong> — 数据层接口抽象，支持后续切换后端（如云端同步）而不改上层</li>
+  <li><strong>WebView + Blob URL 架构 (ADR-001)</strong> — 合理的折中方案：离线可用、绕过 WebView 缓存不可靠问题</li>
+  <li><strong>CDN 多源回退 (ADR-003)</strong> — 4 级优先级 + asyncPool 并发控制，容错性好</li>
+  <li><strong>分层清晰</strong> — Screens → Hooks → Services → Utils → Types，职责单一</li>
+  <li><strong>Context API 适度使用</strong> — 仅 Auth + Locale 两个全局 Context，避免过度工程化</li>
+  <li><strong>无循环依赖</strong> — 模块导入拓扑单向流动</li>
+  <li><strong>3 份 ADR 文档</strong> — 关键架构决策有记录、有对比方案、有选型理由</li>
+</ul>
+
+<h3>⚠️ 问题清单</h3>
+<ul class="issue-list">
+  <li class="warn">
+    <span class="badge badge-warn">警告</span>
+    <div class="title">StorageService 与 WorkoutRepository 共享存储 Key</div>
+    <div class="desc">旧 <code>StorageService</code> (v1.0) 和新 <code>WorkoutRepository</code> (v1.2) 操作同一 AsyncStorage key，存在数据冲突风险。应废弃 StorageService 或明确迁移机制</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">缺少依赖注入容器</div>
+    <div class="desc">当前 hooks 直接 <code>import</code> 具体服务实现，单元测试需要模块级 mock。建议引入轻量 DI 或 factory 模式</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">WebView 通信耦合度较高</div>
+    <div class="desc"><code>useWebViewMessageHandler</code> (332 行) 承载了消息路由、Blob 注入、运行时控制等多个职责，可考虑拆分</div>
+  </li>
+</ul>
+
+<!-- ============ PERFORMANCE ============ -->
+<h2>四、性能瓶颈与优化空间</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="label">评分</div>
+    <div class="value score-high">4.0<span style="font-size:1rem">/5</span></div>
+    <div class="detail">自适应帧率 + Kalman 滤波 · APK 目录需清理</div>
+  </div>
+</div>
+
+<h3>✅ 优势</h3>
+<ul>
+  <li><strong>自适应帧率 (adaptivePoseRuntime)</strong> — 根据设备性能动态调整检测频率，低端机自动降频</li>
+  <li><strong>Kalman 滤波 + 滑动窗口</strong> — 姿态信号去噪，减少计数抖动</li>
+  <li><strong>WebView GPU 加速</strong> — <code>androidLayerType: 'hardware'</code> 已配置</li>
+  <li><strong>模型本地缓存</strong> — 首次 22MB 下载后零网络依赖，离线可用</li>
+  <li><strong>分块注入优化</strong> — 大文件 8x 增大分块，小块一次性注入，消除分块传输延迟</li>
+  <li><strong>PerformanceMonitor</strong> — FPS / 推理耗时实时监控，低帧率事件记录</li>
+</ul>
+
+<h3>⚠️ 问题清单</h3>
+<ul class="issue-list">
+  <li class="severe">
+    <span class="badge badge-severe">严重</span>
+    <div class="title">APK 构建目录 ~1.5GB 未清理</div>
+    <div class="desc"><code>AI Sport APK/</code> 目录包含 17 次历史构建的 APK 文件，约 1.5GB。虽已 .gitignore 但仍占用磁盘。建议归档旧版本或添加清理脚本</div>
+  </li>
+  <li class="warn">
+    <span class="badge badge-warn">警告</span>
+    <div class="title">WebView postMessage 序列化开销</div>
+    <div class="desc">每帧 Pose 数据通过 <code>JSON.stringify</code> / <code>JSON.parse</code> 在 JS ↔ Native 间传递，高频场景 (30fps) 下存在可感知开销。中长期应考虑 <code>expo-camera</code> + 原生 MediaPipe 方案</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">useExerciseFeedback 计算开销</div>
+    <div class="desc">(369 行) 每帧执行角度计算、质量评分、反馈生成。可考虑 throttle 非关键反馈更新频率</div>
+  </li>
+</ul>
+
+<!-- ============ SECURITY ============ -->
+<h2>五、安全性漏洞风险</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="label">评分</div>
+    <div class="value score-high">4.0<span style="font-size:1rem">/5</span></div>
+    <div class="detail">Sentry DSN 待填入 · WebView 安全加固完善</div>
+  </div>
+</div>
+
+<h3>✅ 优势</h3>
+<ul>
+  <li><strong>无硬编码密钥</strong> — 未检测到密码、Token、API Key 等硬编码</li>
+  <li><strong>WebView CSP 加固</strong> — <code>originWhitelist</code> 限制 5 个可信源，<code>allowFileAccess: false</code></li>
+  <li><strong>Cookie 隔离</strong> — <code>sharedCookiesEnabled: false</code></li>
+  <li><strong>Bearer Token 认证</strong> — v1.1.0 移除了 Cookie 手工管理，改用标准 Bearer Token</li>
+  <li><strong>expo-secure-store</strong> — 敏感数据 (Token) 使用 Keychain / Keystore 存储</li>
+  <li><strong>Token 刷新竞态保护</strong> — <code>refreshOnce()</code> 单例锁防止并发刷新</li>
+  <li><strong>依赖安全覆盖</strong> — <code>ws</code>, <code>shell-quote</code>, <code>postcss</code> 等已知漏洞依赖已 override</li>
+</ul>
+
+<h3>⚠️ 问题清单</h3>
+<ul class="issue-list">
+  <li class="warn">
+    <span class="badge badge-warn">警告</span>
+    <div class="title">Sentry DSN 使用占位符</div>
+    <div class="desc"><code>EXPO_PUBLIC_SENTRY_DSN</code> 当前为占位符 <code>YOUR_SENTRY_DSN_HERE</code>，生产环境崩溃无法上报。需填入真实 DSN 或明确禁用</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">无 HTTPS 强制检查</div>
+    <div class="desc"><code>apiBaseUrl.ts</code> 在开发环境使用 <code>localhost:5173</code> (HTTP)，生产切换到 <code>gakiwoo.com</code>，但未做协议强制校验</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">缺少 SSL Pinning</div>
+    <div class="desc">当前网络请求未做证书固定，存在中间人攻击风险</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">代码混淆未配置</div>
+    <div class="desc">APK 构建未启用 ProGuard/R8 混淆，逆向工程门槛较低</div>
+  </li>
+</ul>
+
+<!-- ============ DEPENDENCIES ============ -->
+<h2>六、依赖项版本与健康状态</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="label">评分</div>
+    <div class="value score-mid">3.5<span style="font-size:1rem">/5</span></div>
+    <div class="detail">当前版本稳定 · 20 个 Major 升级待评估</div>
+  </div>
+</div>
+
+<h3>依赖升级概览</h3>
+<table>
+  <tr><th>类型</th><th>数量</th><th>说明</th></tr>
+  <tr><td style="color:var(--score-high)">Patch 向后兼容</td><td>8</td><td>React 19.2.0→19.2.7、expo-av、ts-jest 等小修小补</td></tr>
+  <tr><td style="color:var(--score-high)">Minor 新增功能</td><td>9</td><td>ESLint 10.2.1→10.6.0、Prettier 3.8.3→3.9.4 等</td></tr>
+  <tr><td style="color:var(--warning)">Major 破坏性变更</td><td>20</td><td>Expo 55→56、RN 0.83→0.86、Navigation 6→7、Sentry 7→8 等</td></tr>
+</table>
+
+<h3>关键 Major 升级风险</h3>
+<ul>
+  <li><strong>Expo 55 → 56</strong> — SDK 大版本升级，所有 expo-* 包需同步升级，可能有 API 变更</li>
+  <li><strong>React Navigation 6 → 7</strong> — API 重构，路由定义方式变化较大</li>
+  <li><strong>Sentry 7 → 8</strong> — 性能监控 API 变化，需适配新 SDK</li>
+  <li><strong>AsyncStorage 2 → 3</strong> — 新架构 (Fabric) 支持，API 基本兼容</li>
+  <li><strong>Jest 29 → 30</strong> — 可能有配置格式变更</li>
+</ul>
+
+<h3>✅ 优势</h3>
+<ul>
+  <li><strong>无已知高危漏洞</strong> — 通过 <code>overrides</code> 修复了 <code>ws</code>、<code>shell-quote</code> 等安全漏洞</li>
+  <li><strong>版本锁定合理</strong> — 生产依赖使用精确版本 (~ / 固定)，开发依赖使用 ^ 灵活更新</li>
+  <li><strong>无冗余依赖</strong> — 43 个依赖项均为项目所需，无僵尸包</li>
+</ul>
+
+<h3>⚠️ 问题清单</h3>
+<ul class="issue-list">
+  <li class="warn">
+    <span class="badge badge-warn">警告</span>
+    <div class="title">20 个 Major 版本落后</div>
+    <div class="desc">Expo 56 已发布，RN 0.86 可用。虽当前版本稳定，但长期不升级会导致安全补丁缺失和升级路径困难。建议制定渐进升级计划</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">缺少定期依赖审计</div>
+    <div class="desc">CI 中未集成 <code>npm audit</code> 或 <code>npm outdated</code> 检查，依赖健康状态依赖手动维护</div>
+  </li>
+</ul>
+
+<!-- ============ TESTING ============ -->
+<h2>七、测试覆盖率与质量</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="label">评分</div>
+    <div class="value score-mid">3.5<span style="font-size:1rem">/5</span></div>
+    <div class="detail">核心路径有保障 · UI 层和 Context 覆盖不足</div>
+  </div>
+</div>
+
+<h3>✅ 优势</h3>
+<ul>
+  <li><strong>分层测试策略</strong> — 纯逻辑 (计数器/工具)、服务层、组件渲染各自独立测试</li>
+  <li><strong>核心模块阈值保障</strong> — counters 75%+、utils 80%+、mediapipe 90%+，不达标 CI 失败</li>
+  <li><strong>Golden Pose 回归测试</strong> — 7 组 JSON fixture 驱动的端到端验证，设计精巧，易于扩展</li>
+  <li><strong>完善的 Mock 基础设施</strong> — RN 170 行增强 mock、SVG mock、Sentry mock 覆盖面广</li>
+  <li><strong>测试辅助工具完善</strong> — <code>testHelpers.ts</code> 姿态工厂 + <code>testRenderer.tsx</code> act() 封装</li>
+  <li><strong>边界/异常测试</strong> — 低置信度忽略、缺失关键点、重复操作不崩溃等健壮性测试</li>
+</ul>
+
+<h3>⚠️ 问题清单</h3>
+<ul class="issue-list">
+  <li class="severe">
+    <span class="badge badge-severe">严重</span>
+    <div class="title">contexts 目录 0% 覆盖率</div>
+    <div class="desc"><code>AuthContext</code> (138 行) 和 <code>LocaleContext</code> (40 行) 完全未测试。登录/注册/语言切换是核心流程，无测试意味着回归风险高</div>
+  </li>
+  <li class="warn">
+    <span class="badge badge-warn">警告</span>
+    <div class="title">hooks 覆盖率仅 27%</div>
+    <div class="desc"><code>useExerciseFeedback</code> (369 行)、<code>useWorkoutScreen</code> (346 行)、<code>useWebViewMessageHandler</code> (332 行) 等核心 Hook 缺少独立单元测试</div>
+  </li>
+  <li class="warn">
+    <span class="badge badge-warn">警告</span>
+    <div class="title">Branches 覆盖率偏低 (46.9%)</div>
+    <div class="desc">screens 仅 25%、hooks 仅 13% 的分支覆盖。大量条件分支（加载状态、空数据、错误状态）未验证</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">E2E 测试仅骨架</div>
+    <div class="desc">Maestro 仅 1 个烟雾测试 (游客+深蹲)，无 CI 集成。缺少关键路径 E2E (登录流程、历史查看、设置修改)</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">组件测试紧密耦合实现</div>
+    <div class="desc">部分 Screen 测试文件内 inline mock 了 6+ 个模块，修改实现易导致测试误报</div>
+  </li>
+</ul>
+
+<!-- ============ DOCUMENTATION ============ -->
+<h2>八、文档完整性</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="label">评分</div>
+    <div class="value score-high">4.0<span style="font-size:1rem">/5</span></div>
+    <div class="detail">ADR ×3 · 部署指南 · 路线图 · 缺少开发入门指南</div>
+  </div>
+</div>
+
+<h3>✅ 现有文档 (14 份)</h3>
+<table>
+  <tr><th>文档</th><th>用途</th><th>质量</th></tr>
+  <tr><td>README.md</td><td>项目介绍、技术栈、快速开始</td><td>🟢 完善</td></tr>
+  <tr><td>CHANGELOG.md</td><td>版本变更记录 (Keep a Changelog 格式)</td><td>🟢 规范</td></tr>
+  <tr><td>docs/ROADMAP.md</td><td>5 阶段开发路线图</td><td>🟢 清晰</td></tr>
+  <tr><td>docs/FIX_PLAN.md</td><td>14 项修复计划 (含代码行号)</td><td>🟢 细致</td></tr>
+  <tr><td>docs/adr/ (3 份)</td><td>架构决策记录</td><td>🟢 专业</td></tr>
+  <tr><td>docs/architecture/cloud-sync-design.md</td><td>云端同步完整设计</td><td>🟢 全面</td></tr>
+  <tr><td>docs/deployment/ (3 份)</td><td>Git 推送、MediaPipe 部署、Sentry 配置</td><td>🟢 实用</td></tr>
+  <tr><td>docs/e2e/README.md</td><td>Maestro E2E 说明</td><td>🟢 简洁</td></tr>
+  <tr><td>docs/architecture_evaluation.md</td><td>v1.0 架构评估报告</td><td>🟡 已过期</td></tr>
+  <tr><td>docs/PROJECT_EVALUATION_REPORT*.md (2 份)</td><td>历史评估报告</td><td>🟡 需归档</td></tr>
+</table>
+
+<h3>⚠️ 问题清单</h3>
+<ul class="issue-list">
+  <li class="warn">
+    <span class="badge badge-warn">警告</span>
+    <div class="title">缺少新人上手文档</div>
+    <div class="desc">无 <code>CONTRIBUTING.md</code> 或开发者入门指南。新成员需要自行理解架构和开发流程</div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">历史评估报告需归档</div>
+    <div class="desc"><code>architecture_evaluation.md</code> (v1.0) 和 <code>PROJECT_EVALUATION_REPORT*.md</code> 可能包含过时信息，建议移至 <code>docs/archive/</code></div>
+  </li>
+  <li class="suggest">
+    <span class="badge badge-suggest">建议</span>
+    <div class="title">无 API 接口文档</div>
+    <div class="desc"><code>AuthService</code>、<code>SyncService</code> 等对外接口缺少 JSDoc 注释，IDE 智能提示不完整</div>
+  </li>
+</ul>
+
+<!-- ============ SUMMARY ============ -->
+<h2>九、问题严重等级汇总</h2>
+
+<table>
+  <tr><th>#</th><th>问题</th><th>等级</th><th>维度</th></tr>
+  <tr><td>1</td><td>contexts 目录 0% 覆盖率 (AuthContext + LocaleContext)</td><td><span class="badge badge-severe">严重</span></td><td>测试</td></tr>
+  <tr><td>2</td><td>APK 构建目录 ~1.5GB 未清理</td><td><span class="badge badge-severe">严重</span></td><td>性能</td></tr>
+  <tr><td>3</td><td>Sentry DSN 使用占位符</td><td><span class="badge badge-warn">警告</span></td><td>安全</td></tr>
+  <tr><td>4</td><td>hooks 覆盖率仅 27% (核心 Hook 未独立测试)</td><td><span class="badge badge-warn">警告</span></td><td>测试</td></tr>
+  <tr><td>5</td><td>Branches 覆盖率 46.9% (screens 25%)</td><td><span class="badge badge-warn">警告</span></td><td>测试</td></tr>
+  <tr><td>6</td><td>20 个 Major 依赖版本落后</td><td><span class="badge badge-warn">警告</span></td><td>依赖</td></tr>
+  <tr><td>7</td><td>StorageService 与 WorkoutRepository 共享存储 Key</td><td><span class="badge badge-warn">警告</span></td><td>架构</td></tr>
+  <tr><td>8</td><td>WebView postMessage 序列化开销 (中期风险)</td><td><span class="badge badge-warn">警告</span></td><td>性能</td></tr>
+  <tr><td>9</td><td>缺少新人上手文档 (CONTRIBUTING.md)</td><td><span class="badge badge-warn">警告</span></td><td>文档</td></tr>
+  <tr><td>10</td><td>调试 console.log 残留</td><td><span class="badge badge-suggest">建议</span></td><td>代码质量</td></tr>
+  <tr><td>11</td><td>Hook 依赖缺失 (HomeScreen useEffect)</td><td><span class="badge badge-suggest">建议</span></td><td>代码质量</td></tr>
+  <tr><td>12</td><td>测试文件未使用导入</td><td><span class="badge badge-suggest">建议</span></td><td>代码质量</td></tr>
+  <tr><td>13</td><td>ProfileScreen.tsx 体积偏大</td><td><span class="badge badge-suggest">建议</span></td><td>代码质量</td></tr>
+  <tr><td>14</td><td>缺少依赖注入容器</td><td><span class="badge badge-suggest">建议</span></td><td>架构</td></tr>
+  <tr><td>15</td><td>WebView 通信耦合度高 (useWebViewMessageHandler)</td><td><span class="badge badge-suggest">建议</span></td><td>架构</td></tr>
+  <tr><td>16</td><td>useExerciseFeedback 计算开销</td><td><span class="badge badge-suggest">建议</span></td><td>性能</td></tr>
+  <tr><td>17</td><td>无 HTTPS 强制检查</td><td><span class="badge badge-suggest">建议</span></td><td>安全</td></tr>
+  <tr><td>18</td><td>缺少 SSL Pinning</td><td><span class="badge badge-suggest">建议</span></td><td>安全</td></tr>
+  <tr><td>19</td><td>代码混淆未配置</td><td><span class="badge badge-suggest">建议</span></td><td>安全</td></tr>
+  <tr><td>20</td><td>缺少定期依赖审计 CI</td><td><span class="badge badge-suggest">建议</span></td><td>依赖</td></tr>
+  <tr><td>21</td><td>E2E 测试仅骨架</td><td><span class="badge badge-suggest">建议</span></td><td>测试</td></tr>
+  <tr><td>22</td><td>组件测试与实现紧密耦合</td><td><span class="badge badge-suggest">建议</span></td><td>测试</td></tr>
+  <tr><td>23</td><td>历史评估报告需归档</td><td><span class="badge badge-suggest">建议</span></td><td>文档</td></tr>
+  <tr><td>24</td><td>无 API 接口 JSDoc 文档</td><td><span class="badge badge-suggest">建议</span></td><td>文档</td></tr>
+</table>
+
+<!-- ============ PRIORITY ============ -->
+<h2>十、优先级排序的改进建议清单</h2>
+
+<h3>🔴 P0 — 立即处理 (2 项)</h3>
+<ol class="priority-order" style="list-style:none;padding:0;">
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--severe-bg);border-radius:8px;">
+    <div><strong>为 AuthContext 和 LocaleContext 添加单元测试</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">当前覆盖率为 0%，但登录/注册/语言切换是核心路径。建议使用 <code>@testing-library/react-native</code> 编写 Provider + Hook 集成测试</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--warning-bg);border-radius:8px;">
+    <div><strong>配置真实 Sentry DSN 或明确禁用 Sentry</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">当前占位符 <code>YOUR_SENTRY_DSN_HERE</code> 导致生产崩溃无法追踪。若暂不使用 Sentry，应在 <code>app.json</code> 中移除 <code>@sentry/react-native</code> 插件以减小包体积</span></div>
+  </li>
+</ol>
+
+<h3>🟡 P1 — 本迭代处理 (5 项)</h3>
+<ol class="priority-order" start="3" style="list-style:none;padding:0;">
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--warning-bg);border-radius:8px;">
+    <div><strong>为核心 Hooks 添加单元测试</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">重点：<code>useExerciseFeedback</code> (369 行)、<code>useWorkoutScreen</code> (346 行)、<code>useWorkout</code>。优先覆盖关键条件分支</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--warning-bg);border-radius:8px;">
+    <div><strong>废弃或标记 StorageService 为 deprecated</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">新旧存储层共享 Key 存在数据冲突风险。应添加 <code>@deprecated</code> 注释并引导调用方迁移至 <code>WorkoutRepository</code></span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--warning-bg);border-radius:8px;">
+    <div><strong>制定 Expo 56 / RN 0.86 升级计划</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">评估 20 个 Major 升级的可行性，优先升级安全相关补丁 (Sentry 8、AsyncStorage 3)。创建升级分支逐步验证</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--warning-bg);border-radius:8px;">
+    <div><strong>补全 E2E 关键路径测试</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">添加登录流程、训练完整周期、历史查看 3 条 Maestro flow</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>清理 APK 历史构建目录</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">保留最近 3 个版本，其余移至归档存储。添加 <code>scripts/clean-apk.sh</code> 自动化脚本</span></div>
+  </li>
+</ol>
+
+<h3>🟢 P2 — 后续迭代 (8 项)</h3>
+<ol class="priority-order" start="8" style="list-style:none;padding:0;">
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>清理 ESLint 11 个 Warning</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">移除未使用导入、修复 Hook 依赖、删除调试 console.log</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>拆分 ProfileScreen.tsx</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">585 行 → 拆为 ProfileInfo / ProfileSettings / ProfileStats 等子组件</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>编写 CONTRIBUTING.md 开发者入门指南</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">包括环境搭建、项目结构导览、开发约定、提交规范</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>补充关键接口 JSDoc 文档</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;"><code>AuthService</code>、<code>SyncService</code>、<code>ExerciseCounter</code> 基类等方法添加 JSDoc 注释</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>CI 添加 npm audit / npm outdated 检查</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">GitHub Actions 中增加依赖安全审计步骤</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>Screen 测试覆盖率目标提升至 70%+</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">重点补充分支覆盖：错误状态、空数据、加载中等 UI 状态</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>启用 Android ProGuard/R8 代码混淆</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">增强逆向工程防护，同时可减小 APK 体积</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;background:var(--suggest-bg);border-radius:8px;">
+    <div><strong>归档过期评估报告</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">将 v1.0 架构评估等历史报告移至 <code>docs/archive/</code></span></div>
+  </li>
+</ol>
+
+<h3>🔵 P3 — 中长期规划 (3 项)</h3>
+<ol class="priority-order" start="16" style="list-style:none;padding:0;">
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;">
+    <div><strong>评估 WebView → expo-camera + 原生 MediaPipe 迁移</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">消除 postMessage 序列化开销，降低 WebView 内存占用。可先做 PoC 对比性能</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;">
+    <div><strong>引入轻量 DI 容器</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">使用 React Context 或 tsyringe 实现服务注入，降低模块耦合度</span></div>
+  </li>
+  <li style="display:flex;align-items:flex-start;margin:12px 0;padding:12px 16px;">
+    <div><strong>实现 SSL Pinning</strong><br>
+    <span style="color:var(--muted);font-size:0.9rem;">通过 expo 插件或原生模块实现证书固定，增强网络通信安全</span></div>
+  </li>
+</ol>
+
+<!-- ============ RADAR ============ -->
+<h2>十一、各维度评分雷达</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0;">
+  <div>
+    <div style="display:flex;justify-content:space-between;"><span>代码质量</span><strong style="color:var(--score-high)">4.5/5</strong></div>
+    <div class="bar"><div class="bar-fill high" style="width:90%"></div></div>
+  </div>
+  <div>
+    <div style="display:flex;justify-content:space-between;"><span>架构设计</span><strong style="color:var(--score-high)">4.5/5</strong></div>
+    <div class="bar"><div class="bar-fill high" style="width:90%"></div></div>
+  </div>
+  <div>
+    <div style="display:flex;justify-content:space-between;"><span>性能优化</span><strong style="color:var(--score-high)">4.0/5</strong></div>
+    <div class="bar"><div class="bar-fill high" style="width:80%"></div></div>
+  </div>
+  <div>
+    <div style="display:flex;justify-content:space-between;"><span>安全性</span><strong style="color:var(--score-high)">4.0/5</strong></div>
+    <div class="bar"><div class="bar-fill high" style="width:80%"></div></div>
+  </div>
+  <div>
+    <div style="display:flex;justify-content:space-between;"><span>依赖健康</span><strong style="color:var(--score-mid)">3.5/5</strong></div>
+    <div class="bar"><div class="bar-fill mid" style="width:70%"></div></div>
+  </div>
+  <div>
+    <div style="display:flex;justify-content:space-between;"><span>测试覆盖</span><strong style="color:var(--score-mid)">3.5/5</strong></div>
+    <div class="bar"><div class="bar-fill mid" style="width:70%"></div></div>
+  </div>
+  <div>
+    <div style="display:flex;justify-content:space-between;"><span>文档完整性</span><strong style="color:var(--score-high)">4.0/5</strong></div>
+    <div class="bar"><div class="bar-fill high" style="width:80%"></div></div>
+  </div>
+</div>
+
+<div style="text-align:center;margin-top:32px;padding:20px;background:var(--accent-light);border-radius:10px;">
+  <strong style="font-size:1.2rem;color:var(--accent);">综合评分：4.1 / 5.0</strong><br>
+  <span style="color:var(--muted);">工程化水平良好，核心架构稳健。主要短板在测试覆盖率均衡性和依赖升级节奏。</span>
+</div>
+
+</body>
+</html>

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { WorkoutSession, ExerciseType } from '../types';
 import { AnalyticsScreenProps } from '../types/navigation';
-import StorageService from '../services/StorageService';
+import { workoutRepository } from '../services/WorkoutRepository';
 import BarChart from '../components/BarChart';
 import { EXERCISE_NAMES } from '../constants/exerciseConfig';
 
@@ -47,7 +47,7 @@ export default function AnalyticsScreen(_props: AnalyticsScreenProps) {
   }, []);
 
   const loadAnalytics = async () => {
-    const data = await StorageService.getAnalytics();
+    const data = await workoutRepository.getAnalytics();
     setAnalytics(data);
   };
 
@@ -106,19 +106,25 @@ export default function AnalyticsScreen(_props: AnalyticsScreenProps) {
     <ScrollView style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>总体统计</Text>
-        <View style={styles.statRow}>
+        <View style={styles.statRow} accessibilityLabel={`总训练次数: ${analytics.totalWorkouts}`}>
           <Text style={styles.statLabel}>总训练次数</Text>
           <Text style={styles.statValue}>{analytics.totalWorkouts}</Text>
         </View>
-        <View style={styles.statRow}>
+        <View style={styles.statRow} accessibilityLabel={`总完成次数: ${analytics.totalReps}`}>
           <Text style={styles.statLabel}>总完成次数</Text>
           <Text style={styles.statValue}>{analytics.totalReps}</Text>
         </View>
-        <View style={styles.statRow}>
+        <View
+          style={styles.statRow}
+          accessibilityLabel={`平均次数: ${analytics.avgReps.toFixed(1)}`}
+        >
           <Text style={styles.statLabel}>平均次数</Text>
           <Text style={styles.statValue}>{analytics.avgReps.toFixed(1)}</Text>
         </View>
-        <View style={styles.statRow}>
+        <View
+          style={styles.statRow}
+          accessibilityLabel={`累计用时: ${formatDuration(analytics.totalDuration)}`}
+        >
           <Text style={styles.statLabel}>⏱ 累计用时</Text>
           <Text style={[styles.statValue, styles.statValueDuration]}>
             {formatDuration(analytics.totalDuration)}

@@ -2,7 +2,7 @@ import { ExerciseCounter } from '../services/ExerciseCounter';
 
 // 用最小实现测试基类
 class TestCounter extends ExerciseCounter {
-  processFrame(_pose: any): void {
+  processFrame(_pose: unknown): void {
     this.totalFrames++;
   }
 }
@@ -56,7 +56,6 @@ describe('ExerciseCounter 基类', () => {
     expect(counter.getFeedback()).toBeNull();
   });
 });
-
 describe('ExerciseCounter getRate 公式验证', () => {
   it('100帧 @ 100ms间隔 + 1次计数 = 60/分钟', () => {
     class CountingCounter extends ExerciseCounter {
@@ -64,7 +63,7 @@ describe('ExerciseCounter getRate 公式验证', () => {
         super();
         // 模拟 100 帧后计数 1 次
       }
-      processFrame(_pose: any): void {
+      processFrame(_pose: unknown): void {
         this.totalFrames++;
       }
       simulateCount(frames: number, counts: number): void {
@@ -83,7 +82,7 @@ describe('ExerciseCounter getRate 公式验证', () => {
 
   it('300帧 @ 100ms间隔 + 10次计数 = 60/分钟', () => {
     class CountingCounter extends ExerciseCounter {
-      processFrame(_pose: any): void {
+      processFrame(_pose: unknown): void {
         this.totalFrames++;
       }
       simulateCount(frames: number, counts: number): void {
@@ -181,7 +180,7 @@ describe('ExerciseCounter getRate 不同帧间隔公式验证', () => {
 
 describe('ExerciseCounter 时间窗口换算', () => {
   class TimingCounter extends ExerciseCounter {
-    processFrame(_pose: any): void {
+    processFrame(_pose: unknown): void {
       this.totalFrames++;
     }
 
@@ -216,5 +215,118 @@ describe('ExerciseCounter 时间窗口换算', () => {
 
     expect(c.framesForMsPublic(1)).toBe(1);
     expect(c.framesForMsPublic(121)).toBe(2);
+  });
+});
+describe('ExerciseCounter 商业化统一结果结构', () => {
+  class ResultCounter extends ExerciseCounter {
+    processFrame(pose: { keypoints?: unknown[] }): void {
+      this.totalFrames++;
+      if ((pose.keypoints || []).length > 0) {
+        this.count++;
+        this.lastState = 'counted';
+      } else {
+        this.invalidCount++;
+        this.lastState = 'invalid';
+      }
+    }
+  }
+
+  const confidentPose = {
+    score: 0.92,
+    keypoints: [
+      { name: 'left_shoulder', x: 0.4, y: 0.2, score: 0.9 },
+      { name: 'right_shoulder', x: 0.6, y: 0.2, score: 0.94 },
+    ],
+  };
+
+  it('processFrameResult 输出统一帧结果', () => {
+    const counter = new ResultCounter();
+
+    const frameResult = counter.processFrameResult(confidentPose);
+
+    expect(frameResult).toEqual({
+      state: 'counted',
+      countDelta: 1,
+      valid: true,
+      confidence: 0.92,
+      feedback: undefined,
+      keyMetrics: {
+        count: 1,
+        resultValue: 1,
+        totalFrames: 1,
+        rate: 600,
+      },
+    });
+  });
+
+  it('getSessionResult 输出 ExerciseResult 并记录异常帧', () => {
+    const counter = new ResultCounter();
+    counter.setFrameInterval(100);
+    counter.startSession('jump_rope', {
+      sessionId: 'session_test',
+      startedAt: '2026-07-01T00:00:00.000Z',
+    });
+
+    counter.processFrameResult(confidentPose);
+    counter.processFrameResult({ keypoints: [] });
+
+    const result = counter.getSessionResult('jump_rope', '2026-07-01T00:00:01.000Z');
+
+    expect(result).toMatchObject({
+      sessionId: 'session_test',
+      exerciseType: 'jump_rope',
+      reps: 1,
+      validCount: 1,
+      invalidCount: 1,
+      foulCount: 0,
+      confidence: 0.5,
+      durationMs: 1000,
+      feedback: [],
+      algorithmLog: expect.any(Array),
+      startedAt: '2026-07-01T00:00:00.000Z',
+      endedAt: '2026-07-01T00:00:01.000Z',
+    });
+    expect(result.algorithmLog).toHaveLength(2);
+    expect(result.algorithmLog[0]).toMatchObject({
+      frameIndex: 1,
+      timestampMs: 100,
+      state: 'counted',
+      countDelta: 1,
+    });
+  });
+
+  it('测量型项目按项目类型映射 distanceCm 和 heightCm', () => {
+    class DistanceCounter extends ExerciseCounter {
+      processFrame(): void {
+        this.totalFrames++;
+      }
+
+      getResultValue(): number {
+        return 236;
+      }
+
+      getResultUnit(): string {
+        return 'cm';
+      }
+    }
+
+    const longJump = new DistanceCounter();
+    longJump.startSession('standing_long_jump', {
+      sessionId: 'long_jump',
+      startedAt: '2026-07-01T00:00:00.000Z',
+    });
+    longJump.processFrameResult(confidentPose);
+
+    const verticalJump = new DistanceCounter();
+    verticalJump.startSession('vertical_jump', {
+      sessionId: 'vertical_jump',
+      startedAt: '2026-07-01T00:00:00.000Z',
+    });
+    verticalJump.processFrameResult(confidentPose);
+
+    expect(longJump.getSessionResult('standing_long_jump').distanceCm).toBe(236);
+    expect(longJump.getSessionResult('standing_long_jump').heightCm).toBeUndefined();
+    expect(verticalJump.getSessionResult('vertical_jump').heightCm).toBe(236);
+    expect(verticalJump.getSessionResult('vertical_jump').distanceCm).toBeUndefined();
   });
 });

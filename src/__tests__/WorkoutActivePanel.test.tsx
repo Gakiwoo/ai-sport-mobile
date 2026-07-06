@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import { renderToJSON } from './testRenderer';
+import { ExerciseFeedback } from '../types';
 
 // ── 导航 mock ──
 jest.mock('@react-navigation/native', () => ({
@@ -27,7 +28,7 @@ describe('WorkoutActivePanel', () => {
     countdown: 30,
     timeUp: false,
     countdownAnim: mockAnimValue,
-    currentFeedback: null as any,
+    currentFeedback: null as ExerciseFeedback | null,
   };
 
   it('渲染不崩溃', async () => {
@@ -52,9 +53,7 @@ describe('WorkoutActivePanel', () => {
   });
 
   it('显示当前次数', async () => {
-    const tree = await renderToJSON(
-      <WorkoutActivePanel {...defaultProps} count={42} />,
-    );
+    const tree = await renderToJSON(<WorkoutActivePanel {...defaultProps} count={42} />);
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('42');
   });

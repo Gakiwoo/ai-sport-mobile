@@ -1,7 +1,9 @@
 /**
  * 中文翻译
  */
-const zh: Record<string, string | ((...args: any[]) => string)> = {
+import type { TranslationValue } from './index';
+
+const zh: Record<string, TranslationValue> = {
   // ── 通用 ──
   'app.name': 'AI运动助手',
   'common.loading': '加载中...',
@@ -127,6 +129,33 @@ const zh: Record<string, string | ((...args: any[]) => string)> = {
   'lang.zh': '中文',
   'lang.en': 'English',
   'lang.current': '当前语言',
+
+  // ── 无障碍 (Accessibility) ──
+  'a11y.profile': '个人中心',
+  'a11y.startExercise': '点击进入训练',
+  'a11y.dismissError': '关闭错误提示',
+  'a11y.guestMode': '游客模式，本地训练',
+  'a11y.goToRegister': '没有账号，去注册',
+  'a11y.goToLogin': '已有账号，去登录',
+  'a11y.confirmPassword': '确认密码',
+  'a11y.openSettings': '打开系统设置',
+  'a11y.setTarget': '设置目标',
+  'a11y.editNickname': '修改昵称',
+  'a11y.saveNickname': '保存昵称',
+  'a11y.changePassword': '修改密码',
+  'a11y.selectLanguage': '选择语言',
+  'a11y.languageOption': (name: string) => `选择语言: ${name}`,
+  'a11y.logout': '退出登录',
+  'a11y.guestLogout': '退出本地模式',
+  'a11y.reload': '重新加载',
+  'a11y.workoutCount': (n: number) => `当前次数: ${n}`,
+  'a11y.countdown': (n: number) => `倒计时: ${n}`,
+  'a11y.timer': (t: string) => `剩余时间: ${t}`,
+  'a11y.feedback': '动作反馈',
+  'a11y.targetInput': '输入目标次数',
+  'a11y.durationInput': '输入目标时长（秒）',
+  'a11y.quickDuration': (d: number) => `${d}秒`,
+  'a11y.historyItem': (name: string, count: number) => `${name}，${count}次`,
 };
 
 export default zh;

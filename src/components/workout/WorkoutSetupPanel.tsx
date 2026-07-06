@@ -21,10 +21,14 @@ export default function WorkoutSetupPanel({
   return (
     <View style={styles.centerContent}>
       {startCountdown !== null ? (
-        <Text style={styles.startCountdown}>{startCountdown}</Text>
+        <Text style={styles.startCountdown} accessibilityLiveRegion="assertive">
+          {startCountdown}
+        </Text>
       ) : (
         <>
-          <Text style={styles.counter}>{count}</Text>
+          <Text style={styles.counter} accessibilityLiveRegion="polite">
+            {count}
+          </Text>
           <View
             style={[
               styles.setupGuide,

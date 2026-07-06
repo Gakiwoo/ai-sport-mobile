@@ -1,6 +1,6 @@
 {
   "name": "ai-motion-tracker",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -9,6 +9,8 @@
     "web": "expo start --web",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:video-dataset": "node scripts/validate-video-dataset.js",
+    "report:algorithm": "node scripts/algorithm-regression-report.js",
     "test:watch": "jest --watch",
     "lint": "eslint src/ --ext .ts,.tsx",
     "lint:fix": "eslint src/ --ext .ts,.tsx --fix",
@@ -20,12 +22,18 @@
     "@react-native-community/slider": "5.1.2",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/stack": "^6.4.1",
-    "expo": "~55.0.25",
+    "@sentry/react-native": "~7.11.0",
+    "expo": "~55.0.27",
+    "expo-application": "~55.0.16",
     "expo-av": "~16.0.0",
-    "expo-camera": "~55.0.18",
-    "expo-linking": "~55.0.15",
-    "expo-localization": "~55.0.15",
-    "expo-secure-store": "~55.0.14",
+    "expo-camera": "~55.0.20",
+    "expo-constants": "~55.0.16",
+    "expo-device": "~55.0.18",
+    "expo-file-system": "~55.0.23",
+    "expo-linking": "~55.0.16",
+    "expo-localization": "~55.0.16",
+    "expo-secure-store": "~55.0.15",
+    "expo-sharing": "~55.0.21",
     "expo-status-bar": "~55.0.6",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -35,14 +43,14 @@
     "react-native-screens": "~4.23.0",
     "react-native-svg": "15.15.3",
     "react-native-web": "~0.21.0",
-    "react-native-webview": "13.16.0",
-    "sentry-expo": "~7.0.0"
+    "react-native-webview": "13.16.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@eslint/js": "^10.0.1",
     "@types/jest": "^29.5.14",
     "@types/react": "~19.2.0",
+    "@types/react-test-renderer": "^19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.59.0",
     "@typescript-eslint/parser": "^8.59.0",
     "eslint": "^10.2.1",
@@ -55,14 +63,14 @@
     "react-test-renderer": "19.2.0",
     "ts-jest": "^29.4.9",
     "typescript": "^5.5.0",
-    "typescript-eslint": "^8.59.0",
-    "@types/react-test-renderer": "^19.1.0"
+    "typescript-eslint": "^8.59.0"
   },
   "private": true,
   "overrides": {
     "brace-expansion": "^5.0.6",
     "postcss": "^8.5.10",
-    "ws": "^8.20.1"
+    "ws": "^8.21.0",
+    "shell-quote": "^1.9.0"
   },
   "expo": {
     "doctor": {

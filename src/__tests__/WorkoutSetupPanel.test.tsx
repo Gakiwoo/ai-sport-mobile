@@ -42,12 +42,7 @@ describe('WorkoutSetupPanel', () => {
 
   it('倒计时模式显示数字', async () => {
     const tree = await renderToJSON(
-      <WorkoutSetupPanel
-        count={0}
-        startCountdown={3}
-        poseQuality={null}
-        autoStartPhase={null}
-      />,
+      <WorkoutSetupPanel count={0} startCountdown={3} poseQuality={null} autoStartPhase={null} />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('3');

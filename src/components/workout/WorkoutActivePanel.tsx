@@ -24,8 +24,7 @@ export default function WorkoutActivePanel({
   countdownAnim,
   currentFeedback,
 }: WorkoutActivePanelProps) {
-  const progressPercent =
-    targetCount > 0 ? Math.round((count / targetCount) * 100) : 0;
+  const progressPercent = targetCount > 0 ? Math.round((count / targetCount) * 100) : 0;
 
   return (
     <View style={styles.centerContent}>
@@ -37,7 +36,12 @@ export default function WorkoutActivePanel({
         </Animated.View>
       )}
 
-      <Text style={[styles.counter, isTimed && styles.counterTimed]}>{count}</Text>
+      <Text
+        style={[styles.counter, isTimed && styles.counterTimed]}
+        accessibilityLiveRegion="polite"
+      >
+        {count}
+      </Text>
 
       <View style={styles.targetHint}>
         <Text style={styles.targetHintText}>
@@ -48,7 +52,11 @@ export default function WorkoutActivePanel({
       </View>
 
       {currentFeedback && (
-        <View style={[styles.feedbackBox, getFeedbackBoxStyle(currentFeedback)]}>
+        <View
+          style={[styles.feedbackBox, getFeedbackBoxStyle(currentFeedback)]}
+          accessibilityLabel="动作反馈"
+          accessibilityLiveRegion="polite"
+        >
           <Text style={styles.feedbackText}>{currentFeedback.message}</Text>
         </View>
       )}
