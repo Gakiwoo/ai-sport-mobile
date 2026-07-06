@@ -11,7 +11,7 @@ import zh from './zh';
 import en from './en';
 
 export type Locale = 'zh' | 'en';
-export type TranslationValue = string | ((...args: any[]) => string);
+export type TranslationValue = string | ((...args: Array<string | number>) => string);
 
 const translations: Record<Locale, Record<string, TranslationValue>> = {
   zh,
@@ -56,7 +56,7 @@ export function getSupportedLocales(): { code: Locale; name: string; localName: 
  * @param key 翻译键
  * @param args 可选参数（用于函数翻译）
  */
-export function t(key: string, ...args: unknown[]): string {
+export function t(key: string, ...args: Array<string | number>): string {
   const dict = translations[currentLocale];
   const value = dict[key];
   if (value === undefined) {

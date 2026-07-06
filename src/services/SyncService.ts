@@ -6,7 +6,7 @@
  * 触发时机：
  * 1. App 启动后（延迟执行，不阻塞首屏）
  * 2. 每次训练保存后（fire-and-forget）
- * 3. 网络恢复时（NetInfo listener）
+ * 3. 应用回到前台 / 网络恢复时（AppState 监听，可选 NetInfo 增强）
  *
  * 当前后端同步默认关闭：本地读写已完备，只有显式开启云同步并配置 API 后才会标记为已同步。
  *
@@ -19,9 +19,10 @@
  */
 
 import { workoutRepository } from './WorkoutRepository';
-import { authService } from './AuthService';
+import AuthService from './AuthService';
 import { LocalWorkoutRecord } from '../types';
 import { getEnvVar } from '../utils/getEnv';
+import { AppState, type NativeEventSubscription } from 'react-native';
 
 // ── 配置 ──
 const SYNC_API_PATH = '/api/workouts/sync';
@@ -56,6 +57,8 @@ class SyncService {
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private retryCount = 0;
   private networkListener: (() => void) | null = null;
+  /** AppState 订阅（零新依赖，覆盖「应用回到前台 / 恢复网络」场景） */
+  private appStateSub: NativeEventSubscription | null = null;
 
   /** 启动同步服务：初始延迟同步 + 注册网络监听 */
   start(): void {
@@ -66,8 +69,8 @@ class SyncService {
       });
     }, SYNC_INITIAL_DELAY_MS);
 
-    // TODO: 注册 NetInfo 监听（需要 @react-native-community/netinfo）
-    // this.registerNetworkListener();
+    // 注册网络/前台恢复监听：离线→在线时自动补传待同步记录
+    this.registerNetworkListener();
   }
 
   /** 停止同步服务 */
@@ -141,7 +144,7 @@ class SyncService {
     const timeoutId = setTimeout(() => controller.abort(), SYNC_FETCH_TIMEOUT_MS);
 
     try {
-      const token = await authService.getAccessToken().catch(() => null);
+      const token = await AuthService.getAccessToken().catch(() => null);
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -195,20 +198,48 @@ class SyncService {
     }, delay);
   }
 
-  /** 注册网络恢复监听 */
+  /** 注册网络恢复监听：主路径 AppState（零依赖），可选增强 NetInfo */
   private registerNetworkListener(): void {
-    // TODO: 接入 @react-native-community/netinfo
+    // 主路径：监听应用回到前台（覆盖「恢复网络后重新打开 App」最常见场景）
+    this.appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        this.syncIfPending();
+      }
+    });
+
+    // 增强路径：NetInfo 监听（需在项目环境先执行 `expo install @react-native-community/netinfo`）。
+    // 安装后取消下方注释即可启用，无需改动任何业务逻辑：
     // import NetInfo from '@react-native-community/netinfo';
     // this.networkListener = NetInfo.addEventListener((state) => {
     //   if (state.isConnected && state.isInternetReachable) {
-    //     this.sync().catch(() => {});
+    //     this.syncIfPending();
     //   }
     // });
   }
 
+  /** 仅当存在待同步记录时才触发同步（供网络/前台恢复时调用，避免空跑与初始延迟同步冲突） */
+  private syncIfPending(): void {
+    workoutRepository
+      .getPendingSync()
+      .then((pending) => {
+        if (pending.length > 0) {
+          this.sync().catch((err) =>
+            console.warn('[SyncService] Resume sync failed:', err?.message ?? err),
+          );
+        }
+      })
+      .catch((err) =>
+        console.warn('[SyncService] Pending check failed:', err?.message ?? err),
+      );
+  }
+
   private removeNetworkListener(): void {
+    if (this.appStateSub) {
+      this.appStateSub.remove();
+      this.appStateSub = null;
+    }
     if (this.networkListener) {
-      // TODO: NetInfo remove
+      this.networkListener();
       this.networkListener = null;
     }
   }

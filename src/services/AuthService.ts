@@ -353,6 +353,12 @@ const AuthService = {
       return null;
     }
   },
+
+  /** 获取当前 access token（供同步等需 Authorization 头的场景使用）；未登录返回 null */
+  async getAccessToken(): Promise<string | null> {
+    const tokens = await getStoredTokens();
+    return tokens?.accessToken ?? null;
+  },
 };
 
 export default AuthService;
