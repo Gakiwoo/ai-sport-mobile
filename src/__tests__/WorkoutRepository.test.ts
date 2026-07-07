@@ -17,6 +17,9 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
       delete mockStore[key];
       return Promise.resolve();
     }),
+    multiGet: jest.fn((keys: string[]) =>
+      Promise.resolve(keys.map((k) => [k, mockStore[k] ?? null] as [string, string | null])),
+    ),
   },
 }));
 
@@ -157,6 +160,51 @@ describe('LocalWorkoutRepository', () => {
     });
   });
 
+  describe('batchMarkSynced', () => {
+    it('应批量将多条记录标记为已同步（一次性重写，避免 O(n²)）', async () => {
+      await repo.save(makeSession({ id: 'b1' }));
+      await repo.save(makeSession({ id: 'b2' }));
+      await repo.save(makeSession({ id: 'b3' }));
+
+      const updated = await repo.batchMarkSynced(['b1', 'b2']);
+      expect(updated).toBe(2);
+
+      const pending = await repo.getPendingSync();
+      expect(pending.map((r) => r.id).sort()).toEqual(['b3']);
+      const b1 = await repo.getById('b1');
+      expect(b1!._syncStatus).toBe('synced');
+    });
+
+    it('应写入 serverId 映射', async () => {
+      await repo.save(makeSession({ id: 's1' }));
+      const serverIds = new Map<string, string>([['s1', 'server-xyz']]);
+      await repo.batchMarkSynced(['s1'], serverIds);
+      const rec = await repo.getById('s1');
+      expect(rec!._serverId).toBe('server-xyz');
+    });
+
+    it('已同步记录不应被重复计数', async () => {
+      await repo.save(makeSession({ id: 'x1' }));
+      await repo.markSynced('x1', 'svr');
+      const updated = await repo.batchMarkSynced(['x1']);
+      expect(updated).toBe(0);
+    });
+
+    it('空 ids 应返回 0 且不执行任何写入', async () => {
+      await repo.save(makeSession({ id: 'e1' }));
+      const updated = await repo.batchMarkSynced([]);
+      expect(updated).toBe(0);
+    });
+
+    it('ids 含不存在的 id 时只更新存在的记录', async () => {
+      await repo.save(makeSession({ id: 'real' }));
+      const updated = await repo.batchMarkSynced(['real', 'ghost']);
+      expect(updated).toBe(1);
+      const rec = await repo.getById('real');
+      expect(rec!._syncStatus).toBe('synced');
+    });
+  });
+
   describe('delete', () => {
     it('应删除指定记录', async () => {
       await repo.save(makeSession({ id: 'del-me' }));
@@ -206,6 +254,42 @@ describe('LocalWorkoutRepository', () => {
       expect(all.length).toBeLessThanOrEqual(1000);
       // Oldest records should be trimmed
       expect(all[0].id).toBe('rec-5');
+    });
+  });
+
+  describe('分键存储结构', () => {
+    it('save 应以分键形式存储，不再把整个历史写进 storageKey', async () => {
+      await repo.save(makeSession({ id: 'sharded-1' }));
+      await repo.save(makeSession({ id: 'sharded-2' }));
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      // 旧「单大数组」键不应再被写入
+      expect(await AsyncStorage.getItem('@test_workouts')).toBeNull();
+      // 每条记录独立存储
+      expect(await AsyncStorage.getItem('@test_workouts:sharded-1')).not.toBeNull();
+      expect(await AsyncStorage.getItem('@test_workouts:sharded-2')).not.toBeNull();
+      // 索引键存在且内容正确
+      const idxRaw = await AsyncStorage.getItem('@test_workouts:__index');
+      expect(idxRaw).not.toBeNull();
+      expect(JSON.parse(idxRaw as string)).toEqual(['sharded-1', 'sharded-2']);
+    });
+
+    it('旧大数组格式应迁移为分键并备份原键', async () => {
+      const oldData = JSON.stringify([
+        { id: 'legacy-1', exerciseType: 'jump_rope', mode: 'count', count: 50, duration: 30, timestamp: 1000 },
+      ]);
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.setItem('@test_workouts', oldData);
+
+      await repo.getAll(); // 触发迁移
+
+      // 原大数组键应被删除
+      expect(await AsyncStorage.getItem('@test_workouts')).toBeNull();
+      // 分键记录应已写入
+      expect(await AsyncStorage.getItem('@test_workouts:legacy-1')).not.toBeNull();
+      // 原数据应备份到 _legacy_backup_ 键
+      const backupKey = Object.keys(mockStore).find((k) => k.includes('_legacy_backup_'));
+      expect(backupKey).toBeDefined();
+      expect(mockStore[backupKey as string]).toBe(oldData);
     });
   });
 });
