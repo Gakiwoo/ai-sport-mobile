@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import PilotDataPackageService from '../services/PilotDataPackageService';
-import { PILOT_SCHEMA_VERSION, type PilotHistoryFilter } from '../types/pilot';
+import PilotDataPackageService, { DEFAULT_PILOT_ENTITIES } from '../services/PilotDataPackageService';
+import { PILOT_SCHEMA_VERSION, type PilotHistoryFilter, type TrainingTask } from '../types/pilot';
 import type { WorkoutSession } from '../types';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
@@ -101,6 +101,47 @@ describe('PilotDataPackageService', () => {
       sourceApp: 'mobile',
     });
     expect(options).toEqual({ encoding: 'utf8' });
+  });
+
+  it('createSessionRecord 计算并携带评分结果', () => {
+    const service = new PilotDataPackageService();
+    const task: TrainingTask = {
+      id: 'task-jump_rope',
+      schoolId: 'school-demo',
+      classId: 'class-demo-1',
+      name: '跳绳',
+      exerciseType: 'jump_rope',
+      targetCount: 60,
+      officialScoring: true,
+    };
+
+    const record = service.createSessionRecord(session(), task);
+
+    expect(record.rating).toBe('good');
+    expect(record.ratingLabel).toBe('良好');
+    expect(record.passed).toBe(true);
+    // qualityScore = round(58/60 * 100 * (0.8+0.2*0.91)) = 95 → composite = round(58*0.95)=55
+    expect(record.compositeScore).toBe(55);
+    expect(record.qualityLabel).toBe('标准');
+  });
+
+  it('buildPackage 导出的成绩记录携带评分（reps 按任务目标评级）', async () => {
+    const service = new PilotDataPackageService();
+    const task: TrainingTask = {
+      id: 'task-jump_rope',
+      schoolId: 'school-demo',
+      classId: 'class-demo-1',
+      name: '跳绳',
+      exerciseType: 'jump_rope',
+      targetCount: 60,
+      officialScoring: true,
+    };
+    await service.saveEntities({ ...DEFAULT_PILOT_ENTITIES, tasks: [task] });
+
+    const dataPackage = await service.buildPackage([session()], 'mobile');
+
+    expect(dataPackage.entities.sessions[0].rating).toBe('good');
+    expect(dataPackage.entities.sessions[0].compositeScore).toBe(55);
   });
 
   it('filters history by student task and exercise', () => {

@@ -79,6 +79,12 @@ export interface ExerciseSessionRecord {
   algorithmVersion: string;
   algorithmLogSummary?: string;
   sourceSession: WorkoutSession;
+  /** 评分引擎输出（可选，导出时由 PilotDataPackageService 填充，向后兼容） */
+  rating?: 'excellent' | 'good' | 'pass' | 'weak';
+  ratingLabel?: string;
+  passed?: boolean;
+  qualityLabel?: string;
+  compositeScore?: number;
 }
 
 export interface ReviewRecord {

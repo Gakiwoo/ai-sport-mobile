@@ -19,6 +19,7 @@ import {
   type TrainingTask,
 } from '../types/pilot';
 import { workoutRepository } from './WorkoutRepository';
+import { scoreSession, type ScoringResult } from './scoring';
 
 const PILOT_SELECTION_KEY = '@pilot_selection_v1';
 const PILOT_ENTITIES_KEY = '@pilot_entities_v1';
@@ -201,7 +202,7 @@ class PilotDataPackageService {
     return next;
   }
 
-  createSessionRecord(session: WorkoutSession): ExerciseSessionRecord {
+  createSessionRecord(session: WorkoutSession, task?: TrainingTask): ExerciseSessionRecord {
     const result = session.exerciseResult;
     const score = result?.distanceCm ?? result?.heightCm ?? result?.reps ?? session.count;
     const scoreUnit = result?.distanceCm || result?.heightCm ? 'cm' : 'reps';
@@ -209,7 +210,7 @@ class PilotDataPackageService {
       result?.startedAt || new Date(session.timestamp - session.duration * 1000).toISOString();
     const endedAt = result?.endedAt || new Date(session.timestamp).toISOString();
 
-    return {
+    const record: ExerciseSessionRecord = {
       id: session.id,
       schoolId: session.schoolId,
       classId: session.classId,
@@ -232,6 +233,28 @@ class PilotDataPackageService {
       algorithmLogSummary: session.algorithmLogSummary,
       sourceSession: session,
     };
+
+    const scoring = this.scoreSessionRecord(record, task);
+    record.rating = scoring.rating;
+    record.ratingLabel = scoring.ratingLabel;
+    record.passed = scoring.passed;
+    record.qualityLabel = scoring.qualityLabel;
+    record.compositeScore = scoring.compositeScore;
+    return record;
+  }
+
+  /** 根据成绩记录与（可选）任务目标计算评分结果 */
+  scoreSessionRecord(record: ExerciseSessionRecord, task?: TrainingTask): ScoringResult {
+    return scoreSession({
+      exerciseType: record.exerciseType,
+      score: record.score,
+      scoreUnit: record.scoreUnit,
+      validCount: record.validCount,
+      invalidCount: record.invalidCount,
+      foulCount: record.foulCount,
+      confidence: record.confidence,
+      targetCount: task?.targetCount,
+    });
   }
 
   filterSessions<T extends WorkoutSession | ExerciseSessionRecord>(
@@ -300,7 +323,9 @@ class PilotDataPackageService {
       entities: {
         ...entities,
         devices: [...entities.devices, ...Array.from(devicesById.values())],
-        sessions: sessions.map((session) => this.createSessionRecord(session)),
+        sessions: sessions.map((session) =>
+          this.createSessionRecord(session, entities.tasks.find((task) => task.id === session.taskId)),
+        ),
         reviews: [],
       },
     };

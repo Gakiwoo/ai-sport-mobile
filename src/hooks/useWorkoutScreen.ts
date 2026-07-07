@@ -4,6 +4,7 @@ import { ExerciseType, Pose, WorkoutMode } from '../types';
 import { useExerciseFeedback, FormFeedback } from './useExerciseFeedback';
 import { useSound } from './useSound';
 import { useWorkout } from './useWorkout';
+import { scoreSession } from '../services/scoring';
 import {
   EXERCISE_NAMES,
   DEFAULT_TARGETS,
@@ -248,15 +249,31 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
 
     if (saved && session) {
       const modeLabel = session.mode === 'timed' ? '⏰ 定时模式' : '🎯 定数模式';
+      const result = session.exerciseResult;
+      const scoreUnit: 'reps' | 'cm' =
+        result?.distanceCm || result?.heightCm ? 'cm' : 'reps';
+      const score = result?.distanceCm ?? result?.heightCm ?? result?.reps ?? session.count;
+      const scoring = scoreSession({
+        exerciseType: session.exerciseType,
+        score,
+        scoreUnit,
+        validCount: result?.validCount ?? session.count,
+        invalidCount: result?.invalidCount ?? 0,
+        foulCount: result?.foulCount ?? 0,
+        confidence: result?.confidence ?? session.accuracy ?? 0,
+        targetCount,
+      });
       Alert.alert(
         `${modeLabel}\n训练记录已保存`,
-        `${EXERCISE_NAMES[exerciseType]}：${session.count} 次，耗时 ${session.duration} 秒`,
+        `${EXERCISE_NAMES[exerciseType]}：${session.count} 次，耗时 ${session.duration} 秒\n` +
+          `评级：${scoring.ratingLabel}（${scoring.passed ? '达标' : '未达标'}）\n` +
+          `综合分 ${scoring.compositeScore} · 动作质量 ${scoring.qualityLabel}`,
         [{ text: '确定' }],
       );
     } else if (!saved && session) {
       Alert.alert('保存失败', '训练记录保存失败，请重试', [{ text: '确定' }]);
     }
-  }, [exerciseType, stop]);
+  }, [exerciseType, stop, targetCount]);
 
   handleStopRef.current = handleStop;
   handleStartRef.current = handleStart;
