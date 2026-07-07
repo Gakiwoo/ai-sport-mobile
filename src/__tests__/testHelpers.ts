@@ -209,22 +209,29 @@ export function ropeSwingPose(): Pose {
   });
 }
 
-/** 立定跳远落地 — 身体前移（归一化坐标） */
+/**
+ * 立定跳远落地 — 身体前移（像素坐标，与 Mobile 其他 preset 一致，模拟 480×360 画面）
+ *
+ * 修正：原实现误用归一化坐标，被 StandingLongJumpCounter 当作像素处理，
+ * 导致水平位移仅约 48px → distanceCm ≈ 22 < 50 的合理性下界而被拒计。
+ * 此处采用像素坐标并让落地相对起跳点前移约 144px（≈66cm），
+ * 满足计数器有效跳远区间（MIN_DISTANCE_PX=20、distanceCm ∈ [50,400]）。
+ */
 export function longJumpLandingPose(): Pose {
   return buildPose({
-    nose: { x: 0.6, y: 0.2, score: 0.9 },
-    left_shoulder: { x: 0.45, y: 0.28, score: 0.9 },
-    right_shoulder: { x: 0.75, y: 0.28, score: 0.9 },
-    left_elbow: { x: 0.4, y: 0.38, score: 0.9 },
-    right_elbow: { x: 0.8, y: 0.38, score: 0.9 },
-    left_wrist: { x: 0.38, y: 0.48, score: 0.9 },
-    right_wrist: { x: 0.82, y: 0.48, score: 0.9 },
-    left_hip: { x: 0.5, y: 0.55, score: 0.9 },
-    right_hip: { x: 0.7, y: 0.55, score: 0.9 },
-    left_knee: { x: 0.5, y: 0.72, score: 0.9 },
-    right_knee: { x: 0.7, y: 0.72, score: 0.9 },
-    left_ankle: { x: 0.5, y: 0.9, score: 0.9 },
-    right_ankle: { x: 0.7, y: 0.9, score: 0.9 },
+    nose: { x: 360, y: 72, score: 0.9 },
+    left_shoulder: { x: 288, y: 101, score: 0.9 },
+    right_shoulder: { x: 432, y: 101, score: 0.9 },
+    left_elbow: { x: 252, y: 137, score: 0.9 },
+    right_elbow: { x: 468, y: 137, score: 0.9 },
+    left_wrist: { x: 236, y: 173, score: 0.9 },
+    right_wrist: { x: 476, y: 173, score: 0.9 },
+    left_hip: { x: 300, y: 198, score: 0.9 },
+    right_hip: { x: 444, y: 198, score: 0.9 },
+    left_knee: { x: 300, y: 259, score: 0.9 },
+    right_knee: { x: 444, y: 259, score: 0.9 },
+    left_ankle: { x: 312, y: 324, score: 0.9 },
+    right_ankle: { x: 456, y: 324, score: 0.9 },
   });
 }
 
