@@ -18,6 +18,8 @@ function loadGoldenFixtures(): GoldenPoseFixture[] {
 
 const FIXTURES = loadGoldenFixtures();
 
+const RESULTS: Record<string, { count: number; phase: string; calibrated?: boolean }> = {};
+
 describe('golden pose regression', () => {
   it('loads at least one fixture per exercise type', () => {
     const types = new Set(FIXTURES.map((f) => f.exerciseType));
@@ -26,6 +28,11 @@ describe('golden pose regression', () => {
 
   it.each(FIXTURES)('$id — $description', (fixture) => {
     const result = runGoldenPoseFixture(fixture);
+    RESULTS[fixture.id] = {
+      count: result.count,
+      phase: result.phase,
+      calibrated: result.calibrated,
+    };
     assertGoldenExpectation(fixture, result);
   });
 
@@ -34,5 +41,20 @@ describe('golden pose regression', () => {
     presets.forEach((preset) => {
       expect(poseFromPreset(preset).keypoints.length).toBeGreaterThan(0);
     });
+  });
+
+  // 跨端对比报告导出：设置 GOLDEN_REPORT=1 时写出 golden-report.json
+  it('exports golden report when GOLDEN_REPORT is set', () => {
+    if (!process.env.GOLDEN_REPORT) return;
+    const report = {
+      platform: 'mobile',
+      generatedAt: new Date().toISOString(),
+      results: RESULTS,
+    };
+    fs.writeFileSync(
+      path.join(__dirname, 'golden-report.json'),
+      JSON.stringify(report, null, 2),
+    );
+    expect(true).toBe(true);
   });
 });
