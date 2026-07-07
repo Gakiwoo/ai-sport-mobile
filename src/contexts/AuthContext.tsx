@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { User } from '../types/auth';
 import AuthService, { AuthError } from '../services/AuthService';
 import { createGuestUser } from '../utils/guestUser';
+import ErrorReporter from '../services/ErrorReporter';
 
 // ── Context 类型 ──
 interface AuthContextType {
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(loggedInUser);
     } catch (err) {
       const msg = err instanceof AuthError ? err.message : '登录失败，请稍后重试';
+      ErrorReporter.captureWarning('登录失败', { source: 'AuthContext', error: msg });
       setError(msg);
       throw err;
     } finally {
@@ -71,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(result.user);
     } catch (err) {
       const msg = err instanceof AuthError ? err.message : '注册失败，请稍后重试';
+      ErrorReporter.captureWarning('注册失败', { source: 'AuthContext', error: msg });
       setError(msg);
       throw err;
     } finally {

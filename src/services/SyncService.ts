@@ -20,6 +20,7 @@
 
 import { workoutRepository } from './WorkoutRepository';
 import AuthService from './AuthService';
+import ErrorReporter from './ErrorReporter';
 import { LocalWorkoutRecord } from '../types';
 import { getEnvVar } from '../utils/getEnv';
 import { AppState, type NativeEventSubscription } from 'react-native';
@@ -129,7 +130,7 @@ class SyncService {
       this.retryCount = 0;
       return { synced: syncedCount, failed: 0, skipped: 0, errors: [] };
     } catch (error) {
-      console.error('[SyncService] Sync error:', error);
+      ErrorReporter.captureError(error, { source: 'SyncService', action: 'syncPending' });
       this.scheduleRetry();
       const message = error instanceof Error ? error.message : String(error);
       return { synced: 0, failed: 1, skipped: 0, errors: [message] };

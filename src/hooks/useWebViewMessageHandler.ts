@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import ErrorReporter from '../services/ErrorReporter';
 import type { WebView, WebViewMessageEvent } from 'react-native-webview';
 import {
   buildBlobAppendScript,
@@ -139,7 +140,7 @@ export function useWebViewMessageHandler(
         webView.injectJavaScript('init();true;');
         injectionDoneRef.current = true;
       } catch (err) {
-        console.warn('[CameraView] Local injection failed, falling back to CDN:', err);
+        ErrorReporter.captureWarning('本地注入 MediaPipe 失败，回退 CDN', { source: 'useWebViewMessageHandler', error: String(err) });
         rejectPendingBlobAcks('Local MediaPipe injection failed');
         try {
           webView.injectJavaScript('init();true;');

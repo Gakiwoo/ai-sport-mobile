@@ -8,6 +8,7 @@ import {
   deleteAsync,
   EncodingType,
 } from 'expo-file-system/legacy';
+import ErrorReporter from './ErrorReporter';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   MediaPipeCachedAsset,
@@ -148,7 +149,7 @@ class MediaPipeAssetService {
         await this.recordSuccessfulCdn(cdnBase);
         break;
       } catch (err) {
-        console.warn(`[MediaPipeAsset] CDN ${host} failed:`, err);
+        ErrorReporter.captureWarning('MediaPipe CDN 加载失败', { source: 'MediaPipeAssetService', host, error: String(err) });
         await this.recordFailedCdn(cdnBase);
         await this.cleanIncompleteCacheFiles();
       }
@@ -359,6 +360,7 @@ class MediaPipeAssetService {
         }
         return;
       } catch (err) {
+        ErrorReporter.captureWarning('MediaPipe 模型文件解压失败', { source: 'MediaPipeAssetService', cdnBase, error: String(err) });
         lastError = err;
         await deleteAsync(dest, { idempotent: true });
       }

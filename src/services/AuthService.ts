@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import ErrorReporter from './ErrorReporter';
 import {
   User,
   AuthTokens,
@@ -350,6 +351,7 @@ const AuthService = {
       if (err instanceof AuthError && (err.status === 401 || err.status === 403)) {
         await clearSession();
       }
+      ErrorReporter.captureWarning('认证请求失败', { source: 'AuthService', error: err instanceof Error ? err.message : String(err) });
       return null;
     }
   },

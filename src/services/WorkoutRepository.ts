@@ -12,6 +12,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ErrorReporter from './ErrorReporter';
 import {
   WorkoutSession,
   LocalWorkoutRecord,
@@ -59,7 +60,7 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
       await AsyncStorage.setItem(this.storageKey, JSON.stringify(trimmed));
       return true;
     } catch (error) {
-      console.error('[LocalWorkoutRepository] save error:', error);
+      ErrorReporter.captureError(error, { source: 'WorkoutRepository', action: 'save' });
       return false;
     }
   }
@@ -78,6 +79,7 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
       });
     } catch (error) {
       // JSON.parse 失败时备份原始数据到单独的键，便于事后恢复，避免静默丢弃全部历史
+      ErrorReporter.captureError(error, { source: 'WorkoutRepository', storageKey: this.storageKey, action: 'loadHistory' });
       try {
         const raw = await AsyncStorage.getItem(this.storageKey);
         if (raw) {
@@ -117,7 +119,7 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
       await AsyncStorage.setItem(this.storageKey, JSON.stringify(all));
       return true;
     } catch (error) {
-      console.error('[LocalWorkoutRepository] markSynced error:', error);
+      ErrorReporter.captureError(error, { source: 'WorkoutRepository', action: 'markSynced' });
       return false;
     }
   }
@@ -150,7 +152,7 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
       }
       return updated;
     } catch (error) {
-      console.error('[LocalWorkoutRepository] batchMarkSynced error:', error);
+      ErrorReporter.captureError(error, { source: 'WorkoutRepository', action: 'batchMarkSynced' });
       return 0;
     }
   }
@@ -162,7 +164,7 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
       await AsyncStorage.setItem(this.storageKey, JSON.stringify(filtered));
       return true;
     } catch (error) {
-      console.error('[LocalWorkoutRepository] delete error:', error);
+      ErrorReporter.captureError(error, { source: 'WorkoutRepository', action: 'delete' });
       return false;
     }
   }

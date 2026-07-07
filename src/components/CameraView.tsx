@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import ErrorReporter from '../services/ErrorReporter';
 import {
   View,
   Text,
@@ -79,7 +80,7 @@ export default function CameraView({
             return;
           }
         } catch (err) {
-          console.warn('[CameraView] Permission request error:', err);
+          ErrorReporter.captureWarning('摄像头权限请求失败', { source: 'CameraView', error: String(err) });
         }
       }
     }
@@ -124,7 +125,7 @@ export default function CameraView({
       try {
         await injectLocalFiles();
       } catch (err) {
-        console.warn('[CameraView] Local injection failed:', err);
+        ErrorReporter.captureWarning('本地注入 MediaPipe 失败', { source: 'CameraView', error: String(err) });
       }
     }, 100);
   }, [injectBlobFile, injectionDoneRef, webViewRef]);

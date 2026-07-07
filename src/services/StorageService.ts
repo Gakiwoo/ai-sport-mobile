@@ -4,6 +4,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WorkoutSession } from '../types';
+import ErrorReporter from './ErrorReporter';
 
 const STORAGE_KEY = '@workout_history_legacy';
 const MAX_RECENT_WORKOUTS = 10;
@@ -20,7 +21,7 @@ class StorageService {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
       return true;
     } catch (error) {
-      console.error('Error saving workout session:', error);
+      ErrorReporter.captureError(error, { source: 'StorageService', action: 'saveSession' });
       return false;
     }
   }
@@ -35,7 +36,7 @@ class StorageService {
         mode: s.mode || 'count',
       }));
     } catch (error) {
-      console.error('Error loading workout history:', error);
+      ErrorReporter.captureError(error, { source: 'StorageService', action: 'loadHistory' });
       return [];
     }
   }

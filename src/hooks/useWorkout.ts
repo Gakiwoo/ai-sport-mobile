@@ -10,6 +10,7 @@ import { VerticalJumpCounter } from '../services/counters/VerticalJumpCounter';
 import { SitUpCounter } from '../services/counters/SitUpCounter';
 import { workoutRepository } from '../services/WorkoutRepository';
 import { syncService } from '../services/SyncService';
+import ErrorReporter from '../services/ErrorReporter';
 import { performanceMonitor } from '../services/PerformanceMonitor';
 import { pilotDataPackageService } from '../services/PilotDataPackageService';
 import { PILOT_ALGORITHM_VERSION } from '../types/pilot';
@@ -177,9 +178,9 @@ export function useWorkout(exerciseType: ExerciseType) {
         console.warn('[useWorkout] Post-workout sync failed:', err);
       });
       return { session, saved };
-    } catch (error) {
-      console.error('保存训练记录失败:', error);
-      return { session, saved: false };
+      } catch (error) {
+        ErrorReporter.captureError(error, { source: 'useWorkout', action: 'saveSession' });
+        return { session, saved: false };
     } finally {
       setIsSaving(false);
       performanceMonitor.stop(); // 保存性能报告
