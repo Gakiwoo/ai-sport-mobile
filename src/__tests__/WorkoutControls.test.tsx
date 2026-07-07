@@ -23,10 +23,14 @@ import WorkoutControls from '../components/workout/WorkoutControls';
 describe('WorkoutControls', () => {
   const mockOnStart = jest.fn();
   const mockOnConfirmStop = jest.fn();
+  const mockOnPause = jest.fn();
+  const mockOnResume = jest.fn();
 
   beforeEach(() => {
     mockOnStart.mockClear();
     mockOnConfirmStop.mockClear();
+    mockOnPause.mockClear();
+    mockOnResume.mockClear();
   });
 
   it('未激活时渲染开始按钮', async () => {
@@ -37,6 +41,9 @@ describe('WorkoutControls', () => {
         isSaving={false}
         onStart={mockOnStart}
         onConfirmStop={mockOnConfirmStop}
+        isPaused={false}
+        onPause={mockOnPause}
+        onResume={mockOnResume}
       />,
     );
     const jsonStr = JSON.stringify(tree);
@@ -51,6 +58,9 @@ describe('WorkoutControls', () => {
         isSaving={false}
         onStart={mockOnStart}
         onConfirmStop={mockOnConfirmStop}
+        isPaused={false}
+        onPause={mockOnPause}
+        onResume={mockOnResume}
       />,
     );
     const jsonStr = JSON.stringify(tree);
@@ -65,6 +75,9 @@ describe('WorkoutControls', () => {
         isSaving={false}
         onStart={mockOnStart}
         onConfirmStop={mockOnConfirmStop}
+        isPaused={false}
+        onPause={mockOnPause}
+        onResume={mockOnResume}
       />,
     );
 
@@ -87,6 +100,9 @@ describe('WorkoutControls', () => {
         isSaving={false}
         onStart={mockOnStart}
         onConfirmStop={mockOnConfirmStop}
+        isPaused={false}
+        onPause={mockOnPause}
+        onResume={mockOnResume}
       />,
     );
 
@@ -109,6 +125,9 @@ describe('WorkoutControls', () => {
         isSaving={false}
         onStart={mockOnStart}
         onConfirmStop={mockOnConfirmStop}
+        isPaused={false}
+        onPause={mockOnPause}
+        onResume={mockOnResume}
       />,
     );
     const jsonStr = JSON.stringify(tree);
@@ -123,6 +142,9 @@ describe('WorkoutControls', () => {
         isSaving={true}
         onStart={mockOnStart}
         onConfirmStop={mockOnConfirmStop}
+        isPaused={false}
+        onPause={mockOnPause}
+        onResume={mockOnResume}
       />,
     );
     const jsonStr = JSON.stringify(tree);

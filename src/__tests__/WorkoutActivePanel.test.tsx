@@ -27,6 +27,7 @@ describe('WorkoutActivePanel', () => {
     targetCount: 50,
     countdown: 30,
     timeUp: false,
+    isPaused: false,
     countdownAnim: mockAnimValue,
     currentFeedback: null as ExerciseFeedback | null,
   };

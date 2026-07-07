@@ -20,6 +20,7 @@ module.exports = {
     '^@sentry/react-native$': '<rootDir>/src/__mocks__/sentry-react-native.ts',
     '^expo-file-system/legacy$': '<rootDir>/src/__mocks__/expo-file-system-legacy.ts',
     '^expo-sharing$': '<rootDir>/src/__mocks__/expo-sharing.ts',
+    '^expo-localization$': '<rootDir>/src/__mocks__/expo-localization.ts',
     '\\.html$': '<rootDir>/src/mediapipe/__mocks__/htmlModule.js',
   },
   collectCoverageFrom: [

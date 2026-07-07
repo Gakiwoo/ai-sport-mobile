@@ -11,6 +11,7 @@ jest.mock('react', () => ({
 const mockCounter = {
   getCount: jest.fn(() => 3),
   reset: jest.fn(),
+  processFrameResult: jest.fn(),
   setFrameInterval: jest.fn(),
   startSession: jest.fn(),
   getSessionResult: jest.fn(() => ({
@@ -69,5 +70,22 @@ describe('useWorkout', () => {
 
     expect(result.session).not.toBeNull();
     expect(result.saved).toBe(false);
+  });
+
+  it('pause gates processFrame and resume re-enables counting', () => {
+    const workout = useWorkout('jump_rope');
+    workout.start();
+    const pose = {} as never;
+
+    workout.processFrame(pose);
+    expect(mockCounter.processFrameResult).toHaveBeenCalledTimes(1);
+
+    workout.pause();
+    workout.processFrame(pose);
+    expect(mockCounter.processFrameResult).toHaveBeenCalledTimes(1);
+
+    workout.resume();
+    workout.processFrame(pose);
+    expect(mockCounter.processFrameResult).toHaveBeenCalledTimes(2);
   });
 });
