@@ -10,6 +10,7 @@ interface WorkoutActivePanelProps {
   targetCount: number;
   countdown: number;
   timeUp: boolean;
+  isPaused: boolean;
   countdownAnim: Animated.Value;
   currentFeedback: FormFeedback | null;
 }
@@ -21,6 +22,7 @@ export default function WorkoutActivePanel({
   targetCount,
   countdown,
   timeUp,
+  isPaused,
   countdownAnim,
   currentFeedback,
 }: WorkoutActivePanelProps) {
@@ -28,6 +30,11 @@ export default function WorkoutActivePanel({
 
   return (
     <View style={styles.centerContent}>
+      {isPaused && (
+        <View style={styles.pausedBadge}>
+          <Text style={styles.pausedBadgeText}>已暂停</Text>
+        </View>
+      )}
       {isTimed && (
         <Animated.View style={{ opacity: countdownAnim }}>
           <Text style={[styles.timerValue, timeUp && styles.timerValueExpired]}>

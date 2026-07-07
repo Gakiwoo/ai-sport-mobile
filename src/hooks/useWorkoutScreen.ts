@@ -11,7 +11,6 @@ import {
   getExerciseRuntimeProfile,
 } from '../constants/exerciseRegistry';
 import { analyzePoseQuality, PoseQualityResult } from '../utils/poseQuality';
-import { getElapsedSeconds } from '../components/workout/workoutFormat';
 
 export type AutoStartPhase = 'waiting' | 'ready' | 'counting' | null;
 
@@ -24,9 +23,13 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
     targetDuration,
     isSaving,
     timeUp,
+    isPaused,
     processFrame,
     start,
     stop,
+    pause,
+    resume,
+    getElapsedSeconds,
     switchMode,
     setTargetCount,
     setTargetDuration,
@@ -43,7 +46,6 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
   const [elapsed, setElapsed] = useState(0);
 
   const hasShownCompletionRef = useRef(false);
-  const startTimeRef = useRef<number | null>(null);
   const prevFeedbackMsgRef = useRef<string | null>(null);
   const prevQualityMsgRef = useRef<string | null>(null);
   const handleStopRef = useRef<() => Promise<void>>(() => Promise.resolve());
@@ -63,24 +65,16 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
   const exerciseName = EXERCISE_NAMES[exerciseType];
 
   useEffect(() => {
-    if (isActive) {
-      startTimeRef.current = Date.now();
-      hasShownCompletionRef.current = false;
+    if (!isActive) {
       setElapsed(0);
-    } else {
-      startTimeRef.current = null;
+      return;
     }
-  }, [isActive]);
-
-  useEffect(() => {
-    if (!isActive) return;
+    setElapsed(0);
     const timer = setInterval(() => {
-      if (startTimeRef.current) {
-        setElapsed(getElapsedSeconds(startTimeRef.current));
-      }
+      setElapsed(getElapsedSeconds());
     }, 200);
     return () => clearInterval(timer);
-  }, [isActive]);
+  }, [isActive, getElapsedSeconds]);
 
   useEffect(() => {
     return () => {
@@ -319,6 +313,7 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
     countdown,
     isSaving,
     timeUp,
+    isPaused,
     elapsed,
     startCountdown,
     autoStartPhase,
@@ -338,6 +333,8 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
     handleSetDuration,
     closeTargetModal,
     confirmStop,
+    pause,
+    resume,
     switchMode: (next: WorkoutMode) => switchMode(next),
     setFrameInterval,
   };

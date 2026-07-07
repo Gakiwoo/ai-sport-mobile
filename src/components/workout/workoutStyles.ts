@@ -181,6 +181,22 @@ export const workoutStyles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  pausedBadge: {
+    backgroundColor: 'rgba(255,159,10,0.24)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,159,10,0.55)',
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    marginBottom: 10,
+  },
+  pausedBadgeText: {
+    color: '#FF9F0A',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
   controls: {
     alignItems: 'center',
   },
@@ -219,6 +235,23 @@ export const workoutStyles = StyleSheet.create({
   },
   stopButtonText: {
     color: '#FFFFFF',
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pauseButton: {
+    backgroundColor: 'rgba(255,159,10,0.92)',
+    paddingHorizontal: 44,
+    paddingVertical: 17,
+    borderRadius: 50,
+    shadowColor: '#FF9F0A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
   },
   modalOverlay: {
     flex: 1,

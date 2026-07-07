@@ -28,6 +28,7 @@ export interface WorkoutState {
   targetDuration: number;
   isSaving: boolean;
   timeUp: boolean;
+  isPaused: boolean;
 }
 
 export function useWorkout(exerciseType: ExerciseType) {
@@ -38,6 +39,7 @@ export function useWorkout(exerciseType: ExerciseType) {
   const [targetDuration, setTargetDuration] = useState(DEFAULT_DURATIONS[exerciseType]);
   const [isSaving, setIsSaving] = useState(false);
   const [timeUp, setTimeUp] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   // counter 必须随 exerciseType 变化重建，否则切换运动后仍用旧算法实例 → 数据错乱
   const [counter, setCounter] = useState<ExerciseCounter>(() => createCounter(exerciseType));
   const startTimeRef = useRef<number | null>(null);
@@ -45,6 +47,10 @@ export function useWorkout(exerciseType: ExerciseType) {
   const prevCountRef = useRef(0);
   const isActiveRef = useRef(false);
   const prevExerciseTypeRef = useRef(exerciseType);
+  // 暂停语义：暂停期间计数不计、时长不累积，恢复后从暂停点继续
+  const isPausedRef = useRef(false);
+  const pausedAccumRef = useRef(0);
+  const pauseStartRef = useRef<number | null>(null);
 
   // 保持 isActiveRef 同步，供 processFrame 使用
   useEffect(() => {
@@ -61,6 +67,10 @@ export function useWorkout(exerciseType: ExerciseType) {
     setCount(0);
     prevCountRef.current = 0;
     startTimeRef.current = null;
+    isPausedRef.current = false;
+    pauseStartRef.current = null;
+    pausedAccumRef.current = 0;
+    setIsPaused(false);
     setTimeUp(false);
   }, [exerciseType, isActive]);
 
@@ -90,7 +100,7 @@ export function useWorkout(exerciseType: ExerciseType) {
 
   const processFrame = useCallback(
     (pose: Pose) => {
-      if (isActiveRef.current) {
+      if (isActiveRef.current && !isPausedRef.current) {
         counter.processFrameResult(pose);
         const newCount = counter.getCount();
         if (newCount !== prevCountRef.current) {
@@ -102,9 +112,20 @@ export function useWorkout(exerciseType: ExerciseType) {
     [counter],
   );
 
+  // 实际训练时长（毫秒）：扣除暂停区间，供 stop 与 getElapsedSeconds 复用
+  const getElapsedMs = useCallback((): number => {
+    if (startTimeRef.current == null) return 0;
+    const end = pauseStartRef.current ?? Date.now();
+    return Math.max(0, end - startTimeRef.current - pausedAccumRef.current);
+  }, []);
+
   const start = useCallback(() => {
     counter.reset();
     prevCountRef.current = 0;
+    isPausedRef.current = false;
+    pauseStartRef.current = null;
+    pausedAccumRef.current = 0;
+    setIsPaused(false);
     const startedAt = Date.now();
     const sessionId = `${startedAt}-${Math.random().toString(36).substr(2, 9)}`;
     sessionIdRef.current = sessionId;
@@ -138,7 +159,7 @@ export function useWorkout(exerciseType: ExerciseType) {
     }
 
     const duration = startTimeRef.current
-      ? Math.round((Date.now() - startTimeRef.current) / 1000)
+      ? Math.round(getElapsedMs() / 1000)
       : targetDuration;
     const performanceTier =
       (
@@ -187,6 +208,27 @@ export function useWorkout(exerciseType: ExerciseType) {
     }
   }, [counter, exerciseType, mode, targetDuration]);
 
+  const pause = useCallback(() => {
+    if (!isActiveRef.current || isPausedRef.current) return;
+    isPausedRef.current = true;
+    pauseStartRef.current = Date.now();
+    setIsPaused(true);
+  }, []);
+
+  const resume = useCallback(() => {
+    if (!isActiveRef.current || !isPausedRef.current) return;
+    if (pauseStartRef.current != null) {
+      pausedAccumRef.current += Date.now() - pauseStartRef.current;
+      pauseStartRef.current = null;
+    }
+    isPausedRef.current = false;
+    setIsPaused(false);
+  }, []);
+
+  const getElapsedSeconds = useCallback((): number => {
+    return Math.round(getElapsedMs() / 1000);
+  }, [getElapsedMs]);
+
   const switchMode = useCallback(
     (newMode: WorkoutMode) => {
       if (isActive) return;
@@ -205,9 +247,13 @@ export function useWorkout(exerciseType: ExerciseType) {
     setTargetDuration,
     isSaving,
     timeUp,
+    isPaused,
     processFrame,
     start,
     stop,
+    pause,
+    resume,
+    getElapsedSeconds,
     switchMode,
     setFrameInterval,
   };

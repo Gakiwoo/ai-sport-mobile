@@ -51,6 +51,7 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
             targetCount={vm.targetCount}
             countdown={vm.countdown}
             timeUp={vm.timeUp}
+            isPaused={vm.isPaused}
             countdownAnim={vm.countdownAnim}
             currentFeedback={vm.currentFeedback}
           />
@@ -67,7 +68,10 @@ export default function WorkoutScreen({ route }: WorkoutScreenProps) {
           isActive={vm.isActive}
           startCountdown={vm.startCountdown}
           isSaving={vm.isSaving}
+          isPaused={vm.isPaused}
           onStart={vm.handleStart}
+          onPause={vm.pause}
+          onResume={vm.resume}
           onConfirmStop={vm.confirmStop}
         />
       </View>
