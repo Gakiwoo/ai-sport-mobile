@@ -50,6 +50,8 @@ export interface TrainingTask {
   name: string;
   exerciseType: ExerciseType;
   targetCount?: number;
+  /** 显式厘米目标（距离类项目）；缺省回退 DISTANCE_REFERENCE */
+  targetCm?: number;
   targetDurationSec?: number;
   startsAt?: string;
   endsAt?: string;

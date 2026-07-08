@@ -4,7 +4,7 @@ import { ExerciseType, Pose, WorkoutMode } from '../types';
 import { useExerciseFeedback, FormFeedback } from './useExerciseFeedback';
 import { useSound } from './useSound';
 import { useWorkout } from './useWorkout';
-import { scoreSession } from '../services/scoring';
+import { scoreSession, extractScoringInput } from '../services/scoring';
 import {
   EXERCISE_NAMES,
   DEFAULT_TARGETS,
@@ -56,6 +56,8 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
   const countdownAnim = useRef(new Animated.Value(1)).current;
   const poseQualityRef = useRef<PoseQualityResult | null>(null);
   const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 训练开始时快照的目标次数，防止中途修改目标导致评分失真 */
+  const targetCountSnapshotRef = useRef(targetCount);
 
   const runtimeProfile = useMemo(() => getExerciseRuntimeProfile(exerciseType), [exerciseType]);
   const { getFeedback } = useExerciseFeedback();
@@ -220,6 +222,8 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
       autoStartTimerRef.current = null;
     }
     setAutoStartPhase('counting');
+    // 训练开始时快照目标次数，防止中途修改目标导致评分失真
+    targetCountSnapshotRef.current = targetCount;
 
     setCurrentFeedback(null);
     prevFeedbackMsgRef.current = null;
@@ -240,7 +244,7 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
         setStartCountdown(next);
       }
     }, 1000);
-  }, [startCountdown, start]);
+  }, [startCountdown, start, targetCount]);
 
   const handleStop = useCallback(async () => {
     setCurrentFeedback(null);
@@ -249,20 +253,9 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
 
     if (saved && session) {
       const modeLabel = session.mode === 'timed' ? '⏰ 定时模式' : '🎯 定数模式';
-      const result = session.exerciseResult;
-      const scoreUnit: 'reps' | 'cm' =
-        result?.distanceCm || result?.heightCm ? 'cm' : 'reps';
-      const score = result?.distanceCm ?? result?.heightCm ?? result?.reps ?? session.count;
-      const scoring = scoreSession({
-        exerciseType: session.exerciseType,
-        score,
-        scoreUnit,
-        validCount: result?.validCount ?? session.count,
-        invalidCount: result?.invalidCount ?? 0,
-        foulCount: result?.foulCount ?? 0,
-        confidence: result?.confidence ?? session.accuracy ?? 0,
-        targetCount,
-      });
+      const scoring = scoreSession(
+        extractScoringInput(session, targetCountSnapshotRef.current),
+      );
       Alert.alert(
         `${modeLabel}\n训练记录已保存`,
         `${EXERCISE_NAMES[exerciseType]}：${session.count} 次，耗时 ${session.duration} 秒\n` +
@@ -273,7 +266,7 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
     } else if (!saved && session) {
       Alert.alert('保存失败', '训练记录保存失败，请重试', [{ text: '确定' }]);
     }
-  }, [exerciseType, stop, targetCount]);
+  }, [exerciseType, stop]);
 
   handleStopRef.current = handleStop;
   handleStartRef.current = handleStart;

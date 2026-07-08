@@ -85,13 +85,13 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
             await AsyncStorage.setItem(`${this.storageKey}:${rec.id}`, JSON.stringify(rec));
             ids.push(rec.id);
           }
-          // 备份旧键后删除，避免重复迁移
+          // 备份旧键 → 先写索引 → 再删旧键（防止中间崩溃导致数据丢失）
           await AsyncStorage.setItem(
             `${this.storageKey}${LEGACY_BACKUP_SUFFIX}${Date.now()}`,
             legacyRaw,
           );
-          await AsyncStorage.removeItem(this.storageKey);
           await AsyncStorage.setItem(this.indexKey, JSON.stringify(ids));
+          await AsyncStorage.removeItem(this.storageKey);
           return ids;
         }
       } catch (error) {
@@ -128,13 +128,16 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
     return records;
   }
 
-  /** 超过最大记录数时裁剪最旧的若干条（O(超出条数) 删除） */
-  private async trimExcess(index: string[]): Promise<string[]> {
+  /** 超过最大记录数时裁剪最旧的若干条（O(超出条数) 删除）。
+   *  @param protectedId 保护 id，不会被裁剪（刚保存的记录即使在边界也不应被立即删除） */
+  private async trimExcess(index: string[], protectedId?: string): Promise<string[]> {
     if (index.length <= MAX_STORED_WORKOUTS) return index;
     const records = await this.readAllRecords(index);
     records.sort((a, b) => a.timestamp - b.timestamp);
     const excess = records.slice(0, records.length - MAX_STORED_WORKOUTS);
     const excessIds = new Set(excess.map((r) => r.id));
+    if (protectedId) excessIds.delete(protectedId);
+    if (excessIds.size === 0) return index;
     for (const id of excessIds) {
       await AsyncStorage.removeItem(`${this.storageKey}:${id}`);
     }
@@ -151,9 +154,10 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
       await AsyncStorage.setItem(`${this.storageKey}:${record.id}`, JSON.stringify(record));
       if (!index.includes(record.id)) {
         index.push(record.id);
-        await AsyncStorage.setItem(this.indexKey, JSON.stringify(index));
+        // 裁剪后再写索引：防止 trimExcess 将刚保存的记录当作最旧条目删除
+        index = await this.trimExcess(index, record.id);
       }
-      index = await this.trimExcess(index);
+      await AsyncStorage.setItem(this.indexKey, JSON.stringify(index));
       return true;
     } catch (error) {
       ErrorReporter.captureError(error, { source: 'WorkoutRepository', action: 'save' });
@@ -223,27 +227,34 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
   }
 
   /**
-   * 批量标记已同步——逐条读写，O(ids) 而非 O(n) 全量重写，避免串行 markSynced 导致的 O(n²) 写放大。
+   * 批量标记已同步——先 multiGet 并行读取 → 逐条写入，避免串行 markSynced 导致的 O(n²) 写放大。
    * @returns 成功标记的条目数
    */
   async batchMarkSynced(ids: string[], serverIds?: Map<string, string>): Promise<number> {
     try {
       if (ids.length === 0) return 0;
       const sidMap = serverIds ?? new Map<string, string>();
+      const keys = ids.map((id) => `${this.storageKey}:${id}`);
+      const pairs = await AsyncStorage.multiGet(keys);
+
       let updated = 0;
-      for (const id of ids) {
-        const raw = await AsyncStorage.getItem(`${this.storageKey}:${id}`);
+      for (const [i, [, raw]] of pairs.entries()) {
         if (!raw) continue;
-        const record = migrateToLocalRecord(JSON.parse(raw));
-        if (record._syncStatus === 'synced') continue;
-        const updatedRecord: LocalWorkoutRecord = {
-          ...record,
-          _syncStatus: 'synced' as SyncStatus,
-          _lastModified: Date.now(),
-          _serverId: sidMap.get(id) || record._serverId,
-        };
-        await AsyncStorage.setItem(`${this.storageKey}:${id}`, JSON.stringify(updatedRecord));
-        updated++;
+        try {
+          const record = migrateToLocalRecord(JSON.parse(raw));
+          if (record._syncStatus === 'synced') continue;
+          const id = ids[i];
+          const updatedRecord: LocalWorkoutRecord = {
+            ...record,
+            _syncStatus: 'synced' as SyncStatus,
+            _lastModified: Date.now(),
+            _serverId: sidMap.get(id) || record._serverId,
+          };
+          await AsyncStorage.setItem(`${this.storageKey}:${id}`, JSON.stringify(updatedRecord));
+          updated++;
+        } catch {
+          // 单条损坏跳过，不影响其他记录
+        }
       }
       return updated;
     } catch (error) {
@@ -254,12 +265,13 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
 
   async delete(id: string): Promise<boolean> {
     try {
-      await AsyncStorage.removeItem(`${this.storageKey}:${id}`);
+      // 先更新索引、再删除数据键：索引更新失败时数据仍完整
       const index = await this.ensureIndex();
       if (index.includes(id)) {
         const newIndex = index.filter((x) => x !== id);
         await AsyncStorage.setItem(this.indexKey, JSON.stringify(newIndex));
       }
+      await AsyncStorage.removeItem(`${this.storageKey}:${id}`);
       return true;
     } catch (error) {
       ErrorReporter.captureError(error, { source: 'WorkoutRepository', action: 'delete' });

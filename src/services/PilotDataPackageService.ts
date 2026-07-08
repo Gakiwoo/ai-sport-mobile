@@ -19,7 +19,7 @@ import {
   type TrainingTask,
 } from '../types/pilot';
 import { workoutRepository } from './WorkoutRepository';
-import { scoreSession, type ScoringResult } from './scoring';
+import { scoreSession, extractScoringInput, type ScoringResult } from './scoring';
 
 const PILOT_SELECTION_KEY = '@pilot_selection_v1';
 const PILOT_ENTITIES_KEY = '@pilot_entities_v1';
@@ -110,9 +110,41 @@ class PilotDataPackageService {
     students: number;
     tasks: number;
   }> {
-    const data = JSON.parse(json) as PilotDataPackage;
+    // 输入大小校验：防止恶意/损坏的 JSON 撑爆 AsyncStorage
+    const MAX_JSON_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (json.length > MAX_JSON_SIZE) {
+      throw new Error(`Package too large: ${(json.length / 1024 / 1024).toFixed(1)} MB (max 10 MB)`);
+    }
+
+    let data: PilotDataPackage;
+    try {
+      data = JSON.parse(json) as PilotDataPackage;
+    } catch {
+      throw new Error('Invalid JSON in pilot package');
+    }
+
     if (data?.schemaVersion !== PILOT_SCHEMA_VERSION || !data.entities) {
       throw new Error('Invalid pilot-v1 package');
+    }
+
+    // 实体数组长度校验：防止注入超大数组
+    const MAX_ENTITIES = 10_000;
+    const entityCounts: Array<[string, unknown[] | undefined]> = [
+      ['schools', data.entities.schools],
+      ['classes', data.entities.classes],
+      ['students', data.entities.students],
+      ['tasks', data.entities.tasks],
+      ['sessions', data.entities.sessions],
+    ];
+    for (const [name, arr] of entityCounts) {
+      if (arr && !Array.isArray(arr)) {
+        throw new Error(`Invalid package: entities.${name} is not an array`);
+      }
+      if (arr && arr.length > MAX_ENTITIES) {
+        throw new Error(
+          `Invalid package: entities.${name} has ${arr.length} items (max ${MAX_ENTITIES})`,
+        );
+      }
     }
 
     const current = await this.getEntities();
@@ -254,6 +286,7 @@ class PilotDataPackageService {
       foulCount: record.foulCount,
       confidence: record.confidence,
       targetCount: task?.targetCount,
+      targetCm: task?.targetCm,
     });
   }
 

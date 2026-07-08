@@ -32,7 +32,9 @@ interface FrameFeatures {
 }
 
 export class JumpRopeCounter extends ExerciseCounter {
-  private readonly kalman = new MultiPointKalman(0.5, 6);
+  // Desktop 端已验证的参数组合（processNoise=0.0005, measurementNoise=0.006）
+  // 提供紧密平滑，配合小幅速度阈值使用。双端对齐，确保同一输入产生一致输出。
+  private readonly kalman = new MultiPointKalman(0.0005, 0.006);
   private readonly bodyBaselineWindow = new SlidingWindow(90);
   private readonly ankleBaselineWindow = new SlidingWindow(90);
   private readonly leftWristWindow = new SlidingWindow(15);
@@ -322,7 +324,7 @@ export class JumpRopeCounter extends ExerciseCounter {
       ? this.takeoffThreshold
       : this.takeoffThreshold * this.WRIST_INACTIVE_LIFT_MULTIPLIER;
 
-    if (features.ankleLift >= threshold && features.velocity < -0.4) {
+    if (features.ankleLift >= threshold && features.velocity < -0.0005) {
       this.transitionTo(JumpState.Ascending);
       this.airborneFrames = 0;
       this.landingFrames = 0;
@@ -331,7 +333,7 @@ export class JumpRopeCounter extends ExerciseCounter {
 
   private handleAscending(features: FrameFeatures): void {
     this.airborneFrames++;
-    if (features.velocity > 0.2 && this.prevVelocity <= 0) {
+    if (features.velocity > 0.0005 && this.prevVelocity <= 0) {
       this.transitionTo(JumpState.Airborne);
     } else if (this.airborneFrames > this.maxAirborneFrames()) {
       this.transitionTo(JumpState.Standing);

@@ -402,10 +402,12 @@ export class SitUpCounter extends ExerciseCounter {
     const currentHipAnkleDist = ankleY - hipY;
     const baselineHipAnkleDist = this.baselineAnkleY - this.baselineHipY;
 
-    // 如果臀部相对脚踝的距离显著减小 → 臀部上抬
-    // 与 Desktop 端保持一致，不使用 *3 宽松系数
+    // 臀部离垫检测：臀部Y减小 → ankleY-hipY 增大 → liftRatio 为正
+    // 当前距离 > 基线距离 且 超出阈值比例 → 判为臀部离垫
+    // 与 Desktop 端公式一致：(current - baseline) / baseline
     if (baselineHipAnkleDist > 0) {
-      const liftRatio = (baselineHipAnkleDist - currentHipAnkleDist) / baselineHipAnkleDist;
+      const liftRatio =
+        (currentHipAnkleDist - baselineHipAnkleDist) / baselineHipAnkleDist;
       if (liftRatio > this.HIP_LIFT_THRESHOLD) {
         this.lastFoul = 'hip_lift';
       }

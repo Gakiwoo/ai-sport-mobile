@@ -1,4 +1,4 @@
-import type { ExerciseType } from '../types';
+import type { ExerciseType, ExerciseResult } from '../types';
 
 /**
  * Pilot 评分引擎（纯函数，双端共享同构实现）
@@ -144,5 +144,37 @@ export function scoreSession(input: ScoringInput): ScoringResult {
     qualityTier,
     qualityLabel: QUALITY_LABELS[qualityTier],
     compositeScore,
+  };
+}
+
+/**
+ * 从 WorkoutSession 中提取评分输入（纯函数，双端共享）。
+ * 消除 useWorkoutScreen / PilotDataPackageService 之间的重复提取逻辑。
+ */
+export function extractScoringInput(
+  session: {
+    exerciseType: ExerciseType;
+    count: number;
+    accuracy?: number;
+    exerciseResult?: ExerciseResult;
+  },
+  targetCount?: number,
+  targetCm?: number,
+): ScoringInput {
+  const result = session.exerciseResult;
+  const scoreUnit: 'reps' | 'cm' =
+    result?.distanceCm || result?.heightCm ? 'cm' : 'reps';
+  const score =
+    result?.distanceCm ?? result?.heightCm ?? result?.reps ?? session.count;
+  return {
+    exerciseType: session.exerciseType,
+    score,
+    scoreUnit,
+    validCount: result?.validCount ?? session.count,
+    invalidCount: result?.invalidCount ?? 0,
+    foulCount: result?.foulCount ?? 0,
+    confidence: result?.confidence ?? session.accuracy ?? 0,
+    targetCount,
+    targetCm,
   };
 }
