@@ -31,6 +31,7 @@ const MAX_LOCAL_ENTRIES = 50;
 
 class ErrorReporter {
   private persistQueue: PersistEntry[] = [];
+  private persistFailureCount = 0;
 
   /** 上报错误：Sentry + console + 本地持久化 */
   captureError(error: Error | unknown, metadata?: Record<string, unknown>): void {
@@ -74,19 +75,32 @@ class ErrorReporter {
     if (this.persistQueue.length > MAX_LOCAL_ENTRIES) {
       this.persistQueue = this.persistQueue.slice(-MAX_LOCAL_ENTRIES);
     }
-    // fire-and-forget：不阻塞调用方，持久化失败静默忽略
+    // fire-and-forget：不阻塞调用方
     Promise.resolve()
       .then(async () => {
         try {
           const AsyncStorage = require('@react-native-async-storage/async-storage').default;
           await AsyncStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(this.persistQueue));
+          this.persistFailureCount = 0; // 持久化成功时重置失败计数
         } catch {
-          // 存储不可用，忽略
+          this.persistFailureCount++;
+          this.warnPersistFailure();
         }
       })
       .catch(() => {
-        /* 忽略持久化失败 */
+        this.persistFailureCount++;
+        this.warnPersistFailure();
       });
+  }
+
+  /** MED-5: 持久化连续失败时降级告警，首次 + 每 10 次各输出一次，避免日志洪流 */
+  private warnPersistFailure(): void {
+    if (this.persistFailureCount === 1 || this.persistFailureCount % 10 === 0) {
+      console.error(
+        `[ErrorReporter] 持久化连续失败 (${this.persistFailureCount} 次)，` +
+          `内存队列: ${this.persistQueue.length} 条 — 建议回收 AsyncStorage 空间`,
+      );
+    }
   }
 }
 

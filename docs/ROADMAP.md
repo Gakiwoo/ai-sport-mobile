@@ -8,9 +8,9 @@
 |------|------|------|
 | Phase 0 工程地基 | ✅ 已完成 | CI、覆盖率门槛、文档、mediapipeBridge |
 | Phase 1 核心链路加固 | ✅ 已完成 | pose.html、Workout 拆分、registry、hooks |
-| Phase 2 测试金字塔 | 🚧 进行中 | 黄金样本、Hook 集成测试已落地 |
-| Phase 3 数据与同步 | ⏳ 待开始 | WorkoutRepository + sync API |
-| Phase 4 可观测与发布 | ⏳ 待开始 | Sentry、EAS 内测、埋点 |
+| Phase 2 测试金字塔 | ✅ 已完成 | 黄金样本、Hook 集成测试、393 tests / 53 suites |
+| Phase 3 数据与同步 | ✅ **已完成** | WorkoutRepository + SyncService + 后端 API 部署 |
+| Phase 4 可观测与发布 | 🚧 进行中 | Sentry 集成、EAS 内测 |
 | Phase 5 体验与增长 | ⏳ 待开始 | 深色模式、报告分享等 |
 
 ---
@@ -53,15 +53,23 @@
 
 ---
 
-## Phase 3：数据与同步（第 7～11 周）
+## Phase 3：数据与同步（✅ 已完成 — 2026-07-08）
 
-- [ ] `LocalWorkoutRecord` + `_syncStatus` 字段
-- [ ] `WorkoutRepository` 抽象（本地读写）
-- [ ] 后端 `POST /api/workouts/sync`
-- [ ] `SyncService`：启动 / 训练后 / NetInfo 恢复
-- [ ] History / Analytics 改读 Repository
+- [x] `LocalWorkoutRecord` + `_syncStatus` 字段
+- [x] `WorkoutRepository` 抽象（分键存储 + 旧数据迁移 + FIFO 裁剪）
+- [x] 后端 API 部署到 `gakiwoo.com`：
+  - `POST /api/auth/{register,login,refresh,logout}` — 用户认证
+  - `POST /api/workouts/sync` — 推送训练记录
+  - `GET /api/workouts/sync?since=` — 增量拉取（双向同步）
+  - `GET /api/workouts/stats` — 训练统计
+  - `/api/pilot/*` — 校园任务/班级/学生 CRUD
+- [x] `SyncService`：启动 / 训练后 / 网络恢复自动同步
+- [x] History / Analytics 改读 Repository
+- [x] 后端 DB：SQLite `workout_sessions` 表（24 字段）
+- [x] Pilot 校园：`pilot_schools/classrooms/students/tasks/assignments` 5 表
+- [x] MediaPipe CDN：`gakiwoo.com/static/mediapipe/pose/` 提供 lite + full 模型
 
-**验收**：登录用户换机后训练记录可恢复。
+**验收**：登录用户换机后训练记录可恢复。✅
 
 ---
 
@@ -85,12 +93,12 @@
 
 ## 里程碑
 
-| 里程碑 | 目标日期（示意） | 交付物 |
+| 里程碑 | 目标日期 | 交付物 |
 |--------|------------------|--------|
-| M1 可协作 | +2 周 | CI 绿、覆盖率报告 |
-| M2 可维护 | +6 周 | CameraView/Workout 拆分 |
-| M3 可留存 | +10 周 | 训练同步 MVP |
-| M4 可运营 | +12 周 | 内测包 + 崩溃监控 |
+| M1 可协作 | ✅ +2 周 | CI 绿、覆盖率报告 |
+| M2 可维护 | ✅ +6 周 | CameraView/Workout 拆分 |
+| M3 可留存 | ✅ **2026-07-08** | 训练同步 MVP + Pilot API |
+| M4 可运营 | 待定 | 内测包 + 崩溃监控 |
 
 ---
 

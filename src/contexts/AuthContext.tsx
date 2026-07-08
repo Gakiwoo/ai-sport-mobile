@@ -36,8 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (restored) {
           setUser(restored);
         }
-      } catch {
-        // 静默失败，显示登录页
+        // restored 为 null 时是正常的「未登录/已过期」，不报错
+      } catch (err) {
+        ErrorReporter.captureWarning('会话恢复失败', {
+          source: 'AuthContext.restoreSession',
+          error: err instanceof Error ? err.message : String(err),
+        });
+        setError('登录状态读取失败，请重新登录');
       } finally {
         setIsLoading(false);
       }

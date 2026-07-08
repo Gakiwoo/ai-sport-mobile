@@ -98,7 +98,11 @@ async function getStoredTokens(): Promise<AuthTokens | null> {
   try {
     const raw = await SecureStorageService.getItem(TOKEN_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch {
+  } catch (err) {
+    ErrorReporter.captureWarning('读取 token 存储失败', {
+      source: 'AuthService.getStoredTokens',
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }
@@ -119,7 +123,11 @@ async function getStoredUser(): Promise<User | null> {
   try {
     const raw = await AsyncStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch {
+  } catch (err) {
+    ErrorReporter.captureWarning('读取用户缓存失败', {
+      source: 'AuthService.getStoredUser',
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }
@@ -171,7 +179,11 @@ async function refreshToken(refreshTokenStr: string): Promise<AuthTokens | null>
     }
 
     return tokens;
-  } catch {
+  } catch (err) {
+    ErrorReporter.captureWarning('Token 刷新请求失败', {
+      source: 'AuthService.refreshToken',
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }

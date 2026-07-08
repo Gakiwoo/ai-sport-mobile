@@ -3,7 +3,7 @@
 [![Expo](https://img.shields.io/badge/Expo-55-blueviolet?logo=expo)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript)](https://www.typescriptlang.org)
-[![Test](https://img.shields.io/badge/tests-214_passing-brightgreen)](https://jestjs.io)
+[![Test](https://img.shields.io/badge/tests-393_passing-brightgreen)](https://jestjs.io)
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -41,6 +41,8 @@
 - **📱 Offline First** — 模型文件本地缓存，完全离线可用
 - **⚡ Adaptive Frame Rate** — 根据设备性能动态调整姿态检测帧率
 - **🔐 Guest & Auth Mode** — 支持游客模式快速体验，也支持账号系统完整使用
+- **☁️ Cloud Sync** — 训练记录云端备份与多设备同步（基于 `gakiwoo.com` 后端 API）
+- **🏫 Campus Pilot** — 教师端任务下发 + 学生端自动接收 + 成绩云端汇总
 
 ---
 
@@ -184,7 +186,7 @@ npm run test:coverage
 | Hooks | 1 suite | useWorkout |
 | Utils | 5 suites | filters、poseQuality、asyncPool、adaptiveRuntime、CDN policy |
 | Infrastructure | 7 suites | CDN、Manifest、Asset injection、mediapipeBridge |
-| **Total** | **31 suites / 214 tests** | |
+| **Total** | **53 suites / 393 tests** | |
 
 CI runs `npm run lint` and `npm run test:coverage` on every push/PR to `main`/`master`. See [docs/ROADMAP.md](docs/ROADMAP.md) for the development plan.
 
@@ -345,6 +347,24 @@ EXPO_PUBLIC_MEDIAPIPE_CDN_BASES=https://your-cdn.com/pose/,https://backup-cdn.co
 ```
 
 默认优先级：`gakiwoo.com` → `npmmirror.com` → `jsdelivr` → `unpkg`
+
+### Cloud Sync & Server API
+
+AI Motion Tracker 通过 `https://gakiwoo.com` 提供后端服务：
+
+| 服务 | 端点 | 说明 |
+|------|------|------|
+| 用户认证 | `POST /api/auth/{register,login,refresh,logout}` | JWT 双 Token（access 15min / refresh 7d） |
+| 用户信息 | `GET/PUT /api/auth/me` | 获取/更新用户资料 |
+| 训练同步 | `POST /api/workouts/sync` | 推送本地记录到云端 |
+| 增量拉取 | `GET /api/workouts/sync?since=ISO` | 拉取服务端新增记录（双向同步） |
+| 训练统计 | `GET /api/workouts/stats` | 按运动类型汇总统计 |
+| 校园任务 | `GET /api/pilot/{tasks,assignments}` | 获取教师下发的训练任务 |
+
+启用云同步：
+```bash
+EXPO_PUBLIC_ENABLE_CLOUD_SYNC=true
+```
 
 ### Runtime Profiles
 

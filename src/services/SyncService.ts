@@ -66,7 +66,10 @@ class SyncService {
     // 延迟初始同步，避免阻塞启动
     this.syncTimer = setTimeout(() => {
       this.sync().catch((err) => {
-        console.warn('[SyncService] Initial sync skipped:', err?.message ?? err);
+        ErrorReporter.captureWarning('Initial sync failed', {
+          source: 'SyncService.start',
+          error: err?.message ?? String(err),
+        });
       });
     }, SYNC_INITIAL_DELAY_MS);
 
@@ -92,7 +95,10 @@ class SyncService {
   async syncAfterWorkout(): Promise<void> {
     // fire-and-forget，不阻塞 UI
     this.sync().catch((err) => {
-      console.warn('[SyncService] Post-workout sync failed:', err?.message ?? err);
+      ErrorReporter.captureWarning('Post-workout sync failed', {
+        source: 'SyncService.syncAfterWorkout',
+        error: err?.message ?? String(err),
+      });
     });
   }
 
@@ -181,7 +187,10 @@ class SyncService {
   private scheduleRetry(): void {
     if (this.retryTimer) return;
     if (this.retryCount >= SYNC_MAX_RETRIES) {
-      console.warn('[SyncService] Max retries reached, giving up.');
+      ErrorReporter.captureWarning('Max sync retries reached', {
+        source: 'SyncService.scheduleRetry',
+        retryCount: this.retryCount,
+      });
       this.retryCount = 0;
       return;
     }
@@ -194,7 +203,11 @@ class SyncService {
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;
       this.sync().catch((err) => {
-        console.warn('[SyncService] Retry sync failed:', err?.message ?? err);
+        ErrorReporter.captureWarning('Retry sync failed', {
+          source: 'SyncService.scheduleRetry',
+          retryCount: this.retryCount,
+          error: err?.message ?? String(err),
+        });
       });
     }, delay);
   }
@@ -225,12 +238,18 @@ class SyncService {
       .then((pending) => {
         if (pending.length > 0) {
           this.sync().catch((err) =>
-            console.warn('[SyncService] Resume sync failed:', err?.message ?? err),
+            ErrorReporter.captureWarning('Resume sync failed', {
+              source: 'SyncService.resumePendingSync',
+              error: err?.message ?? String(err),
+            }),
           );
         }
       })
       .catch((err) =>
-        console.warn('[SyncService] Pending check failed:', err?.message ?? err),
+        ErrorReporter.captureWarning('Pending check failed', {
+          source: 'SyncService.checkPendingAndSync',
+          error: err?.message ?? String(err),
+        }),
       );
   }
 

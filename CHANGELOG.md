@@ -7,23 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.2.0] — Unreleased
+## [1.2.0] — 2026-07-08
 
 ### Added
-- **WorkoutRepository** 抽象层：`IWorkoutRepository` 接口 + `LocalWorkoutRepository` 实现
+- **WorkoutRepository** 抽象层：`IWorkoutRepository` 接口 + `LocalWorkoutRepository` 分键存储实现
 - **LocalWorkoutRecord** 类型：扩展 `WorkoutSession`，添加 `_syncStatus`、`_lastModified`、`_serverId` 字段
-- **SyncService**：支持启动/训练后/网络恢复三种触发时机的云端同步骨架
-- **SyncService 测试**（6 个测试用例）
-- **WorkoutRepository 测试**（17 个测试用例，覆盖 CRUD、分析、数据迁移、边界值）
-- **HistoryScreen / AnalyticsScreen / useWorkout** 改为使用 `WorkoutRepository`
-- App.tsx 中集成 `SyncService` 生命周期管理
-- 测试总数：282 → **346**（+64 个测试）
-- 测试套件：46 → **48**（+2 个测试套件）
+- **SyncService**：支持启动/训练后/网络恢复三种触发时机的云端同步，指数退避重试
+- **PilotDataPackageService** — 评分引擎集成、校园数据包导出、`importPackage` 安全校验
+- **scoring.ts** — `scoreSession()` 纯函数 + `extractScoringInput()` 共享提取器（双端同构）
+- **extractScoringInput** — 从 WorkoutSession 提取评分输入的共享函数，消除 useWorkoutScreen 与 PilotDataPackageService 间的重复逻辑
+- **服务器后端部署** — `gakiwoo.com` 上线：
+  - `POST/GET /api/workouts/sync` — 训练记录双向同步
+  - `GET /api/workouts/stats` — 训练统计
+  - `/api/pilot/{schools,classrooms,students,tasks,assignments}` — 校园试点 API
+  - MediaPipe CDN 补全 lite 模型（`pose_landmark_lite.tflite`）
+- **TrainingTask** 新增 `targetCm` 字段
+- SyncService 测试、WorkoutRepository 测试、scoring 测试、PilotDataPackageService 测试
+- 测试总数：282 → **393**（+111 个测试）
+- 测试套件：46 → **53**（+7 个测试套件）
+
+### Fixed (P0 — 正确性)
+- **SitUpCounter** 髋部离地检测公式方向：`(baseline-current)` → `(current-baseline)`，犯规检测恢复正常
+- **JumpRopeCounter** Kalman 参数对齐 Desktop（0.5,6 → 0.0005,0.006），velocity 阈值同步（-0.4→-0.0005），消除 800x 跨端差异
+- **SRI 哈希** 添加验证文档和升级指引
+
+### Fixed (P1 — 持久性与可靠性)
+- **WorkoutRepository.save()** trimExcess 新增 `protectedId` 参数，防止刚保存的记录被立即删除
+- **WorkoutRepository.delete()** 先更新索引再删数据键，防止部分失败导致数据丢失
+- **WorkoutRepository.ensureIndex()** 迁移时先写索引再删旧键，防止中间崩溃
+- **WorkoutRepository.batchMarkSynced()** multiGet 并行读取替代串行 getItem
+- **PilotDataPackageService.importPackage()** 添加 JSON 大小（10MB）+ 数组长度（10000）+ 类型校验
+- **useWorkoutScreen** handleStop 使用训练开始时快照的 targetCount，防止中途修改目标导致评分失真
+
+### Fixed (P1 — 评分一致性)
+- **targetCm** 传递链路补全：ScoringInput → scoreSessionRecord → scoreSession → DISTANCE_REFERENCE 降级
 
 ### Changed
+- `StorageService` 保留但标记为 @deprecated，新代码使用 `WorkoutRepository`
+- 测试总数：282 → 393 | 测试套件：46 → 53
 - 整体代码覆盖率：60.46% → **60.96%**
 - Counters 覆盖率：77.30% → **78.42%**
-- `StorageService` 保留但标记为向后兼容，新代码使用 `WorkoutRepository`
 
 ---
 

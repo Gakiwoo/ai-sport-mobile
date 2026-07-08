@@ -44,7 +44,7 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
   const [poseQuality, setPoseQuality] = useState<PoseQualityResult | null>(null);
   const [startCountdown, setStartCountdown] = useState<number | null>(null);
   const [autoStartPhase, setAutoStartPhase] = useState<AutoStartPhase>(null);
-  const [elapsed, setElapsed] = useState(0);
+  const [displayElapsed, setDisplayElapsed] = useState(0);
 
   const hasShownCompletionRef = useRef(false);
   const prevFeedbackMsgRef = useRef<string | null>(null);
@@ -58,26 +58,36 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
   const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 训练开始时快照的目标次数，防止中途修改目标导致评分失真 */
   const targetCountSnapshotRef = useRef(targetCount);
+  /** ref 存储实时 elapsed，避免每秒 5 次 setState 触发整树重渲染 */
+  const elapsedRef = useRef(0);
 
   const runtimeProfile = useMemo(() => getExerciseRuntimeProfile(exerciseType), [exerciseType]);
   const { getFeedback } = useExerciseFeedback();
   const { playSuccess } = useSound();
 
   const isTimed = mode === 'timed';
-  const countdown = Math.max(0, targetDuration - elapsed);
+  const countdown = Math.max(0, targetDuration - displayElapsed);
   const exerciseName = EXERCISE_NAMES[exerciseType];
 
+  // MED-3: 仅在整秒变化时更新 UI，从每秒 5 次降为每秒 1 次渲染
   useEffect(() => {
     if (!isActive) {
-      setElapsed(0);
+      setDisplayElapsed(0);
+      elapsedRef.current = 0;
       return;
     }
-    setElapsed(0);
+    elapsedRef.current = 0;
+    setDisplayElapsed(0);
     const timer = setInterval(() => {
-      setElapsed(getElapsedSeconds());
+      const seconds = getElapsedSeconds();
+      elapsedRef.current = seconds;
+      // 仅在整秒变化时触发 UI 更新
+      if (Math.abs(seconds - displayElapsed) >= 1) {
+        setDisplayElapsed(seconds);
+      }
     }, 200);
     return () => clearInterval(timer);
-  }, [isActive, getElapsedSeconds]);
+  }, [isActive, getElapsedSeconds, displayElapsed]);
 
   useEffect(() => {
     return () => {
@@ -324,7 +334,7 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
     isSaving,
     timeUp,
     isPaused,
-    elapsed,
+    elapsed: displayElapsed,
     startCountdown,
     autoStartPhase,
     poseQuality,

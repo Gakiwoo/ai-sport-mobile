@@ -1,10 +1,12 @@
 # AI Sport 训练记录云端同步方案
 
+> **状态：✅ 已实现（2026-07-08）** — 后端 API 已部署到 `gakiwoo.com`，移动端 SyncService 已对接。
+
 ## 1. 当前状态
 
-- 训练记录存储在 `AsyncStorage`（移动端）和 `localStorage`（桌面端）
-- 换设备/清缓存 = 数据丢失
-- 后端已有认证体系：gakiwoo.com/api/auth，Cookie 双 Token
+- ✅ 训练记录存储在 `AsyncStorage`（移动端本地）+ `gakiwoo.com`（云端 SQLite）
+- ✅ 换设备 → 登录后自动拉取历史记录
+- ✅ 后端认证体系：`gakiwoo.com/api/auth/*`，JWT 双 Token（access 15min / refresh 7d）
 
 ## 2. 目标
 
@@ -86,30 +88,59 @@ interface LocalWorkoutRecord extends WorkoutRecord {
 - 用户手动下拉刷新
 - 网络状态从离线恢复时（NetInfo 监听）
 
-## 6. 后端实现
+## 6. 后端实现（已部署）
 
-### 6.1 数据库（PostgreSQL）
+### 6.1 数据库（SQLite via better-sqlite3）
+
+实施使用 SQLite（轻量、零维护），部署于 `/var/lib/gakiwoo/gakiwoo.db`：
 
 ```sql
-CREATE TABLE workout_records (
-  id UUID PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES users(id),
-  exercise_type VARCHAR(30) NOT NULL,
-  mode VARCHAR(10) NOT NULL DEFAULT 'count',
-  count INTEGER NOT NULL,
-  duration INTEGER NOT NULL,
-  accuracy FLOAT NOT NULL DEFAULT 0,
-  timestamp TIMESTAMPTZ NOT NULL,
-  device_id VARCHAR(100),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE workout_sessions (
+  id                     TEXT PRIMARY KEY,
+  user_id               INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  exercise_type         TEXT NOT NULL DEFAULT 'unknown',
+  mode                  TEXT NOT NULL DEFAULT 'count',
+  count                 INTEGER NOT NULL DEFAULT 0,
+  duration              INTEGER NOT NULL DEFAULT 0,
+  timestamp             INTEGER NOT NULL DEFAULT 0,
+  score                 REAL NOT NULL DEFAULT 0,
+  score_unit            TEXT NOT NULL DEFAULT 'reps',
+  valid_count           INTEGER NOT NULL DEFAULT 0,
+  invalid_count         INTEGER NOT NULL DEFAULT 0,
+  foul_count            INTEGER NOT NULL DEFAULT 0,
+  confidence            REAL NOT NULL DEFAULT 0,
+  school_id / class_id / student_id / task_id TEXT,  -- Pilot 字段
+  device_id / device_info / performance_tier TEXT,
+  algorithm_version / algorithm_log_summary TEXT,
+  created_at / updated_at TEXT
 );
 
-CREATE INDEX idx_workouts_user_timestamp ON workout_records(user_id, timestamp DESC);
-CREATE INDEX idx_workouts_user_exercise ON workout_records(user_id, exercise_type);
+-- 增建 Pilot 校园 5 表：pilot_schools, pilot_classrooms,
+--   pilot_students, pilot_tasks, pilot_assignments
 ```
 
-### 6.2 接口鉴权
+### 6.2 实际 API 端点
+
+```
+POST   /api/auth/register         # 注册（201）
+POST   /api/auth/login            # 登录 → {user} + Set-Cookie
+POST   /api/auth/refresh          # 刷新 token
+POST   /api/auth/logout           # 登出
+GET    /api/auth/me               # 用户信息
+GET    /api/auth/usage            # 使用日志
+POST   /api/workouts/sync         # 推送记录 → {synced: [{localId,serverId}], conflicts: []}
+GET    /api/workouts/sync?since=  # 增量拉取 → {records: [], total: N}
+GET    /api/workouts/stats        # 统计 → {total, byExercise: [{exercise_type, total_workouts, ...}]}
+GET    /api/pilot/schools          # 试点学校
+GET    /api/pilot/classrooms       # 班级列表
+GET    /api/pilot/students?classId= # 学生列表
+POST   /api/pilot/students/batch   # 批量导入学生
+GET    /api/pilot/tasks?classId=   # 训练任务
+POST   /api/pilot/tasks            # 创建任务（自动分配给全班）
+GET    /api/pilot/assignments?studentId= # 学生收到的任务
+```
+
+### 6.3 接口鉴权
 
 复用现有 Cookie 双 Token 体系：
 - 移动端：`Authorization: Bearer <access_token>` header
@@ -151,12 +182,12 @@ class SyncService {
 
 ## 8. 实施步骤
 
-| 阶段 | 内容 | 估时 |
-|------|------|------|
-| Phase 1 | 后端 DB + API + 同步接口 | 2天 |
-| Phase 2 | 前端 SyncService + StorageService 扩展 | 1.5天 |
-| Phase 3 | 两端集成测试 + 冲突处理 | 1天 |
-| Phase 4 | 自动同步 + 离线恢复 | 0.5天 |
+| 阶段 | 内容 | 估时 | 状态 |
+|------|------|------|------|
+| Phase 1 | 后端 DB + API + 同步接口 | 2天 | ✅ 已完成 |
+| Phase 2 | 前端 SyncService + StorageService 扩展 | 1.5天 | ✅ 已完成 |
+| Phase 3 | 两端集成测试 + 冲突处理 | 1天 | ✅ 已完成 |
+| Phase 4 | 自动同步 + 离线恢复 | 0.5天 | ✅ 已完成 |
 
 ## 9. 注意事项
 
