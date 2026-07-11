@@ -11,7 +11,7 @@ import {
   UsageLog,
 } from '../types/auth';
 import { resolveApiBaseUrl } from '../utils/apiBaseUrl';
-import { withTimeout, TimeoutError } from '../utils/withTimeout';
+import { withTimeout } from '../utils/withTimeout';
 import { getEnvVar, isDevMode } from '../utils/getEnv';
 import SecureStorageService from './SecureStorageService';
 
@@ -363,7 +363,10 @@ const AuthService = {
       if (err instanceof AuthError && (err.status === 401 || err.status === 403)) {
         await clearSession();
       }
-      ErrorReporter.captureWarning('认证请求失败', { source: 'AuthService', error: err instanceof Error ? err.message : String(err) });
+      ErrorReporter.captureWarning('认证请求失败', {
+        source: 'AuthService',
+        error: err instanceof Error ? err.message : String(err),
+      });
       return null;
     }
   },

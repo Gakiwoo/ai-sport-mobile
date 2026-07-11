@@ -158,9 +158,7 @@ export function useWorkout(exerciseType: ExerciseType) {
       return { session: null, saved: false };
     }
 
-    const duration = startTimeRef.current
-      ? Math.round(getElapsedMs() / 1000)
-      : targetDuration;
+    const duration = startTimeRef.current ? Math.round(getElapsedMs() / 1000) : targetDuration;
     const performanceTier =
       (
         performanceMonitor as {
@@ -199,14 +197,14 @@ export function useWorkout(exerciseType: ExerciseType) {
         console.warn('[useWorkout] Post-workout sync failed:', err);
       });
       return { session, saved };
-      } catch (error) {
-        ErrorReporter.captureError(error, { source: 'useWorkout', action: 'saveSession' });
-        return { session, saved: false };
+    } catch (error) {
+      ErrorReporter.captureError(error, { source: 'useWorkout', action: 'saveSession' });
+      return { session, saved: false };
     } finally {
       setIsSaving(false);
       performanceMonitor.stop(); // 保存性能报告
     }
-  }, [counter, exerciseType, mode, targetDuration]);
+  }, [counter, exerciseType, getElapsedMs, mode, targetDuration]);
 
   const pause = useCallback(() => {
     if (!isActiveRef.current || isPausedRef.current) return;

@@ -70,7 +70,12 @@ class ErrorReporter {
     }
   }
 
-  private persist(level: ErrorLevel, message: string, stack?: string, metadata?: Record<string, unknown>): void {
+  private persist(
+    level: ErrorLevel,
+    message: string,
+    stack?: string,
+    metadata?: Record<string, unknown>,
+  ): void {
     this.persistQueue.push({ level, message, stack, metadata, timestamp: Date.now() });
     if (this.persistQueue.length > MAX_LOCAL_ENTRIES) {
       this.persistQueue = this.persistQueue.slice(-MAX_LOCAL_ENTRIES);

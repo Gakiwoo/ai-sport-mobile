@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "status": "not_run",
+  "device": {
+    "manufacturer": "",
+    "model": "",
+    "osVersion": "",
+    "appVersion": ""
+  },
+  "startedAt": "",
+  "endedAt": "",
+  "crashCount": null,
+  "sessions": [],
+  "notes": "填写真实设备信息并粘贴 PerformanceMonitor 产生的会话报告；不得使用模板作为验收证据。"
+}

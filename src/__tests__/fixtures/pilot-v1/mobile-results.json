@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "pilot-v1",
+  "exportedAt": "2026-07-10T08:00:30.000Z",
+  "sourceApp": "mobile",
+  "algorithmVersion": "mobile-pose-v1",
+  "entities": {
+    "schools": [
+      {
+        "id": "contract-school",
+        "name": "契约测试学校"
+      }
+    ],
+    "classes": [
+      {
+        "id": "contract-class",
+        "schoolId": "contract-school",
+        "name": "四年级 1 班",
+        "grade": "四年级"
+      }
+    ],
+    "students": [
+      {
+        "id": "contract-student",
+        "schoolId": "contract-school",
+        "classId": "contract-class",
+        "name": "契约学生",
+        "studentNo": "C001",
+        "gender": "unknown"
+      }
+    ],
+    "devices": [
+      {
+        "id": "contract-device",
+        "label": "试点安卓平板",
+        "platform": "android",
+        "model": "contract-model",
+        "performanceTier": "constrained"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "contract-long-jump-task",
+        "schoolId": "contract-school",
+        "classId": "contract-class",
+        "name": "立定跳远训练估算",
+        "exerciseType": "standing_long_jump",
+        "targetCm": 165,
+        "officialScoring": false
+      }
+    ],
+    "sessions": [
+      {
+        "id": "contract-session",
+        "schoolId": "contract-school",
+        "classId": "contract-class",
+        "studentId": "contract-student",
+        "taskId": "contract-long-jump-task",
+        "exerciseType": "standing_long_jump",
+        "startedAt": "2026-07-10T08:00:00.000Z",
+        "endedAt": "2026-07-10T08:00:30.000Z",
+        "durationSec": 30,
+        "score": 160,
+        "scoreUnit": "cm",
+        "validCount": 1,
+        "invalidCount": 0,
+        "foulCount": 0,
+        "confidence": 0.9,
+        "deviceId": "contract-device",
+        "deviceInfo": "contract-model",
+        "performanceTier": "constrained",
+        "algorithmVersion": "mobile-pose-v1",
+        "algorithmLogSummary": "contract-fixture",
+        "sourceSession": {
+          "id": "contract-session",
+          "exerciseType": "standing_long_jump",
+          "mode": "count",
+          "count": 160,
+          "duration": 30,
+          "timestamp": 1783670400000,
+          "schoolId": "contract-school",
+          "classId": "contract-class",
+          "studentId": "contract-student",
+          "taskId": "contract-long-jump-task",
+          "deviceId": "contract-device",
+          "deviceInfo": "contract-model",
+          "performanceTier": "constrained",
+          "algorithmVersion": "mobile-pose-v1",
+          "algorithmLogSummary": "contract-fixture",
+          "exerciseResult": {
+            "sessionId": "contract-session",
+            "exerciseType": "standing_long_jump",
+            "distanceCm": 160,
+            "validCount": 1,
+            "invalidCount": 0,
+            "foulCount": 0,
+            "confidence": 0.9,
+            "durationMs": 30000,
+            "feedback": [],
+            "algorithmLog": [],
+            "startedAt": "2026-07-10T08:00:00.000Z",
+            "endedAt": "2026-07-10T08:00:30.000Z"
+          }
+        }
+      }
+    ],
+    "reviews": []
+  }
+}

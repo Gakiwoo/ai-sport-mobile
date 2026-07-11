@@ -10,9 +10,11 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:video-dataset": "node scripts/validate-video-dataset.js",
+    "test:device-stability": "node scripts/validate-device-stability.js",
     "report:algorithm": "node scripts/algorithm-regression-report.js",
+    "report:algorithm:strict": "node scripts/algorithm-regression-report.js --strict",
     "test:watch": "jest --watch",
-    "lint": "eslint src/ --ext .ts,.tsx",
+    "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
     "lint:fix": "eslint src/ --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "e2e:maestro": "maestro test .maestro/flows"

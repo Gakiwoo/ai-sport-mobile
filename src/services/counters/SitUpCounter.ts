@@ -406,8 +406,7 @@ export class SitUpCounter extends ExerciseCounter {
     // 当前距离 > 基线距离 且 超出阈值比例 → 判为臀部离垫
     // 与 Desktop 端公式一致：(current - baseline) / baseline
     if (baselineHipAnkleDist > 0) {
-      const liftRatio =
-        (currentHipAnkleDist - baselineHipAnkleDist) / baselineHipAnkleDist;
+      const liftRatio = (currentHipAnkleDist - baselineHipAnkleDist) / baselineHipAnkleDist;
       if (liftRatio > this.HIP_LIFT_THRESHOLD) {
         this.lastFoul = 'hip_lift';
       }

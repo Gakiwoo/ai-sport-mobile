@@ -55,7 +55,8 @@ const StyleSheet = {
 const Platform = {
   OS: 'web',
   Version: 0,
-  select: (obj: Record<string, unknown>) => obj.default ?? obj.web ?? obj.ios ?? obj.android ?? null,
+  select: (obj: Record<string, unknown>) =>
+    obj.default ?? obj.web ?? obj.ios ?? obj.android ?? null,
 };
 
 const Dimensions = {

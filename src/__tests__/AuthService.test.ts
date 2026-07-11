@@ -57,15 +57,19 @@ const testGlobal = globalThis as any as TestGlobal;
 
 /** Get references to the in-memory stores for test setup/teardown */
 function getAsyncStore(): Map<string, string> {
-  return (require('@react-native-async-storage/async-storage') as {
-    __store: Map<string, string>;
-  }).__store;
+  return (
+    require('@react-native-async-storage/async-storage') as {
+      __store: Map<string, string>;
+    }
+  ).__store;
 }
 
 function getSecureStore(): Map<string, string> {
-  return (require('../services/SecureStorageService') as {
-    __store: Map<string, string>;
-  }).__store;
+  return (
+    require('../services/SecureStorageService') as {
+      __store: Map<string, string>;
+    }
+  ).__store;
 }
 
 /** Build a mock fetch Response with optional Set-Cookie header */

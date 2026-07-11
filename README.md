@@ -3,11 +3,13 @@
 [![Expo](https://img.shields.io/badge/Expo-55-blueviolet?logo=expo)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript)](https://www.typescriptlang.org)
-[![Test](https://img.shields.io/badge/tests-393_passing-brightgreen)](https://jestjs.io)
+[![Test](https://img.shields.io/badge/tests-398_passing-brightgreen)](https://jestjs.io)
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **AI Motion Tracker** — 基于 MediaPipe Pose 的实时运动追踪 App，支持 Android 和 iOS。通过手机摄像头实时检测人体姿态，自动计数跳绳、深蹲、仰卧起坐等 6 种运动项目，并提供动作质量反馈。
+
+> 当前状态（2026-07-10）：TypeScript 检查通过，55 个 Jest suites / 398 tests 通过。校园试点采用本地 `pilot-v1` 文件包，并有跨端规范样例与漂移检查；真实视频数据集仍为 0/500，低端 Android 30 分钟稳定性和真机文件往返尚未验收。
 
 ---
 
@@ -41,21 +43,21 @@
 - **📱 Offline First** — 模型文件本地缓存，完全离线可用
 - **⚡ Adaptive Frame Rate** — 根据设备性能动态调整姿态检测帧率
 - **🔐 Guest & Auth Mode** — 支持游客模式快速体验，也支持账号系统完整使用
-- **☁️ Cloud Sync** — 训练记录云端备份与多设备同步（基于 `gakiwoo.com` 后端 API）
-- **🏫 Campus Pilot** — 教师端任务下发 + 学生端自动接收 + 成绩云端汇总
+- **Campus Pilot File Flow** — 导入班级/学生/任务，选择训练对象，保存关联字段并导出/分享 `pilot-v1` 成绩包
+- **Optional Cloud Push** — 云同步默认关闭；当前客户端只实现 pending 记录 push，不包含 pull 与冲突合并
 
 ---
 
 ## Supported Exercises
 
-| Exercise | Detection Method | Key Metrics |
-|----------|-----------------|-------------|
-| 🏃 **Jump Rope** 跳绳 | 手腕旋转周期 + 髋部弹跳双信号融合 | 连续跳跃次数 |
-| 🤸 **Jumping Jacks** 开合跳 | 手臂角度 + 腿部张开比例双信号 | 完整开合次数 |
-| 🦵 **Squats** 深蹲 | 膝盖角度 + 背部稳定性 | 深蹲次数 + 犯规类型 |
-| 🏃‍♂️ **Standing Long Jump** 立定跳远 | 脚踝水平位移 | 跳远距离 (cm) |
-| ⬆️ **Vertical Jump** 纵跳摸高 | 多信号融合（膝盖+脚踝+髋部） | 腾空高度 (cm) |
-| 🙇 **Sit-ups** 仰卧起坐 | 肩-髋-膝三点躯干角度 | 完整起坐次数 |
+| Exercise                           | Detection Method                  | Key Metrics         |
+| ---------------------------------- | --------------------------------- | ------------------- |
+| 🏃 **Jump Rope** 跳绳              | 手腕旋转周期 + 髋部弹跳双信号融合 | 连续跳跃次数        |
+| 🤸 **Jumping Jacks** 开合跳        | 手臂角度 + 腿部张开比例双信号     | 完整开合次数        |
+| 🦵 **Squats** 深蹲                 | 膝盖角度 + 背部稳定性             | 深蹲次数 + 犯规类型 |
+| 🏃‍♂️ **Standing Long Jump** 立定跳远 | 脚踝水平位移                      | 跳远距离 (cm)       |
+| ⬆️ **Vertical Jump** 纵跳摸高      | 多信号融合（膝盖+脚踝+髋部）      | 腾空高度 (cm)       |
+| 🙇 **Sit-ups** 仰卧起坐            | 肩-髋-膝三点躯干角度              | 完整起坐次数        |
 
 ---
 
@@ -179,14 +181,14 @@ npm run test:coverage
 
 **Test Coverage Areas:**
 
-| Domain | Tests | Description |
-|--------|-------|-------------|
-| Exercise Counters | 6 suites | 所有 6 种运动计数逻辑 |
-| Services | 2 suites | Auth、Storage |
-| Hooks | 1 suite | useWorkout |
-| Utils | 5 suites | filters、poseQuality、asyncPool、adaptiveRuntime、CDN policy |
-| Infrastructure | 7 suites | CDN、Manifest、Asset injection、mediapipeBridge |
-| **Total** | **53 suites / 393 tests** | |
+| Domain            | Tests                     | Description                                                  |
+| ----------------- | ------------------------- | ------------------------------------------------------------ |
+| Exercise Counters | 6 suites                  | 所有 6 种运动计数逻辑                                        |
+| Services          | 2 suites                  | Auth、Storage                                                |
+| Hooks             | 1 suite                   | useWorkout                                                   |
+| Utils             | 5 suites                  | filters、poseQuality、asyncPool、adaptiveRuntime、CDN policy |
+| Infrastructure    | 7 suites                  | CDN、Manifest、Asset injection、mediapipeBridge              |
+| **Total**         | **55 suites / 398 tests** |                                                              |
 
 CI runs `npm run lint` and `npm run test:coverage` on every push/PR to `main`/`master`. See [docs/ROADMAP.md](docs/ROADMAP.md) for the development plan.
 
@@ -350,34 +352,37 @@ EXPO_PUBLIC_MEDIAPIPE_CDN_BASES=https://your-cdn.com/pose/,https://backup-cdn.co
 
 ### Cloud Sync & Server API
 
-AI Motion Tracker 通过 `https://gakiwoo.com` 提供后端服务：
+云同步是可选能力，不是当前校园试点的依赖。Auth 与模型 CDN 在线；2026-07-10 只读检查中，Sync/Pilot 的 GET 路由返回 404。当前 Mobile 只实现 POST push，未实现增量 pull 和冲突合并。
 
-| 服务 | 端点 | 说明 |
-|------|------|------|
+| 服务     | 端点                                             | 说明                                      |
+| -------- | ------------------------------------------------ | ----------------------------------------- |
 | 用户认证 | `POST /api/auth/{register,login,refresh,logout}` | JWT 双 Token（access 15min / refresh 7d） |
-| 用户信息 | `GET/PUT /api/auth/me` | 获取/更新用户资料 |
-| 训练同步 | `POST /api/workouts/sync` | 推送本地记录到云端 |
-| 增量拉取 | `GET /api/workouts/sync?since=ISO` | 拉取服务端新增记录（双向同步） |
-| 训练统计 | `GET /api/workouts/stats` | 按运动类型汇总统计 |
-| 校园任务 | `GET /api/pilot/{tasks,assignments}` | 获取教师下发的训练任务 |
+| 用户信息 | `GET/PUT /api/auth/me`                           | 获取/更新用户资料                         |
+| 训练同步 | `POST /api/workouts/sync`                        | 客户端 push 代码已实现；线上联调未验收    |
+| 增量拉取 | `GET /api/workouts/sync?since=ISO`               | 目标契约；客户端未实现，线上 GET 当前 404 |
+| 训练统计 | `GET /api/workouts/stats`                        | 服务端源码存在；线上未验收                |
+| 校园任务 | `GET /api/pilot/{tasks,assignments}`             | 服务端源码存在；线上 GET 当前 404         |
 
 启用云同步：
+
 ```bash
 EXPO_PUBLIC_ENABLE_CLOUD_SYNC=true
 ```
+
+只有在服务端路由和真实账号联调通过后才应启用。详细状态见 [云同步设计](./docs/architecture/cloud-sync-design.md)。
 
 ### Runtime Profiles
 
 每种运动有不同的帧率配置，可根据设备性能自适应调整：
 
-| Exercise | Active Interval | Preview Interval | Model Complexity |
-|----------|----------------|-----------------|-----------------|
-| Jump Rope | 80ms | 200ms | 0 (lite) |
-| Jumping Jacks | 100ms | 250ms | 1 (full) |
-| Squats | 120ms | 250ms | 1 (full) |
-| Long Jump | 100ms | 250ms | 1 (full) |
-| Vertical Jump | 100ms | 250ms | 1 (full) |
-| Sit-ups | 120ms | 250ms | 1 (full) |
+| Exercise      | Active Interval | Preview Interval | Model Complexity |
+| ------------- | --------------- | ---------------- | ---------------- |
+| Jump Rope     | 80ms            | 200ms            | 0 (lite)         |
+| Jumping Jacks | 100ms           | 250ms            | 1 (full)         |
+| Squats        | 120ms           | 250ms            | 1 (full)         |
+| Long Jump     | 100ms           | 250ms            | 1 (full)         |
+| Vertical Jump | 100ms           | 250ms            | 1 (full)         |
+| Sit-ups       | 120ms           | 250ms            | 1 (full)         |
 
 ---
 

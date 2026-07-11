@@ -23,9 +23,11 @@ jest.mock('@react-native-async-storage/async-storage', () => {
 
 /** Access the in-memory store from the mock */
 function getStore(): Map<string, string> {
-  return (require('@react-native-async-storage/async-storage') as {
-    __store: Map<string, string>;
-  }).__store;
+  return (
+    require('@react-native-async-storage/async-storage') as {
+      __store: Map<string, string>;
+    }
+  ).__store;
 }
 
 describe('PerformanceMonitor', () => {
@@ -138,5 +140,20 @@ describe('PerformanceMonitor', () => {
     performanceMonitor.recordFrame(75, true);
     performanceMonitor.recordFrame(80, true);
     expect(performanceMonitor.getCurrentTier()).toBe('constrained');
+  });
+
+  it('长会话报告保留完整聚合数据而不是只统计最近 5000 帧', async () => {
+    performanceMonitor.start();
+    for (let i = 0; i < 5001; i++) performanceMonitor.recordFrame(10, true);
+    for (let i = 0; i < 5001; i++) performanceMonitor.recordFrame(110, true);
+
+    expect(performanceMonitor.frameCount).toBe(10002);
+    const report = await performanceMonitor.stop();
+
+    expect(report?.totalFrames).toBe(10002);
+    expect(report?.avgInferenceMs).toBe(60);
+    expect(report?.medianInferenceMs).toBe(10);
+    expect(report?.p95InferenceMs).toBe(110);
+    expect(report?.lowFpsCount).toBe(5001);
   });
 });

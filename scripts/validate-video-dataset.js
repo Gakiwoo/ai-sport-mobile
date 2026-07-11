@@ -17,6 +17,16 @@ const counts = new Map(manifest.coverage.map((item) => [item.exerciseType, 0]));
 const statusOrder = new Set(manifest.statusOrder);
 const ids = new Set();
 
+function metricEntry(value) {
+  if (!value || typeof value !== 'object') return null;
+  for (const key of ['count', 'distanceCm', 'heightCm']) {
+    if (typeof value[key] === 'number' && Number.isFinite(value[key])) {
+      return { key, value: value[key] };
+    }
+  }
+  return null;
+}
+
 for (const video of manifest.videos) {
   if (!video.id || ids.has(video.id)) {
     throw new Error(`Missing or duplicated video id: ${video.id || '<empty>'}`);
@@ -36,6 +46,26 @@ for (const video of manifest.videos) {
   const fullPath = path.join(repoRoot, video.path);
   if (video.status !== 'planned' && !fs.existsSync(fullPath)) {
     throw new Error(`Recorded video is missing on disk: ${video.path}`);
+  }
+
+  if (['annotated', 'approved'].includes(video.status)) {
+    const expected = metricEntry(video.expected);
+    if (!expected) {
+      throw new Error(`Annotated video is missing expected count/distance/height: ${video.id}`);
+    }
+    if (video.status === 'approved') {
+      const actual = metricEntry(video.actual);
+      if (!actual || actual.key !== expected.key) {
+        throw new Error(`Approved video is missing matching algorithm result: ${video.id}`);
+      }
+    }
+  }
+
+  for (const field of ['missedDetections', 'falseDetections']) {
+    const value = video.actual?.[field];
+    if (value != null && (!Number.isInteger(value) || value < 0)) {
+      throw new Error(`Invalid ${field} for ${video.id}`);
+    }
   }
 
   counts.set(video.exerciseType, counts.get(video.exerciseType) + 1);

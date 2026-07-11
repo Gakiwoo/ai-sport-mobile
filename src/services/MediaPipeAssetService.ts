@@ -149,7 +149,11 @@ class MediaPipeAssetService {
         await this.recordSuccessfulCdn(cdnBase);
         break;
       } catch (err) {
-        ErrorReporter.captureWarning('MediaPipe CDN 加载失败', { source: 'MediaPipeAssetService', host, error: String(err) });
+        ErrorReporter.captureWarning('MediaPipe CDN 加载失败', {
+          source: 'MediaPipeAssetService',
+          host,
+          error: String(err),
+        });
         await this.recordFailedCdn(cdnBase);
         await this.cleanIncompleteCacheFiles();
       }
@@ -360,7 +364,11 @@ class MediaPipeAssetService {
         }
         return;
       } catch (err) {
-        ErrorReporter.captureWarning('MediaPipe 模型文件解压失败', { source: 'MediaPipeAssetService', cdnBase, error: String(err) });
+        ErrorReporter.captureWarning('MediaPipe 模型文件解压失败', {
+          source: 'MediaPipeAssetService',
+          cdnBase,
+          error: String(err),
+        });
         lastError = err;
         await deleteAsync(dest, { idempotent: true });
       }

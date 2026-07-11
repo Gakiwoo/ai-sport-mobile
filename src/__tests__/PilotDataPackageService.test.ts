@@ -1,7 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import PilotDataPackageService, { DEFAULT_PILOT_ENTITIES } from '../services/PilotDataPackageService';
-import { PILOT_SCHEMA_VERSION, type PilotHistoryFilter, type TrainingTask } from '../types/pilot';
+import PilotDataPackageService, {
+  DEFAULT_PILOT_ENTITIES,
+} from '../services/PilotDataPackageService';
+import {
+  PILOT_SCHEMA_VERSION,
+  type PilotDataPackage,
+  type PilotHistoryFilter,
+  type TrainingTask,
+} from '../types/pilot';
 import type { WorkoutSession } from '../types';
+
+const mobileContractPackage =
+  require('./fixtures/pilot-v1/mobile-results.json') as PilotDataPackage;
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store = new Map<string, string>();
@@ -225,6 +235,25 @@ describe('PilotDataPackageService', () => {
       classId: 'class-2',
       studentId: 'student-2',
       taskId: 'task-2',
+    });
+  });
+
+  it('imports the cross-repo pilot-v1 contract without losing targetCm', async () => {
+    const service = new PilotDataPackageService();
+
+    await service.importPackage(JSON.stringify(mobileContractPackage));
+    const entities = await service.getEntities();
+
+    expect(entities.tasks.find((item) => item.id === 'contract-long-jump-task')).toMatchObject({
+      exerciseType: 'standing_long_jump',
+      targetCm: 165,
+      officialScoring: false,
+    });
+    await expect(service.getActiveSelection()).resolves.toMatchObject({
+      schoolId: 'contract-school',
+      classId: 'contract-class',
+      studentId: 'contract-student',
+      taskId: 'contract-long-jump-task',
     });
   });
 });

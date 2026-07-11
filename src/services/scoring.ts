@@ -95,7 +95,9 @@ function clamp01(value: number): number {
 
 function resolveTarget(input: ScoringInput): number | null {
   if (input.scoreUnit === 'cm') {
-    return input.targetCm != null ? input.targetCm : (DISTANCE_REFERENCE[input.exerciseType] ?? null);
+    return input.targetCm != null
+      ? input.targetCm
+      : (DISTANCE_REFERENCE[input.exerciseType] ?? null);
   }
   return input.targetCount != null ? input.targetCount : null;
 }
@@ -128,7 +130,8 @@ export function scoreSession(input: ScoringInput): ScoringResult {
   const denom = input.validCount + input.invalidCount + input.foulCount;
   const qualityRatio = denom > 0 ? clamp01(input.validCount / denom) : 1;
   const confFactor =
-    SCORING_CONFIG.confidenceFloor + (1 - SCORING_CONFIG.confidenceFloor) * clamp01(input.confidence);
+    SCORING_CONFIG.confidenceFloor +
+    (1 - SCORING_CONFIG.confidenceFloor) * clamp01(input.confidence);
   const qualityScore = Math.round(qualityRatio * 100 * confFactor);
   const qualityTier = qualityByScore(qualityScore);
 
@@ -162,10 +165,8 @@ export function extractScoringInput(
   targetCm?: number,
 ): ScoringInput {
   const result = session.exerciseResult;
-  const scoreUnit: 'reps' | 'cm' =
-    result?.distanceCm || result?.heightCm ? 'cm' : 'reps';
-  const score =
-    result?.distanceCm ?? result?.heightCm ?? result?.reps ?? session.count;
+  const scoreUnit: 'reps' | 'cm' = result?.distanceCm || result?.heightCm ? 'cm' : 'reps';
+  const score = result?.distanceCm ?? result?.heightCm ?? result?.reps ?? session.count;
   return {
     exerciseType: session.exerciseType,
     score,

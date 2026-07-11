@@ -16,7 +16,6 @@ jest.mock('@react-navigation/stack', () => ({
 }));
 
 import WorkoutSetupPanel from '../components/workout/WorkoutSetupPanel';
-import { AutoStartPhase } from '../hooks/useWorkoutScreen';
 
 describe('WorkoutSetupPanel', () => {
   const mockPoseQuality = {

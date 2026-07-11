@@ -137,8 +137,11 @@ export default function HistoryScreen(_props: HistoryScreenProps) {
             </Text>
             {item.studentId || item.taskId ? (
               <Text style={styles.pilotMeta}>
-                学生: {students.find((student) => student.id === item.studentId)?.name || item.studentId || '-'} ·
-                任务: {tasks.find((task) => task.id === item.taskId)?.name || item.taskId || '-'}
+                学生:{' '}
+                {students.find((student) => student.id === item.studentId)?.name ||
+                  item.studentId ||
+                  '-'}{' '}
+                · 任务: {tasks.find((task) => task.id === item.taskId)?.name || item.taskId || '-'}
               </Text>
             ) : null}
             <Text style={styles.date}>{formatDate(item.timestamp)}</Text>

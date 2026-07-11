@@ -71,20 +71,14 @@ describe('LoginScreen', () => {
 
   it('渲染不崩溃', async () => {
     const tree = await renderToJSON(
-      <LoginScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     expect(tree).toBeDefined();
   });
 
   it('包含品牌标题', async () => {
     const tree = await renderToJSON(
-      <LoginScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('AI SPORT');
@@ -93,10 +87,7 @@ describe('LoginScreen', () => {
 
   it('包含登录按钮和游客模式按钮', async () => {
     const tree = await renderToJSON(
-      <LoginScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('登录');
@@ -105,10 +96,7 @@ describe('LoginScreen', () => {
 
   it('包含注册链接', async () => {
     const tree = await renderToJSON(
-      <LoginScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('立即注册');
@@ -116,10 +104,7 @@ describe('LoginScreen', () => {
 
   it('点击游客模式按钮触发 loginAsGuest', async () => {
     const instance = await createWithAct(
-      <LoginScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
 
     const guestBtn = instance.root.findAll(
@@ -134,10 +119,7 @@ describe('LoginScreen', () => {
 
   it('包含注册链接文本', async () => {
     const tree = await renderToJSON(
-      <LoginScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <LoginScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     const jsonStr = JSON.stringify(tree);
     expect(jsonStr).toContain('立即注册');

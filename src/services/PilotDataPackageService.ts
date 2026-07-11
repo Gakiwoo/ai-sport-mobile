@@ -19,7 +19,7 @@ import {
   type TrainingTask,
 } from '../types/pilot';
 import { workoutRepository } from './WorkoutRepository';
-import { scoreSession, extractScoringInput, type ScoringResult } from './scoring';
+import { scoreSession, type ScoringResult } from './scoring';
 
 const PILOT_SELECTION_KEY = '@pilot_selection_v1';
 const PILOT_ENTITIES_KEY = '@pilot_entities_v1';
@@ -113,7 +113,9 @@ class PilotDataPackageService {
     // 输入大小校验：防止恶意/损坏的 JSON 撑爆 AsyncStorage
     const MAX_JSON_SIZE = 10 * 1024 * 1024; // 10 MB
     if (json.length > MAX_JSON_SIZE) {
-      throw new Error(`Package too large: ${(json.length / 1024 / 1024).toFixed(1)} MB (max 10 MB)`);
+      throw new Error(
+        `Package too large: ${(json.length / 1024 / 1024).toFixed(1)} MB (max 10 MB)`,
+      );
     }
 
     let data: PilotDataPackage;
@@ -357,7 +359,10 @@ class PilotDataPackageService {
         ...entities,
         devices: [...entities.devices, ...Array.from(devicesById.values())],
         sessions: sessions.map((session) =>
-          this.createSessionRecord(session, entities.tasks.find((task) => task.id === session.taskId)),
+          this.createSessionRecord(
+            session,
+            entities.tasks.find((task) => task.id === session.taskId),
+          ),
         ),
         reviews: [],
       },

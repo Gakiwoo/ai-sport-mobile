@@ -4,7 +4,7 @@
  * 覆盖：渲染不崩溃、定数/定时模式、确认/取消按钮
  */
 import React from 'react';
-import { renderToJSON, createWithAct } from './testRenderer';
+import { renderToJSON } from './testRenderer';
 
 // ── 导航 mock ──
 jest.mock('@react-navigation/native', () => ({

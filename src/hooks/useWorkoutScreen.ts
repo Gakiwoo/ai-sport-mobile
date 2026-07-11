@@ -263,9 +263,7 @@ export function useWorkoutScreen(exerciseType: ExerciseType) {
 
     if (saved && session) {
       const modeLabel = session.mode === 'timed' ? '⏰ 定时模式' : '🎯 定数模式';
-      const scoring = scoreSession(
-        extractScoringInput(session, targetCountSnapshotRef.current),
-      );
+      const scoring = scoreSession(extractScoringInput(session, targetCountSnapshotRef.current));
       Alert.alert(
         `${modeLabel}\n训练记录已保存`,
         `${EXERCISE_NAMES[exerciseType]}：${session.count} 次，耗时 ${session.duration} 秒\n` +

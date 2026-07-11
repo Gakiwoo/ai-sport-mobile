@@ -80,7 +80,10 @@ export default function CameraView({
             return;
           }
         } catch (err) {
-          ErrorReporter.captureWarning('摄像头权限请求失败', { source: 'CameraView', error: String(err) });
+          ErrorReporter.captureWarning('摄像头权限请求失败', {
+            source: 'CameraView',
+            error: String(err),
+          });
         }
       }
     }
@@ -125,7 +128,10 @@ export default function CameraView({
       try {
         await injectLocalFiles();
       } catch (err) {
-        ErrorReporter.captureWarning('本地注入 MediaPipe 失败', { source: 'CameraView', error: String(err) });
+        ErrorReporter.captureWarning('本地注入 MediaPipe 失败', {
+          source: 'CameraView',
+          error: String(err),
+        });
       }
     }, 100);
   }, [injectBlobFile, injectionDoneRef, webViewRef]);

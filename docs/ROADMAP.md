@@ -1,109 +1,118 @@
 # AI Motion Tracker 开发路线图
 
-> 与 [架构评估](./architecture_evaluation.md)、[云端同步设计](./architecture/cloud-sync-design.md) 配套使用。
+> 更新日期：2026-07-10
+>
+> 与 [项目总览](../README.md)、[云同步设计](./architecture/cloud-sync-design.md) 和 [视频数据集说明](./testing/video-dataset.md) 配套使用。
 
 ## 进度总览
 
-| 阶段 | 状态 | 说明 |
-|------|------|------|
-| Phase 0 工程地基 | ✅ 已完成 | CI、覆盖率门槛、文档、mediapipeBridge |
-| Phase 1 核心链路加固 | ✅ 已完成 | pose.html、Workout 拆分、registry、hooks |
-| Phase 2 测试金字塔 | ✅ 已完成 | 黄金样本、Hook 集成测试、393 tests / 53 suites |
-| Phase 3 数据与同步 | ✅ **已完成** | WorkoutRepository + SyncService + 后端 API 部署 |
-| Phase 4 可观测与发布 | 🚧 进行中 | Sentry 集成、EAS 内测 |
-| Phase 5 体验与增长 | ⏳ 待开始 | 深色模式、报告分享等 |
+| 阶段                       | 状态                 | 当前结论                                                       |
+| -------------------------- | -------------------- | -------------------------------------------------------------- |
+| Phase 0 工程地基           | 已完成               | CI、覆盖率配置、文档、MediaPipe bridge                         |
+| Phase 1 核心链路加固       | 已完成               | Camera/Workout 拆分、registry、错误恢复                        |
+| Phase 2 自动化测试         | 已完成               | 55 suites / 398 tests、黄金 pose、Maestro 骨架                 |
+| Phase 3 本地数据与校园试点 | 代码完成，待真机验收 | Repository、`pilot-v1` 导入/选择/保存/分享/筛选                |
+| Phase 3B 云同步            | 部分实现             | Mobile 仅 push；无 pull/冲突合并；线上 sync/pilot GET 路由 404 |
+| Phase 4 可观测与发布       | 进行中               | Sentry SDK 已接入；DSN、EAS 产物与真机稳定性待验收             |
+| Phase 5 算法商业验证       | 阻塞                 | 500 段规划已建立，真实数据 0/500                               |
+| Phase 6 体验与增长         | 待开始               | 分享报告、深色模式、运营与留存能力                             |
 
----
+## Phase 0：工程地基
 
-## Phase 0：工程地基（第 1～2 周）
-
-- [x] GitHub Actions：`lint` + `test:coverage`
-- [x] Jest 覆盖率阈值（global + counters）
-- [x] `docs/ROADMAP.md`
-- [x] README 测试数与 CI 说明同步
+- [x] GitHub Actions：lint、测试与覆盖率流程
+- [x] Jest 覆盖率阈值配置
 - [x] `src/mediapipe/mediapipeBridge.ts` 通信协议类型
-- [ ] `npm run format` 纳入 CI（可选）
-- [ ] `npx expo-doctor` 定期执行记录
+- [x] 核心架构与 ADR 文档
+- [ ] 把格式检查和 `expo-doctor` 定期记录纳入稳定门禁
 
-**验收**：PR 合并前 CI 全绿；`npm run test:coverage` 本地通过。
+验收：当前 lint 零 warning、TypeScript 和 398 项 Jest 测试通过；`expo-doctor` 本次因访问 Expo API 的 TLS/网络错误未形成完整结论。
 
----
+## Phase 1：核心链路加固
 
-## Phase 1：核心链路加固（第 3～6 周）
+- [x] 将 MediaPipe HTML 提取到 `assets/mediapipe/pose.html`
+- [x] 拆分 `WorkoutScreen` 与训练控制组件
+- [x] 合并运动配置到 registry/runtime 层
+- [x] 增加三档设备性能策略与自适应推理间隔
+- [x] 增加站位、全身入镜、边缘和距离提示
+- [x] 收敛 WebView `originWhitelist`，禁止 `eval(jsCode)` 路径
 
-- [x] 将 `CameraView` 内嵌 HTML 提取到 `assets/mediapipe/pose.html`（`metro.config.js` + `loadPoseHtml.ts`）
-- [x] 拆分 `WorkoutScreen`：`useWorkoutScreen` + Setup / Active / Header / Controls / TargetModal
-- [x] 修复 `CameraView`、`useWebViewMessageHandler` 的 hooks 警告
-- [x] 合并 `exerciseConfig` + `exerciseRuntime` → `exerciseRegistry`
+验收：代码结构和自动化测试通过。性能档位仍需目标设备实测，不能作为低端平板已达标的证据。
 
-**验收**：`CameraView.tsx` < 350 行；`WorkoutScreen` < 100 行；无新增 lint error。✅
+## Phase 2：自动化测试
 
----
+- [x] `useWebViewMessageHandler` 消息序列测试
+- [x] `useWorkout` 状态流转与暂停/恢复测试
+- [x] 7 条黄金 pose JSON，覆盖 6 种运动
+- [x] Pilot 数据包、导出分享、历史筛选测试
+- [x] Maestro E2E 骨架
+- [ ] 每种运动至少 10 条标注 pose 序列
+- [ ] 真实相机完整训练保存 E2E
+- [x] 双端相同 `pilot-v1` 规范样例、导入测试与根目录漂移检查
 
-## Phase 2：测试金字塔（第 4～6 周，可与 Phase 1 并行）
+## Phase 3：本地数据与校园试点
 
-- [x] `useWebViewMessageHandler` 消息序列集成测试
-- [x] `useWorkout` 状态流转测试（start / processFrame / stop）
-- [x] 黄金 pose JSON 样本 + `goldenPoseRunner`（7 条，覆盖 6 种运动）
-- [x] Maestro E2E 骨架（`smoke-guest-squats` + testID）
-- [ ] 每种运动 10+ 段标注 pose JSON
-- [ ] E2E：完整训练保存链路（需 dev build + 相机）
+- [x] `WorkoutRepository` 分键存储、旧数据迁移和 FIFO 裁剪
+- [x] 本地班级、学生、任务实体与当前选择
+- [x] 训练记录写入学生、班级、任务、设备、性能档位和算法摘要
+- [x] 历史记录按学生、任务和运动项目筛选
+- [x] 导入 Desktop `pilot-v1` 基础包
+- [x] 导出本地成绩包到文件，并调用系统分享
+- [ ] Android 真机分享文件后由 Desktop 成功导入
+- [ ] 完成一次真实学生训练、教师复核和 XLSX 导出验收
 
-**验收**：counter 目录覆盖率 ≥ 85%。
+验收口径：只有完整的“Desktop 导出 -> Mobile 导入/训练/分享 -> Desktop 导入/复核/导出”人工证据形成后，才标记本阶段验收完成。
 
----
+## Phase 3B：云同步
 
-## Phase 3：数据与同步（✅ 已完成 — 2026-07-08）
+- [x] 本地记录 `_syncStatus` 与 pending 查询
+- [x] 显式开关 `EXPO_PUBLIC_ENABLE_CLOUD_SYNC`
+- [x] pending 记录 POST push 与指数退避
+- [ ] GET pull 与按 `_serverId` 合并
+- [ ] 冲突解决策略和删除同步
+- [ ] 线上 `/api/workouts/sync` 路由挂载与鉴权验收
+- [ ] 线上 `/api/pilot/*` 路由挂载与跨端接入
+- [ ] 换机恢复真实验收
 
-- [x] `LocalWorkoutRecord` + `_syncStatus` 字段
-- [x] `WorkoutRepository` 抽象（分键存储 + 旧数据迁移 + FIFO 裁剪）
-- [x] 后端 API 部署到 `gakiwoo.com`：
-  - `POST /api/auth/{register,login,refresh,logout}` — 用户认证
-  - `POST /api/workouts/sync` — 推送训练记录
-  - `GET /api/workouts/sync?since=` — 增量拉取（双向同步）
-  - `GET /api/workouts/stats` — 训练统计
-  - `/api/pilot/*` — 校园任务/班级/学生 CRUD
-- [x] `SyncService`：启动 / 训练后 / 网络恢复自动同步
-- [x] History / Analytics 改读 Repository
-- [x] 后端 DB：SQLite `workout_sessions` 表（24 字段）
-- [x] Pilot 校园：`pilot_schools/classrooms/students/tasks/assignments` 5 表
-- [x] MediaPipe CDN：`gakiwoo.com/static/mediapipe/pose/` 提供 lite + full 模型
+2026-07-10 只读检查中，线上 sync 和 pilot GET 路由均返回 404。当前试点不依赖本阶段，继续使用本地文件包。
 
-**验收**：登录用户换机后训练记录可恢复。✅
+## Phase 4：可观测与发布
 
----
+- [x] `@sentry/react-native` SDK 和 ErrorBoundary/ErrorReporter 接入
+- [ ] 配置生产 `EXPO_PUBLIC_SENTRY_DSN`
+- [ ] 验证生产错误事件、脱敏、告警和版本关联
+- [ ] EAS preview/production 构建产物归档
+- [ ] Android 目标设备安装、权限、相机和文件分享验收
+- [ ] 低端 Android 30 分钟连续训练测试
 
-## Phase 4：可观测与发布（持续）
+## Phase 5：算法商业验证
 
-- [ ] Sentry 集成
-- [ ] `PerformanceMonitor` 关键指标上报
-- [ ] EAS preview 渠道自动构建
-- [ ] CHANGELOG + 语义化版本
+- [x] 500 段覆盖矩阵
+- [x] 数据集结构校验和严格门禁命令
+- [x] 算法回归报告命令
+- [x] 分项目 MAE/MAPE、漏检、误检、失败样例与严格报告门禁
+- [x] 30 分钟真机稳定性报告格式与严格校验命令
+- [ ] 500 段真实视频采集
+- [ ] 500 段人工标注
+- [ ] 500 段审核通过
+- [ ] 计数误差、准确率、漏检率、误检率和失败样例报告
+- [ ] 第一轮 4 个试点项目达到约定阈值
 
----
-
-## Phase 5：体验与增长（按需）
-
-- [ ] 深色模式（训练页优先）
-- [ ] 训练报告分享图
-- [ ] 新运动类型模板（Counter + 测试 + registry）
-- [ ] 教练/班级模式（依赖 Phase 3）
-
----
+当前状态：0 recorded / 0 annotated / 0 approved。立定跳远和纵跳保持训练估算，不进入正式成绩宣传。
 
 ## 里程碑
 
-| 里程碑 | 目标日期 | 交付物 |
-|--------|------------------|--------|
-| M1 可协作 | ✅ +2 周 | CI 绿、覆盖率报告 |
-| M2 可维护 | ✅ +6 周 | CameraView/Workout 拆分 |
-| M3 可留存 | ✅ **2026-07-08** | 训练同步 MVP + Pilot API |
-| M4 可运营 | 待定 | 内测包 + 崩溃监控 |
+| 里程碑              | 状态   | 完成证据                      |
+| ------------------- | ------ | ----------------------------- |
+| M1 可协作           | 已完成 | CI 与测试框架                 |
+| M2 可维护           | 已完成 | 核心模块拆分与自动化测试      |
+| M3 本地试点代码闭环 | 已完成 | `pilot-v1` 双端服务与界面代码 |
+| M4 本地试点验收     | 待完成 | 真机跨端往返、复核、XLSX      |
+| M5 可发布           | 待完成 | EAS 包、Sentry、30 分钟稳定性 |
+| M6 算法可承诺       | 阻塞   | approved 数据集与准确率报告   |
 
----
+## 最近优先级
 
-## Issue 标签建议
-
-- `phase-0` … `phase-5`
-- `priority:high` / `priority:low`
-- `area:mediapipe` / `area:counter` / `area:sync` / `area:ci`
+1. 运行真实设备 Pilot 往返验收。
+2. 完成低端 Android 30 分钟稳定性测试。
+3. 启动真实视频采集与标注。
+4. 根据产品决策决定是否继续云同步；本地试点不被该项阻塞。

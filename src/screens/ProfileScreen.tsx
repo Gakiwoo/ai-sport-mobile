@@ -68,7 +68,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       setIsEditing(false);
       Alert.alert('成功', '昵称已更新');
     } catch (err: unknown) {
-      ErrorReporter.captureWarning('个人资料更新失败', { source: 'ProfileScreen', error: getErrorMessage(err, '更新失败') });
+      ErrorReporter.captureWarning('个人资料更新失败', {
+        source: 'ProfileScreen',
+        error: getErrorMessage(err, '更新失败'),
+      });
       Alert.alert('失败', getErrorMessage(err, '更新失败'));
     } finally {
       setIsSaving(false);
@@ -102,7 +105,10 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       // changePassword 成功后自动登出
       Alert.alert('成功', '密码已修改，请重新登录');
     } catch (err: unknown) {
-      ErrorReporter.captureWarning('修改密码失败', { source: 'ProfileScreen', error: getErrorMessage(err, '密码修改失败') });
+      ErrorReporter.captureWarning('修改密码失败', {
+        source: 'ProfileScreen',
+        error: getErrorMessage(err, '密码修改失败'),
+      });
       setPasswordError(getErrorMessage(err, '密码修改失败'));
     } finally {
       setIsChangingPassword(false);

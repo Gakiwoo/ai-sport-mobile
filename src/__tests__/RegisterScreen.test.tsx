@@ -4,7 +4,7 @@
  * 覆盖：渲染不崩溃、表单元素、登录链接
  */
 import React from 'react';
-import { renderToJSON, createWithAct } from './testRenderer';
+import { renderToJSON } from './testRenderer';
 
 // ── 导航 mock ──
 const mockNavigate = jest.fn();

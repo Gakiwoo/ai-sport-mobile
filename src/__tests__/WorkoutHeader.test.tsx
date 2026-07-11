@@ -4,7 +4,7 @@
  * 覆盖：渲染不崩溃、运动名称、模式切换、目标按钮
  */
 import React from 'react';
-import { renderToJSON, createWithAct } from './testRenderer';
+import { renderToJSON } from './testRenderer';
 
 // ── 导航 mock ──
 jest.mock('@react-navigation/native', () => ({

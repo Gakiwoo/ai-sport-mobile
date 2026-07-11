@@ -2,7 +2,6 @@ import { JumpRopeCounter } from '../services/counters/JumpRopeCounter';
 import {
   standingPose,
   ropeSwingPose,
-  airbornePose,
   lowConfidencePose,
   missingKeypointPose,
   buildPose,

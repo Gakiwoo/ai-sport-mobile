@@ -106,7 +106,6 @@ describe('SitUpCounter', () => {
       for (let c = 0; c < 3; c++) {
         runOneCycle(counter, 5, 6, 5, 3);
       }
-      const beforeReset = counter.getCount();
       counter.reset();
       expect(counter.getCount()).toBe(0);
       expect(counter.getPhase()).toBe('idle');
@@ -164,7 +163,6 @@ describe('SitUpCounter', () => {
       for (let c = 0; c < 3; c++) {
         runOneCycle(counter, 5, 6, 5, 3);
       }
-      const countBeforeReset = counter.getCount();
       counter.reset();
       expect(counter.getCount()).toBe(0);
 

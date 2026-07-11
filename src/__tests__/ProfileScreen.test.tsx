@@ -138,8 +138,7 @@ describe('ProfileScreen', () => {
     // 查找返回按钮并模拟点击
     const backBtns = instance.root.findAll(
       (el: ReactTestInstance) =>
-        el.props?.onClick !== undefined &&
-        (el.type as string) === 'TouchableOpacity',
+        el.props?.onClick !== undefined && (el.type as string) === 'TouchableOpacity',
     );
 
     if (backBtns.length > 0) {

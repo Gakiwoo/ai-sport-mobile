@@ -275,7 +275,14 @@ describe('LocalWorkoutRepository', () => {
 
     it('旧大数组格式应迁移为分键并备份原键', async () => {
       const oldData = JSON.stringify([
-        { id: 'legacy-1', exerciseType: 'jump_rope', mode: 'count', count: 50, duration: 30, timestamp: 1000 },
+        {
+          id: 'legacy-1',
+          exerciseType: 'jump_rope',
+          mode: 'count',
+          count: 50,
+          duration: 30,
+          timestamp: 1000,
+        },
       ]);
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       await AsyncStorage.setItem('@test_workouts', oldData);

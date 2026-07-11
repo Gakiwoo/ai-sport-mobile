@@ -84,7 +84,7 @@ function ExerciseCard({
       delay: index * 60,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [index, opacity]);
 
   const pressIn = () =>
     Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, speed: 40 }).start();
@@ -147,7 +147,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       duration: 400,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   return (
     <View style={styles.container}>

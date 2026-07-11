@@ -11,6 +11,8 @@ const MAX_STORED_SESSIONS = 50;
 const FPS_WINDOW_SIZE = 60; // 滑动窗口帧数
 const FPS_TARGET = 25; // 期望帧率
 export const FPS_LOW_THRESHOLD = 15; // FPS 低于此值视为"卡顿"
+const INFERENCE_BUCKET_MS = 5;
+const INFERENCE_BUCKET_COUNT = 202; // 0..1000ms，最后一档包含更慢样本
 
 export interface PerfFrameRecord {
   /** 推理耗时 (ms) */
@@ -59,10 +61,21 @@ class PerformanceMonitor {
   private sessionId: string = '';
   private _isRunning: boolean = false;
   private static readonly MAX_FRAMES = 5000; // 帧数组上限（约 8 分钟 @ 10fps）
+  private totalFramesRecorded = 0;
+  private activeFrameCount = 0;
+  private activeInferenceTotal = 0;
+  private activeInferenceMax = 0;
+  private lowFpsCountTotal = 0;
+  private inferenceBuckets = new Array<number>(INFERENCE_BUCKET_COUNT).fill(0);
+  private activeIntervalTotalMs = 0;
+  private activeIntervalCount = 0;
+  private previousFrameTimestamp = 0;
+  private previousFrameWasActive = false;
 
   /** 开始一个新的监控会话 */
   start(): void {
     this.frames = [];
+    this.resetAggregates();
     this.sessionStartTime = Date.now();
     this.sessionId = `perf_${this.sessionStartTime}_${Math.random().toString(36).slice(2, 8)}`;
     this._isRunning = true;
@@ -71,6 +84,7 @@ class PerformanceMonitor {
   /** 重置监控器（清空当前会话但不保存） */
   reset(): void {
     this.frames = [];
+    this.resetAggregates();
     this._isRunning = false;
     this.sessionStartTime = 0;
     this.sessionId = '';
@@ -79,11 +93,36 @@ class PerformanceMonitor {
   /** 记录一帧的性能数据 */
   recordFrame(inferenceMs: number, isActive: boolean): void {
     if (!this._isRunning) return;
+    if (!Number.isFinite(inferenceMs) || inferenceMs < 0) return;
+
+    const timestamp = Date.now();
+    this.totalFramesRecorded += 1;
+
+    if (isActive) {
+      this.activeFrameCount += 1;
+      this.activeInferenceTotal += inferenceMs;
+      this.activeInferenceMax = Math.max(this.activeInferenceMax, inferenceMs);
+      if (inferenceMs > 1000 / FPS_TARGET) this.lowFpsCountTotal += 1;
+
+      const bucket = Math.min(
+        Math.floor(inferenceMs / INFERENCE_BUCKET_MS),
+        INFERENCE_BUCKET_COUNT - 1,
+      );
+      this.inferenceBuckets[bucket] += 1;
+
+      if (this.previousFrameWasActive && timestamp > this.previousFrameTimestamp) {
+        this.activeIntervalTotalMs += timestamp - this.previousFrameTimestamp;
+        this.activeIntervalCount += 1;
+      }
+    }
+
+    this.previousFrameTimestamp = timestamp;
+    this.previousFrameWasActive = isActive;
 
     this.frames.push({
       inferenceMs,
       isActive,
-      timestamp: Date.now(),
+      timestamp,
     });
 
     // 超过上限时保留最近 80% 的数据（丢弃旧帧但保留近期统计精度）
@@ -141,37 +180,21 @@ class PerformanceMonitor {
 
   /** 当前会话的帧数 */
   get frameCount(): number {
-    return this.frames.length;
+    return this.totalFramesRecorded;
   }
 
   // ── 内部 ──
 
   private buildReport(): PerfSessionReport {
-    const activeFrames = this.frames.filter((f) => f.isActive);
-    const samples = activeFrames.map((f) => f.inferenceMs).sort((a, b) => a - b);
-    const n = samples.length;
-
-    const sum = samples.reduce((a, b) => a + b, 0);
-    const avgInferenceMs = n > 0 ? sum / n : 0;
-    const medianInferenceMs = n > 0 ? samples[Math.floor(n / 2)] : 0;
-    const p95InferenceMs = n > 0 ? samples[Math.ceil(n * 0.95) - 1] : 0;
-    const maxInferenceMs = n > 0 ? samples[n - 1] : 0;
-
-    // 估算 FPS: 帧间隔的中位数的倒数
-    const intervals: number[] = [];
-    for (let i = 1; i < activeFrames.length; i++) {
-      intervals.push(activeFrames[i].timestamp - activeFrames[i - 1].timestamp);
-    }
-    const medianInterval =
-      intervals.length > 0 ? intervals.sort((a, b) => a - b)[Math.floor(intervals.length / 2)] : 0;
-    const avgFps = medianInterval > 0 ? 1000 / medianInterval : 0;
-
-    // 卡顿帧比例
-    const lowFpsCount = activeFrames.filter((f) => {
-      // 如果推理耗时超过目标帧间隔，视为卡顿
-      return f.inferenceMs > 1000 / FPS_TARGET;
-    }).length;
-    const lowFpsRatio = activeFrames.length > 0 ? lowFpsCount / activeFrames.length : 0;
+    const avgInferenceMs =
+      this.activeFrameCount > 0 ? this.activeInferenceTotal / this.activeFrameCount : 0;
+    const medianInferenceMs = this.getInferencePercentile(0.5);
+    const p95InferenceMs = this.getInferencePercentile(0.95);
+    const avgIntervalMs =
+      this.activeIntervalCount > 0 ? this.activeIntervalTotalMs / this.activeIntervalCount : 0;
+    const avgFps = avgIntervalMs > 0 ? 1000 / avgIntervalMs : 0;
+    const lowFpsRatio =
+      this.activeFrameCount > 0 ? this.lowFpsCountTotal / this.activeFrameCount : 0;
     const roundedAvgInferenceMs = Math.round(avgInferenceMs * 10) / 10;
     const roundedLowFpsRatio = Math.round(lowFpsRatio * 100) / 100;
 
@@ -181,19 +204,46 @@ class PerformanceMonitor {
       startTime: this.sessionStartTime,
       endTime: now,
       durationMs: now - this.sessionStartTime,
-      totalFrames: this.frames.length,
+      totalFrames: this.totalFramesRecorded,
       avgInferenceMs: roundedAvgInferenceMs,
       medianInferenceMs: Math.round(medianInferenceMs * 10) / 10,
       p95InferenceMs: Math.round(p95InferenceMs * 10) / 10,
-      maxInferenceMs: Math.round(maxInferenceMs * 10) / 10,
+      maxInferenceMs: Math.round(this.activeInferenceMax * 10) / 10,
       avgFps: Math.round(avgFps * 10) / 10,
-      lowFpsCount,
+      lowFpsCount: this.lowFpsCountTotal,
       lowFpsRatio: roundedLowFpsRatio,
       performanceTier: classifyPerformanceTier({
         avgInferenceMs: roundedAvgInferenceMs,
         lowFpsRatio: roundedLowFpsRatio,
       }),
     };
+  }
+
+  private resetAggregates(): void {
+    this.totalFramesRecorded = 0;
+    this.activeFrameCount = 0;
+    this.activeInferenceTotal = 0;
+    this.activeInferenceMax = 0;
+    this.lowFpsCountTotal = 0;
+    this.inferenceBuckets.fill(0);
+    this.activeIntervalTotalMs = 0;
+    this.activeIntervalCount = 0;
+    this.previousFrameTimestamp = 0;
+    this.previousFrameWasActive = false;
+  }
+
+  private getInferencePercentile(percentile: number): number {
+    if (this.activeFrameCount === 0) return 0;
+    const target = Math.ceil(this.activeFrameCount * percentile);
+    let cumulative = 0;
+    for (let index = 0; index < this.inferenceBuckets.length; index += 1) {
+      cumulative += this.inferenceBuckets[index];
+      if (cumulative >= target) {
+        if (index === this.inferenceBuckets.length - 1) return this.activeInferenceMax;
+        return index * INFERENCE_BUCKET_MS;
+      }
+    }
+    return this.activeInferenceMax;
   }
 
   private async persistReport(report: PerfSessionReport): Promise<void> {

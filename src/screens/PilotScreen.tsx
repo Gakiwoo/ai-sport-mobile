@@ -97,7 +97,10 @@ export default function PilotScreen(_props: PilotScreenProps) {
         `学校 ${result.schools}，班级 ${result.classes}，学生 ${result.students}，任务 ${result.tasks}`,
       );
     } catch (err) {
-      ErrorReporter.captureWarning('导入成绩包失败', { source: 'PilotScreen', error: err instanceof Error ? err.message : '数据包格式错误' });
+      ErrorReporter.captureWarning('导入成绩包失败', {
+        source: 'PilotScreen',
+        error: err instanceof Error ? err.message : '数据包格式错误',
+      });
       Alert.alert('导入失败', err instanceof Error ? err.message : '数据包格式错误');
     }
   };
@@ -116,7 +119,10 @@ export default function PilotScreen(_props: PilotScreenProps) {
         Alert.alert('导出成功', `成绩包已保存到：\n${result.uri}`);
       }
     } catch (err) {
-      ErrorReporter.captureWarning('导出成绩包失败', { source: 'PilotScreen', error: err instanceof Error ? err.message : '无法保存成绩包文件' });
+      ErrorReporter.captureWarning('导出成绩包失败', {
+        source: 'PilotScreen',
+        error: err instanceof Error ? err.message : '无法保存成绩包文件',
+      });
       Alert.alert('导出失败', err instanceof Error ? err.message : '无法保存成绩包文件');
     }
   };

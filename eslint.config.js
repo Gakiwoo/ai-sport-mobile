@@ -34,11 +34,14 @@ module.exports = [
       // TypeScript 规则
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': ['warn', { fixToUnknown: true }],
-      '@typescript-eslint/ban-ts-comment': ['warn', {
-        'ts-expect-error': 'allow-with-description',
-        'ts-ignore': true,
-        'ts-nocheck': true,
-      }],
+      '@typescript-eslint/ban-ts-comment': [
+        'warn',
+        {
+          'ts-expect-error': 'allow-with-description',
+          'ts-ignore': true,
+          'ts-nocheck': true,
+        },
+      ],
 
       // Prettier 集成
       'prettier/prettier': 'warn',
@@ -51,6 +54,15 @@ module.exports = [
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-undef': 'off',
       'no-unused-vars': 'off', // 用 TS 版本代替
+    },
+  },
+
+  // 测试中的 React Native/Navigation mock 需要跨越复杂的框架泛型边界。
+  // 生产源码仍保持 no-explicit-any 检查。
+  {
+    files: ['src/__tests__/**/*.{ts,tsx}', 'src/__mocks__/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 

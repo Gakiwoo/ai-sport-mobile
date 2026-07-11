@@ -140,7 +140,10 @@ export function useWebViewMessageHandler(
         webView.injectJavaScript('init();true;');
         injectionDoneRef.current = true;
       } catch (err) {
-        ErrorReporter.captureWarning('本地注入 MediaPipe 失败，回退 CDN', { source: 'useWebViewMessageHandler', error: String(err) });
+        ErrorReporter.captureWarning('本地注入 MediaPipe 失败，回退 CDN', {
+          source: 'useWebViewMessageHandler',
+          error: String(err),
+        });
         rejectPendingBlobAcks('Local MediaPipe injection failed');
         try {
           webView.injectJavaScript('init();true;');

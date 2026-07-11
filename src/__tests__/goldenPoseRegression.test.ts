@@ -51,10 +51,7 @@ describe('golden pose regression', () => {
       generatedAt: new Date().toISOString(),
       results: RESULTS,
     };
-    fs.writeFileSync(
-      path.join(__dirname, 'golden-report.json'),
-      JSON.stringify(report, null, 2),
-    );
+    fs.writeFileSync(path.join(__dirname, 'golden-report.json'), JSON.stringify(report, null, 2));
     expect(true).toBe(true);
   });
 });

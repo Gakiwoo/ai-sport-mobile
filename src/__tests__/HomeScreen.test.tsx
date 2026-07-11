@@ -80,20 +80,14 @@ describe('HomeScreen', () => {
 
   it('渲染不崩溃', async () => {
     const tree = await renderToJSON(
-      <HomeScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <HomeScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     expect(tree).toBeDefined();
   });
 
   it('包含运动卡片区域', async () => {
     const tree = await renderToJSON(
-      <HomeScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <HomeScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     expect(tree).toBeDefined();
     // 验证渲染了内容，结构完整
@@ -104,10 +98,7 @@ describe('HomeScreen', () => {
 
   it('导航按钮存在（历史、分析）', async () => {
     const tree = await renderToJSON(
-      <HomeScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <HomeScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     expect(tree).toBeDefined();
     const jsonStr = JSON.stringify(tree);
@@ -118,10 +109,7 @@ describe('HomeScreen', () => {
 
   it('点击运动卡片触发 navigate', async () => {
     const instance = await createWithAct(
-      <HomeScreen
-        navigation={{ navigate: mockNavigate } as any}
-        route={{ params: {} } as any}
-      />,
+      <HomeScreen navigation={{ navigate: mockNavigate } as any} route={{ params: {} } as any} />,
     );
     expect(instance).toBeDefined();
 

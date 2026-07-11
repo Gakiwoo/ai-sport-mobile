@@ -1,197 +1,137 @@
 # AI Sport 训练记录云端同步方案
 
-> **状态：✅ 已实现（2026-07-08）** — 后端 API 已部署到 `gakiwoo.com`，移动端 SyncService 已对接。
+> 状态：部分实现，当前试点不依赖云同步
+>
+> 更新日期：2026-07-10
 
-## 1. 当前状态
+## 1. 当前事实
 
-- ✅ 训练记录存储在 `AsyncStorage`（移动端本地）+ `gakiwoo.com`（云端 SQLite）
-- ✅ 换设备 → 登录后自动拉取历史记录
-- ✅ 后端认证体系：`gakiwoo.com/api/auth/*`，JWT 双 Token（access 15min / refresh 7d）
+- Mobile 以 `WorkoutRepository` 本地存储为权威数据源，离线训练可用。
+- `SyncService` 默认关闭；只有 `EXPO_PUBLIC_ENABLE_CLOUD_SYNC=true` 时才尝试同步。
+- 当前客户端只实现 pending 记录的 POST push、成功标记和指数退避。
+- 当前客户端没有 GET pull、跨设备合并、删除同步或真实冲突解决。
+- 仓库 `deploy/` 中存在 workout sync、Pilot 路由和 SQLite 迁移源码。
+- 2026-07-10 线上只读检查：`GET /api/workouts/sync` 和 `GET /api/pilot/schools` 均返回 404。
+- Auth 路由在线，MediaPipe 模型 CDN 在线；这两项不能证明 Sync/Pilot 路由已部署。
+
+因此，“双向同步已完成”“换机恢复已验收”“Pilot API 已上线”均不是当前有效结论。校园试点主路径使用 `pilot-v1` 文件包。
 
 ## 2. 目标
 
-- 多设备数据同步（手机 + 桌面）
-- 离线优先，联网后自动同步
-- 历史数据不丢失
+若产品决定继续云端路线，目标是：
 
-## 3. 数据模型
+1. 多设备增量同步。
+2. 离线优先，联网后自动补传。
+3. 明确的冲突与删除语义。
+4. Mobile、Desktop 和服务端共享版本化契约。
+5. 可观测、可回滚、可审计。
+
+## 3. 当前本地模型
 
 ```typescript
-// 服务端 WorkoutRecord
-interface WorkoutRecord {
-  id: string;              // UUID v4
-  userId: string;          // 关联用户
-  exerciseType: ExerciseType;
-  mode: WorkoutMode;       // 'count' | 'timed'
-  count: number;           // 次数或距离(cm)
-  duration: number;        // 秒
-  accuracy: number;        // 0-1
-  timestamp: string;       // ISO 8601
-  deviceId: string;        // 来源设备标识
-  syncedAt?: string;       // 最后同步时间
+interface LocalWorkoutRecord extends WorkoutSession {
+  id: string;
+  _syncStatus: 'local' | 'synced' | 'conflict';
+  _serverId?: string;
 }
 ```
 
-## 4. API 设计
+训练保存后记录保持本地可读。云同步关闭或失败时，记录不得被错误标记为 synced。
 
-### 4.1 同步接口
+## 4. 当前已实现的 push
 
+```text
+WorkoutRepository.getPendingSync()
+  -> 检查 EXPO_PUBLIC_ENABLE_CLOUD_SYNC
+  -> POST /api/workouts/sync { workouts }
+  -> 读取 { synced: [{ localId, serverId }] }
+  -> batchMarkSynced()
+  -> 失败时保留 pending，并执行有限次数指数退避
 ```
+
+触发入口包括启动延迟、训练保存后以及 App 回到前台时。NetInfo 实时网络监听仍是注释中的可选增强，不是当前已启用能力。
+
+## 5. 目标 API 契约
+
+以下是待实现并联调的目标，不代表线上可用。
+
+### 5.1 Push
+
+```http
 POST /api/workouts/sync
-Body: {
-  records: WorkoutRecord[],  // 本地新增/修改的记录
-  lastSyncTime: string|null  // 客户端上次同步时间
-}
-Response: {
-  serverRecords: WorkoutRecord[],  // 服务端比客户端新的记录
-  conflicts?: Conflict[]           // 冲突记录（同ID不同内容）
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "workouts": []
 }
 ```
 
-### 4.2 CRUD
-
-```
-GET    /api/workouts           ?from=&to=&exerciseType=&page=&limit=
-POST   /api/workouts           创建单条记录
-PUT    /api/workouts/:id       更新记录
-DELETE /api/workouts/:id       删除记录
-GET    /api/workouts/stats     统计摘要（总次数、最佳成绩等）
-```
-
-## 5. 同步策略：离线优先 + 增量同步
-
-### 5.1 本地存储扩展
-
-```typescript
-interface LocalWorkoutRecord extends WorkoutRecord {
-  _syncStatus: 'pending' | 'synced' | 'conflict';
-  _localUpdatedAt: string;
+```json
+{
+  "synced": [{ "localId": "...", "serverId": "..." }],
+  "conflicts": []
 }
 ```
 
-### 5.2 同步流程
+### 5.2 Pull
 
-```
-┌─────────────┐    网络可用     ┌─────────────┐
-│  本地写入    │ ─────────────→ │  推送到服务端 │
-│  status=pending│              │  获取服务端新  │
-└─────────────┘                │  记录合并到本地│
-                               └─────────────┘
-
-冲突策略：服务端优先（服务端是权威数据源）
+```http
+GET /api/workouts/sync?since=<ISO-8601>
+Authorization: Bearer <access-token>
 ```
 
-### 5.3 同步时机
+客户端需要保存同步游标，并按稳定 ID、更新时间和删除标记合并记录。
 
-- App 启动时
-- 训练结束后
-- 用户手动下拉刷新
-- 网络状态从离线恢复时（NetInfo 监听）
+### 5.3 Pilot
 
-## 6. 后端实现（已部署）
+目标路由包括 schools、classrooms、students、tasks 和 assignments。正式接入前必须统一 `pilot-v1` 文件模型与 API 模型，避免同一实体出现两套字段语义。
 
-### 6.1 数据库（SQLite via better-sqlite3）
+## 6. 服务端源码状态
 
-实施使用 SQLite（轻量、零维护），部署于 `/var/lib/gakiwoo/gakiwoo.db`：
+仓库内当前包含：
 
-```sql
-CREATE TABLE workout_sessions (
-  id                     TEXT PRIMARY KEY,
-  user_id               INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  exercise_type         TEXT NOT NULL DEFAULT 'unknown',
-  mode                  TEXT NOT NULL DEFAULT 'count',
-  count                 INTEGER NOT NULL DEFAULT 0,
-  duration              INTEGER NOT NULL DEFAULT 0,
-  timestamp             INTEGER NOT NULL DEFAULT 0,
-  score                 REAL NOT NULL DEFAULT 0,
-  score_unit            TEXT NOT NULL DEFAULT 'reps',
-  valid_count           INTEGER NOT NULL DEFAULT 0,
-  invalid_count         INTEGER NOT NULL DEFAULT 0,
-  foul_count            INTEGER NOT NULL DEFAULT 0,
-  confidence            REAL NOT NULL DEFAULT 0,
-  school_id / class_id / student_id / task_id TEXT,  -- Pilot 字段
-  device_id / device_info / performance_tier TEXT,
-  algorithm_version / algorithm_log_summary TEXT,
-  created_at / updated_at TEXT
-);
-
--- 增建 Pilot 校园 5 表：pilot_schools, pilot_classrooms,
---   pilot_students, pilot_tasks, pilot_assignments
+```text
+deploy/api/routes/workouts.js
+deploy/api/routes/pilot.js
+deploy/api/db/workoutRepo.js
+deploy/api/db/pilotRepo.js
+deploy/api/migrate-v9.js
+deploy/api/migrate-v10.js
 ```
 
-### 6.2 实际 API 端点
+这些文件说明服务端方案已经编码，但仍缺少当前线上挂载、鉴权、数据库迁移版本和端到端测试证据。部署状态必须通过线上路由、日志、数据库版本和真实客户端联调共同确认。
 
-```
-POST   /api/auth/register         # 注册（201）
-POST   /api/auth/login            # 登录 → {user} + Set-Cookie
-POST   /api/auth/refresh          # 刷新 token
-POST   /api/auth/logout           # 登出
-GET    /api/auth/me               # 用户信息
-GET    /api/auth/usage            # 使用日志
-POST   /api/workouts/sync         # 推送记录 → {synced: [{localId,serverId}], conflicts: []}
-GET    /api/workouts/sync?since=  # 增量拉取 → {records: [], total: N}
-GET    /api/workouts/stats        # 统计 → {total, byExercise: [{exercise_type, total_workouts, ...}]}
-GET    /api/pilot/schools          # 试点学校
-GET    /api/pilot/classrooms       # 班级列表
-GET    /api/pilot/students?classId= # 学生列表
-POST   /api/pilot/students/batch   # 批量导入学生
-GET    /api/pilot/tasks?classId=   # 训练任务
-POST   /api/pilot/tasks            # 创建任务（自动分配给全班）
-GET    /api/pilot/assignments?studentId= # 学生收到的任务
-```
+## 7. 待完成的客户端能力
 
-### 6.3 接口鉴权
+- [ ] `pullRemote(since)` 与同步游标持久化。
+- [ ] 按 `_serverId` 和更新时间做幂等合并。
+- [ ] 冲突状态、人工选择和最终解决策略。
+- [ ] 删除墓碑与跨设备删除同步。
+- [ ] 批量分页、超限与重试幂等键。
+- [ ] Desktop 复用同一同步契约。
+- [ ] 登录、训练、同步、换机恢复的真实设备 E2E。
 
-复用现有 Cookie 双 Token 体系：
-- 移动端：`Authorization: Bearer <access_token>` header
-- 桌面端：`credentials: 'include'`，浏览器自动带 Cookie
-- 401 → 自动 refresh，失败 → 跳登录页
+## 8. 部署与验收门禁
 
-## 7. 前端实现
+| 门禁       | 当前状态       | 完成标准                             |
+| ---------- | -------------- | ------------------------------------ |
+| 路由挂载   | 未完成         | 未登录请求返回 401/403，而不是 404   |
+| 数据库迁移 | 未验证         | 线上 schema 版本、备份与回滚记录     |
+| Push       | 客户端代码存在 | 真实账号上传并在服务端读取到同一记录 |
+| Pull       | 未实现         | 新设备可拉取并幂等合并               |
+| 冲突       | 未实现         | 自动与人工策略都有测试               |
+| Desktop    | 未接入         | 教师端可读取同一学校/任务/成绩数据   |
+| 可观测性   | 未验证         | 失败率、延迟、重试和告警可追踪       |
 
-### 7.1 SyncService
+只有以上门禁通过后，路线图才能把云同步从“部分实现”改为“已验收”。
 
-```typescript
-class SyncService {
-  // 推送本地 pending 记录到服务端
-  async pushPending(): Promise<void>;
+## 9. 当前试点策略
 
-  // 拉取服务端新记录合并到本地
-  async pullRemote(): Promise<void>;
+第一轮校园试点继续使用本地文件闭环：
 
-  // 完整同步 = push + pull
-  async sync(): Promise<SyncResult>;
-
-  // 监听网络变化自动同步
-  startAutoSync(): void;
-}
+```text
+Desktop 基础包 -> Mobile 导入与训练 -> Mobile 成绩包 -> Desktop 复核与导出
 ```
 
-### 7.2 StorageService 扩展
-
-- 写入记录时同时标记 `_syncStatus: 'pending'`
-- 同步成功后标记 `_syncStatus: 'synced'`
-
-### 7.3 桌面端同步
-
-桌面端（Tauri）当前用 localStorage，需迁移到：
-- 方案 A：tauri-plugin-store（Rust 侧 SQLite，更可靠）
-- 方案 B：直接复用 localStorage + 同一个 SyncService
-
-推荐方案 B，简单直接。
-
-## 8. 实施步骤
-
-| 阶段 | 内容 | 估时 | 状态 |
-|------|------|------|------|
-| Phase 1 | 后端 DB + API + 同步接口 | 2天 | ✅ 已完成 |
-| Phase 2 | 前端 SyncService + StorageService 扩展 | 1.5天 | ✅ 已完成 |
-| Phase 3 | 两端集成测试 + 冲突处理 | 1天 | ✅ 已完成 |
-| Phase 4 | 自动同步 + 离线恢复 | 0.5天 | ✅ 已完成 |
-
-## 9. 注意事项
-
-- **向后兼容**：旧版 App 无同步功能不影响本地使用
-- **数据迁移**：首次同步时，本地全部记录标记为 pending 推送上去
-- **隐私**：训练数据属于用户个人，不做数据分析
-- **配额**：单用户上限 10000 条记录，超出后自动归档旧记录
+该策略与云端同步并不冲突，并且能在服务端契约尚未稳定时降低试点风险。云端路线是否继续，应由数据合规、部署方式、试点学校网络条件和运维成本共同决定。

@@ -10,3 +10,8 @@ Operational scripts are grouped by task area.
 
 Do not commit passwords or private keys in this directory. Use environment variables, SSH agent, or interactive prompts.
 
+## Validation
+
+- `validate-video-dataset.js` validates the 500-video manifest and strict release gate.
+- `algorithm-regression-report.js` summarizes approved algorithm evidence.
+- `validate-device-stability.js` validates a real 30-minute Android stability report.
