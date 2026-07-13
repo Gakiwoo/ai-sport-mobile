@@ -1,5 +1,7 @@
 # MediaPipe WebView 资源
 
+> 2026-07-11 复核：该资源仍是 Mobile MediaPipe WebView 的权威入口；修改后必须运行 pose HTML、asset injection 和 Metro Android export 测试。
+
 ## `pose.html`
 
 MediaPipe Pose 在 WebView 内运行的完整页面（相机、推理、骨架绘制、与 RN 的 postMessage 桥接）。

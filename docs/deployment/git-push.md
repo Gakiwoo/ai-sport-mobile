@@ -4,20 +4,21 @@
 
 | 名称 | 地址 | 用途 |
 |------|------|------|
-| `origin` | `git@github.com:Gakiwoo/ai-motion-tracker.git` | GitHub |
+| `origin` | `git@github.com:Gakiwoo/ai-sport-mobile.git` | GitHub（当前主远端） |
 | `codeup` | `git@codeup.aliyun.com:69e30e610d50a0a5d45da9a8/ai-motion-tracker.git` | Codeup (阿里云) |
 
 ## 推送命令
 
-推送到两个平台：
+先确认当前分支，再推送到两个平台：
 ```bash
-git push -u origin master && git push -u codeup master
+git branch --show-current
+git push -u origin HEAD && git push -u codeup HEAD
 ```
 
 单独推送某个平台：
 ```bash
-git push -u origin master   # GitHub
-git push -u codeup master   # Codeup
+git push -u origin HEAD   # GitHub
+git push -u codeup HEAD   # Codeup
 ```
 
 ## Codeup SSH 配置（首次）

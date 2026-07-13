@@ -2,7 +2,7 @@
 
 > 状态：部分实现，当前试点不依赖云同步
 >
-> 更新日期：2026-07-10
+> 更新日期：2026-07-11
 
 ## 1. 当前事实
 
@@ -11,7 +11,7 @@
 - 当前客户端只实现 pending 记录的 POST push、成功标记和指数退避。
 - 当前客户端没有 GET pull、跨设备合并、删除同步或真实冲突解决。
 - 仓库 `deploy/` 中存在 workout sync、Pilot 路由和 SQLite 迁移源码。
-- 2026-07-10 线上只读检查：`GET /api/workouts/sync` 和 `GET /api/pilot/schools` 均返回 404。
+- 2026-07-11 线上只读复查：`GET /api/workouts/sync` 和 `GET /api/pilot/schools` 均返回 404。
 - Auth 路由在线，MediaPipe 模型 CDN 在线；这两项不能证明 Sync/Pilot 路由已部署。
 
 因此，“双向同步已完成”“换机恢复已验收”“Pilot API 已上线”均不是当前有效结论。校园试点主路径使用 `pilot-v1` 文件包。

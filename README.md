@@ -9,7 +9,7 @@
 
 **AI Motion Tracker** — 基于 MediaPipe Pose 的实时运动追踪 App，支持 Android 和 iOS。通过手机摄像头实时检测人体姿态，自动计数跳绳、深蹲、仰卧起坐等 6 种运动项目，并提供动作质量反馈。
 
-> 当前状态（2026-07-10）：TypeScript 检查通过，55 个 Jest suites / 398 tests 通过。校园试点采用本地 `pilot-v1` 文件包，并有跨端规范样例与漂移检查；真实视频数据集仍为 0/500，低端 Android 30 分钟稳定性和真机文件往返尚未验收。
+> 当前状态（2026-07-13 实测）：TypeScript 0 错误，ESLint 0 warning，55 Jest suites / 398 tests / 14 snapshots 全部通过；Expo Doctor 19/19；EAS preview APK 已成功产出。校园试点仍以本地 `pilot-v1` 文件包为正式路径；真实视频 0/500、低端 Android 30 分钟和真机文件往返尚未验收。完整口径见[系统工程基线](../AI-Sport-System-当前工程基线-2026-07-13.md)。
 
 ---
 
@@ -169,7 +169,7 @@ npx expo start --web
 ## Testing
 
 ```bash
-# Run all tests (31 suites)
+# Run all tests (55 suites / 398 tests)
 npm test
 
 # Watch mode
@@ -222,6 +222,8 @@ npm run format
 ```bash
 npx eas build --platform android --profile preview
 ```
+
+2026-07-13 已验证 Build ID `70e5470b-b86c-4e31-b7b4-2ba274f6cc7a`。本地候选包位于 `../build-artifacts/AI运动助手-mobile-1.2.0-preview.apk`。preview 配置会禁用未配置的 Sentry source map 自动上传；production 必须配置正式 Sentry 项目后再启用。
 
 ### Android App Bundle (Production)
 
@@ -352,7 +354,7 @@ EXPO_PUBLIC_MEDIAPIPE_CDN_BASES=https://your-cdn.com/pose/,https://backup-cdn.co
 
 ### Cloud Sync & Server API
 
-云同步是可选能力，不是当前校园试点的依赖。Auth 与模型 CDN 在线；2026-07-10 只读检查中，Sync/Pilot 的 GET 路由返回 404。当前 Mobile 只实现 POST push，未实现增量 pull 和冲突合并。
+云同步是可选能力，不是当前校园试点的依赖。MediaPipe 模型 CDN 在线（2026-07-13 HTTP 200）；Sync/Pilot 的 GET 路由仍返回 404。当前 Mobile 只实现 POST push，未实现增量 pull 和冲突合并。
 
 | 服务     | 端点                                             | 说明                                      |
 | -------- | ------------------------------------------------ | ----------------------------------------- |

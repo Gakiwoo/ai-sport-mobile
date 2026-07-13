@@ -1,5 +1,7 @@
 # E2E 测试（Maestro）
 
+> 2026-07-11 状态：EAS preview APK 已成功构建，但本文流程尚未在目标真机形成通过记录；E2E 骨架不能替代人工试点验收。
+
 ## 前置条件
 
 1. 安装 [Maestro CLI](https://maestro.mobile.dev/getting-started/installing-maestro)
@@ -7,8 +9,8 @@
 3. Android 模拟器或 iOS 模拟器 / 真机已连接
 
 ```bash
-# 构建预览包（示例）
-npx eas build --platform android --profile preview --local
+# 构建预览包
+npx eas build --platform android --profile preview
 ```
 
 ## 运行

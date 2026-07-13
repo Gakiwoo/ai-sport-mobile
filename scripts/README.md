@@ -1,5 +1,7 @@
 # Project Scripts
 
+> Reviewed 2026-07-11. Deployment scripts must read credentials from environment variables or managed secrets; never commit server passwords or private keys.
+
 Operational scripts are grouped by task area.
 
 ## Deployment
@@ -11,6 +13,10 @@ Operational scripts are grouped by task area.
 Do not commit passwords or private keys in this directory. Use environment variables, SSH agent, or interactive prompts.
 
 ## Validation
+
+- `validate-video-dataset.js` validates recorded, annotated, and approved dataset states.
+- `algorithm-regression-report.js --strict` reports MAE/MAPE, misses, false detections, and failure samples.
+- `validate-device-stability.js` enforces the 30-minute real-device stability report contract.
 
 - `validate-video-dataset.js` validates the 500-video manifest and strict release gate.
 - `algorithm-regression-report.js` summarizes approved algorithm evidence.

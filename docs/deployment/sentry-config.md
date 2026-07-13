@@ -1,5 +1,7 @@
 # Sentry 配置指南
 
+> 2026-07-11 状态：SDK 已接入；preview 构建通过 `SENTRY_DISABLE_AUTO_UPLOAD=true` 禁用未配置的 source map 上传。production 的 organization、project、auth token、DSN 与事件接收尚未验收。
+
 ## 快速开始
 
 ### 1. 获取 Sentry DSN
@@ -32,6 +34,10 @@ npx eas build --platform android --profile production
 | 变量 | 必填 | 说明 |
 |------|------|------|
 | `EXPO_PUBLIC_SENTRY_DSN` | 生产环境必填 | Sentry 项目 DSN |
+| `SENTRY_ORG` | production 构建必填 | Sentry organization slug |
+| `SENTRY_PROJECT` | production 构建必填 | Sentry project slug |
+| `SENTRY_AUTH_TOKEN` | production source map 必填 | 仅存 EAS secret，不进入 Git |
+| `SENTRY_DISABLE_AUTO_UPLOAD` | preview 可用 | `true` 时跳过 source map 上传，不应用于正式发布 |
 
 > `EXPO_PUBLIC_` 前缀确保变量在客户端代码中可用。
 

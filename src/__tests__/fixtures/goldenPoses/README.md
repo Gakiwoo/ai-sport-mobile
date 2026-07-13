@@ -1,5 +1,7 @@
 # Golden Pose fixtures
 
+> 2026-07-11 复核：fixture 仅用于确定性回归，不计入 500 段真实视频数据集，也不能作为算法准确率证据。
+
 JSON 描述「帧序列 → 期望计数/阶段」，供 `goldenPoseRegression.test.ts` 回归。
 
 ## 格式

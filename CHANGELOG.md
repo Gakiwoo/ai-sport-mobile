@@ -5,6 +5,39 @@ All notable changes to AI Motion Tracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 2026-07-13
+
+### Security
+
+- 确认根目录 `scripts/{ssh-exec,upload,sftp-upload}.mjs` 仍含硬编码高权限凭据（P0 待轮换）。
+
+### Status
+
+- 2026-07-13 实测：tsc 0 错误，55 suites / 398 tests，ESLint 0 warning。
+- 线上复查：MediaPipe CDN 200，Auth 401（预期），Sync/Pilot GET 仍 404。
+
+---
+
+## [Unreleased] — 2026-07-11
+
+### Added
+
+- `pilot-v1` 跨端规范 fixture 与合同漂移校验。
+- 低端 Android 30 分钟稳定性报告门禁。
+- 算法回归 MAE/MAPE、漏检、误检与失败样例报告。
+
+### Changed
+
+- PerformanceMonitor 改为短窗口实时数据与全会话聚合并存。
+- ESLint 收敛为零 warning 门禁；当前 55 suites / 398 tests。
+- EAS preview APK、Windows EXE/NSIS 与 macOS arm64 DMG 已形成候选产物。
+
+### Fixed
+
+- 显式声明 Expo Babel preset，修复干净 EAS 环境 Metro 构建。
+- 收窄 `minimatch@3` 的安全 override，修复 React Native Codegen。
+- preview 构建在未配置 Sentry 项目时显式禁用 source map 上传。
+
 ---
 
 ## [1.2.0] — 2026-07-08

@@ -1,5 +1,7 @@
 # gakiwoo.com MediaPipe 静态文件托管
 
+> 2026-07-11 复核：`pose_landmark_lite.tflite` 线上返回 HTTP 200。部署操作必须使用受控 SSH key/secret，禁止在脚本或文档中写入服务器密码。
+
 ## 上传文件
 
 将 `mediapipe-upload/pose/` 目录下的 **9 个文件** 上传到服务器：
