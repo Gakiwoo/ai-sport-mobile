@@ -38,12 +38,14 @@
 - **🏋️ 6 Exercise Types** — 跳绳、开合跳、深蹲、立定跳远、纵跳摸高、仰卧起坐
 - **📊 Intelligent State Machine Counting** — 每种运动基于状态机 + Kalman 滤波算法精确计数
 - **🎯 Two Training Modes** — 定数模式（目标次数）和 定时模式（目标时长）
+- **⏸️ Pause & Resume** — 训练中途可暂停与继续，计时与姿态检测同步挂起/恢复
+- **🏅 Scoring & Rating** — 训练结束按同构 `scoreSession()` 评分：按「有效结果÷目标」比例评级（优秀/良好/及格/待提升），结合动作质量系数输出综合分与动作质量档（标准/一般/需改进）
 - **💬 Real-time Feedback** — 动作质量实时指导（"背部不要过度前倾"、"下蹲更深一些"）
 - **📈 Analytics & History** — 本地存储训练记录，数据统计和趋势分析
 - **📱 Offline First** — 模型文件本地缓存，完全离线可用
 - **⚡ Adaptive Frame Rate** — 根据设备性能动态调整姿态检测帧率
 - **🔐 Guest & Auth Mode** — 支持游客模式快速体验，也支持账号系统完整使用
-- **Campus Pilot File Flow** — 导入班级/学生/任务，选择训练对象，保存关联字段并导出/分享 `pilot-v1` 成绩包
+- **Campus Pilot File Flow** — 导入班级/学生/任务，选择训练对象，保存关联字段并导出/分享 `pilot-v1` 成绩包（含评级/达标/动作质量/综合分评分字段）
 - **Optional Cloud Push** — 云同步默认关闭；当前客户端只实现 pending 记录 push，不包含 pull 与冲突合并
 
 ---
