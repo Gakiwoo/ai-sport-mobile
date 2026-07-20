@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android Network Security Configuration
+  - 强制所有通信使用 HTTPS（cleartextTrafficPermitted=false）
+  - 仅允许开发环境使用 HTTP（10.0.2.2 为 Android 模拟器宿主机地址）
+  - 生产域名 gakiwoo.com 强制 HTTPS
+-->
+<network-security-config>
+  <!-- 全局：禁止明文 HTTP 流量 -->
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+
+  <!-- 开发环境例外：允许模拟器访问本地开发服务器 -->
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="false">10.0.2.2</domain>
+    <domain includeSubdomains="false">localhost</domain>
+  </domain-config>
+
+  <!-- 生产域名：强制 HTTPS + 证书固定（可选，取消注释启用） -->
+  <!--
+  <domain-config>
+    <domain includeSubdomains="true">gakiwoo.com</domain>
+    <pin-set expiration="2027-01-01">
+      <pin digest="SHA-256">YOUR_BASE64_PIN_1=</pin>
+      <pin digest="SHA-256">YOUR_BASE64_PIN_2=</pin>
+    </pin-set>
+  </domain-config>
+  -->
+</network-security-config>

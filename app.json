@@ -46,7 +46,8 @@
       "expo-secure-store",
       "@sentry/react-native",
       "expo-localization",
-      "expo-sharing"
+      "expo-sharing",
+      "./plugins/withNetworkSecurityConfig"
     ]
   }
 }

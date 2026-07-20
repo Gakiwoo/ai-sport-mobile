@@ -11,12 +11,20 @@
       },
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "gradleCommand": ":app:assembleRelease",
+        "gradleProperties": {
+          "android.enableR8": "true",
+          "android.enableR8.fullMode": "true"
+        }
       }
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "gradleProperties": {
+          "android.enableR8": "true",
+          "android.enableR8.fullMode": "true"
+        }
       }
     }
   }
