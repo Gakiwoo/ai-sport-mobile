@@ -194,7 +194,6 @@ export default function CameraView({
           originWhitelist={[
             'https://localhost',
             'https://gakiwoo.com',
-            'https://registry.npmmirror.com',
             'https://cdn.jsdelivr.net',
             'https://unpkg.com',
           ]}
