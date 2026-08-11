@@ -46,6 +46,46 @@ export default function CameraView({
     }),
   );
 
+  // 将运行时配置聚合到 ref，通过版本号驱动注入，减少 useEffect 依赖项
+  const runtimeConfigRef = useRef({
+    isActive,
+    modelComplexity,
+    throttleMs,
+    previewThrottleMs,
+    enablePreviewPose,
+  });
+  const lastInjectedConfigRef = useRef<{
+    isActive: boolean;
+    modelComplexity: number;
+    throttleMs: number;
+    previewThrottleMs: number;
+    enablePreviewPose: boolean;
+  } | null>(null);
+  const runtimeConfigVersionRef = useRef(0);
+
+  // 同步更新 ref 并检测配置变更（render 阶段，确保 ref 始终为最新）
+  runtimeConfigRef.current = {
+    isActive,
+    modelComplexity,
+    throttleMs,
+    previewThrottleMs,
+    enablePreviewPose,
+  };
+
+  const lastInjected = lastInjectedConfigRef.current;
+  if (
+    !lastInjected ||
+    lastInjected.isActive !== isActive ||
+    lastInjected.modelComplexity !== modelComplexity ||
+    lastInjected.throttleMs !== throttleMs ||
+    lastInjected.previewThrottleMs !== previewThrottleMs ||
+    lastInjected.enablePreviewPose !== enablePreviewPose
+  ) {
+    runtimeConfigVersionRef.current += 1;
+  }
+
+  const runtimeConfigVersion = runtimeConfigVersionRef.current;
+
   const {
     cameraState,
     errorMessage,
@@ -91,26 +131,15 @@ export default function CameraView({
     requestPermissionAndStart();
   }, []);
 
+  // 仅在 cameraState 或配置实际变化时才重新注入运行时控制
+  // 配置值通过 runtimeConfigRef 读取，避免将 5 个配置项全部列为依赖
   useEffect(() => {
     if (webViewRef.current && cameraState === 'ready') {
-      injectRuntimeControls(webViewRef.current, {
-        isActive,
-        modelComplexity,
-        throttleMs,
-        previewThrottleMs,
-        enablePreviewPose,
-      });
+      const config = runtimeConfigRef.current;
+      injectRuntimeControls(webViewRef.current, config);
+      lastInjectedConfigRef.current = { ...config };
     }
-  }, [
-    cameraState,
-    injectRuntimeControls,
-    isActive,
-    modelComplexity,
-    previewThrottleMs,
-    throttleMs,
-    enablePreviewPose,
-    webViewRef,
-  ]);
+  }, [cameraState, injectRuntimeControls, runtimeConfigVersion]);
 
   const handleLoadEnd = useCallback(() => {
     if (!webViewRef.current) return;

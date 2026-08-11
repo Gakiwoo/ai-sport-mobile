@@ -237,6 +237,16 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
 
           <TouchableOpacity
             style={styles.menuItem}
+            onPress={() => navigation.navigate('ServerSettings')}
+            accessibilityLabel="服务器设置"
+            accessibilityRole="button"
+          >
+            <Text style={styles.menuText}>服务器设置</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => setShowLangPicker(!showLangPicker)}
             accessibilityLabel={t('a11y.selectLanguage')}
             accessibilityRole="button"

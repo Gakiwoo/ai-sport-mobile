@@ -1,6 +1,11 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ai-sport/core": ["../packages/ai-sport-core/src"],
+      "@ai-sport/core/*": ["../packages/ai-sport-core/src/*"]
+    }
   }
 }

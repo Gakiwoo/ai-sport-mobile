@@ -21,6 +21,7 @@
 import { workoutRepository } from './WorkoutRepository';
 import AuthService from './AuthService';
 import ErrorReporter from './ErrorReporter';
+import { apiClient } from './ApiClient';
 import { LocalWorkoutRecord } from '../types';
 import { getEnvVar } from '../utils/getEnv';
 import { AppState, type NativeEventSubscription } from 'react-native';
@@ -60,6 +61,8 @@ class SyncService {
   private networkListener: (() => void) | null = null;
   /** AppState 订阅（零新依赖，覆盖「应用回到前台 / 恢复网络」场景） */
   private appStateSub: NativeEventSubscription | null = null;
+  /** 上次成功 pull 的时间戳（ISO 字符串），用于增量拉取 */
+  private lastSyncTimestamp: string | null = null;
 
   /** 启动同步服务：初始延迟同步 + 注册网络监听 */
   start(): void {
@@ -261,6 +264,55 @@ class SyncService {
     if (this.networkListener) {
       this.networkListener();
       this.networkListener = null;
+    }
+  }
+
+  /**
+   * 从服务端拉取训练记录（双向同步 — pull 方向）。
+   *
+   * 策略：
+   * - 增量拉取：仅拉取 lastSyncTimestamp 之后的记录
+   * - 冲突处理：服务端版本优先（server wins）
+   * - 离线安全：拉取失败不影响本地数据
+   */
+  async pull(): Promise<{ pulled: number; merged: number; errors: string[] }> {
+    if (!isCloudSyncEnabled()) {
+      return { pulled: 0, merged: 0, errors: ['Cloud sync is disabled'] };
+    }
+
+    try {
+      const { records, total } = await apiClient.pullWorkouts(
+        this.lastSyncTimestamp ?? undefined,
+      );
+
+      if (!records || records.length === 0) {
+        return { pulled: 0, merged: 0, errors: [] };
+      }
+
+      let merged = 0;
+
+      for (const record of records) {
+        try {
+          // Server version wins: upsert regardless of local state
+          await workoutRepository.save(record);
+          merged++;
+        } catch (mergeErr) {
+          ErrorReporter.captureWarning('Pull merge record failed', {
+            source: 'SyncService.pull',
+            recordId: record.id ?? 'unknown',
+            error: mergeErr instanceof Error ? mergeErr.message : String(mergeErr),
+          });
+        }
+      }
+
+      // Update timestamp for next incremental pull
+      this.lastSyncTimestamp = new Date().toISOString();
+
+      return { pulled: total, merged, errors: [] };
+    } catch (error) {
+      ErrorReporter.captureError(error, { source: 'SyncService', action: 'pull' });
+      const message = error instanceof Error ? error.message : String(error);
+      return { pulled: 0, merged: 0, errors: [message] };
     }
   }
 

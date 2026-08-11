@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Analytics: undefined;
   Pilot: undefined;
   PrivacyPolicy: undefined;
+  ServerSettings: undefined;
 };
 
 export type LoginScreenProps = StackScreenProps<RootStackParamList, 'Login'>;
@@ -24,3 +25,4 @@ export type HistoryScreenProps = StackScreenProps<RootStackParamList, 'History'>
 export type AnalyticsScreenProps = StackScreenProps<RootStackParamList, 'Analytics'>;
 export type PilotScreenProps = StackScreenProps<RootStackParamList, 'Pilot'>;
 export type PrivacyPolicyScreenProps = StackScreenProps<RootStackParamList, 'PrivacyPolicy'>;
+export type ServerSettingsScreenProps = StackScreenProps<RootStackParamList, 'ServerSettings'>;

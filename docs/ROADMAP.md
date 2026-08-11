@@ -1,7 +1,7 @@
 # AI Motion Tracker 开发路线图
 
-> 更新日期：2026-07-13
-> 当前工程事实以[系统工程基线](../../AI-Sport-System-当前工程基线-2026-07-13.md)为准。
+> 更新日期：2026-07-24
+> 当前工程事实以[系统工程基线](../../AI-Sport-System-当前工程基线-2026-07-24.md)为准。
 >
 > 与 [项目总览](../README.md)、[云同步设计](./architecture/cloud-sync-design.md) 和 [视频数据集说明](./testing/video-dataset.md) 配套使用。
 
@@ -11,10 +11,10 @@
 | -------------------------- | -------------------- | -------------------------------------------------------------- |
 | Phase 0 工程地基           | 已完成               | CI、覆盖率配置、文档、MediaPipe bridge                         |
 | Phase 1 核心链路加固       | 已完成               | Camera/Workout 拆分、registry、错误恢复                        |
-| Phase 2 自动化测试         | 已完成               | 55 suites / 398 tests、黄金 pose、Maestro 骨架                 |
+| Phase 2 自动化测试         | 已完成               | 56 suites / 407 tests、黄金 pose、Maestro 骨架                 |
 | Phase 3 本地数据与校园试点 | 代码完成，待真机验收 | Repository、`pilot-v1` 导入/选择/保存/分享/筛选                |
 | Phase 3B 云同步            | 部分实现             | Mobile 仅 push；无 pull/冲突合并；线上 sync/pilot GET 路由 404 |
-| Phase 4 可观测与发布       | 进行中               | EAS preview APK 已产出；Sentry production、签名与真机稳定性待验收 |
+| Phase 4 可观测与发布       | 进行中               | EAS preview APK 已产出；HTTPS 强制 + R8 已启用；Sentry production、签名与真机稳定性待验收 |
 | Phase 5 算法商业验证       | 阻塞                 | 500 段规划已建立，真实数据 0/500                               |
 | Phase 6 体验与增长         | 待开始               | 分享报告、深色模式、运营与留存能力                             |
 
@@ -27,7 +27,7 @@
 - [x] `expo-doctor` 当前 19/19 通过并记录到工程基线
 - [ ] 把格式检查和 `expo-doctor` 固化到 CI 稳定门禁
 
-验收：当前 lint 零 warning、TypeScript、398 项 Jest 测试和 Expo Doctor 19/19 通过。
+验收：当前 lint 零 warning、TypeScript、407 项 Jest 测试和 Expo Doctor 19/19 通过。
 
 ## Phase 1：核心链路加固
 
@@ -85,6 +85,9 @@
 - [ ] 配置 Sentry organization/project/auth token，验证 production source map 上传
 - [ ] 验证生产错误事件、脱敏、告警和版本关联
 - [x] EAS preview APK 构建产物归档并记录 SHA-256
+- [x] Android 网络安全配置：全局禁止明文流量（`network_security_config.xml` + Expo config plugin）
+- [x] R8 fullMode 代码混淆（preview + production）
+- [x] AuthContext 测试覆盖（9 个测试）
 - [ ] EAS production AAB 构建、签名与商店前验收
 - [ ] Android 目标设备安装、权限、相机和文件分享验收
 - [ ] 低端 Android 30 分钟连续训练测试

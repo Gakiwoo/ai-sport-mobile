@@ -3,13 +3,13 @@
 [![Expo](https://img.shields.io/badge/Expo-55-blueviolet?logo=expo)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript)](https://www.typescriptlang.org)
-[![Test](https://img.shields.io/badge/tests-398_passing-brightgreen)](https://jestjs.io)
+[![Test](https://img.shields.io/badge/tests-407_passing-brightgreen)](https://jestjs.io)
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](.github/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **AI Motion Tracker** — 基于 MediaPipe Pose 的实时运动追踪 App，支持 Android 和 iOS。通过手机摄像头实时检测人体姿态，自动计数跳绳、深蹲、仰卧起坐等 6 种运动项目，并提供动作质量反馈。
 
-> 当前状态（2026-07-13 实测）：TypeScript 0 错误，ESLint 0 warning，55 Jest suites / 398 tests / 14 snapshots 全部通过；Expo Doctor 19/19；EAS preview APK 已成功产出。校园试点仍以本地 `pilot-v1` 文件包为正式路径；真实视频 0/500、低端 Android 30 分钟和真机文件往返尚未验收。完整口径见[系统工程基线](../AI-Sport-System-当前工程基线-2026-07-13.md)。
+> 当前状态（2026-07-24 更新）：TypeScript 0 错误，ESLint 0 warning，56 Jest suites / 407 tests / 14 snapshots 全部通过；Expo Doctor 19/19；EAS preview APK 已成功产出。2026-07-20 安全加固完成：HTTPS 强制、R8 fullMode 混淆、AuthContext 测试补充。校园试点仍以本地 `pilot-v1` 文件包为正式路径；真实视频 0/500、低端 Android 30 分钟和真机文件往返尚未验收。完整口径见[系统工程基线](../AI-Sport-System-当前工程基线-2026-07-24.md)。
 
 ---
 
@@ -126,8 +126,8 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/gakiwoo1006/ai-motion-tracker.git
-cd ai-motion-tracker
+git clone https://github.com/Gakiwoo/ai-sport-mobile.git
+cd ai-sport-mobile
 
 # 2. Install dependencies
 npm install
@@ -171,7 +171,7 @@ npx expo start --web
 ## Testing
 
 ```bash
-# Run all tests (55 suites / 398 tests)
+# Run all tests (56 suites / 407 tests)
 npm test
 
 # Watch mode
@@ -183,14 +183,16 @@ npm run test:coverage
 
 **Test Coverage Areas:**
 
-| Domain            | Tests                     | Description                                                  |
-| ----------------- | ------------------------- | ------------------------------------------------------------ |
-| Exercise Counters | 6 suites                  | 所有 6 种运动计数逻辑                                        |
-| Services          | 2 suites                  | Auth、Storage                                                |
-| Hooks             | 1 suite                   | useWorkout                                                   |
-| Utils             | 5 suites                  | filters、poseQuality、asyncPool、adaptiveRuntime、CDN policy |
-| Infrastructure    | 7 suites                  | CDN、Manifest、Asset injection、mediapipeBridge              |
-| **Total**         | **55 suites / 398 tests** |                                                              |
+| Domain            | Description                                                        |
+| ----------------- | ------------------------------------------------------------------ |
+| Exercise Counters | 所有 6 种运动计数逻辑                                              |
+| Services          | Auth、Storage、WorkoutRepository、Sync、Pilot、Scoring 等          |
+| Hooks             | useWorkout、useWebViewMessageHandler                               |
+| Screens           | 全部 9 个页面                                                      |
+| Components        | BarChart、ErrorBoundary、ExerciseIllustration、SkeletonOverlay、Workout 子组件 |
+| Utils             | filters、poseQuality、asyncPool、CDN policy、manifest、asset injection 等 |
+| Infrastructure    | mediapipeBridge、poseHtml、goldenPoseRegression、algorithmRegression 等 |
+| **Total**         | **56 suites / 407 tests / 14 snapshots**                           |
 
 CI runs `npm run lint` and `npm run test:coverage` on every push/PR to `main`/`master`. See [docs/ROADMAP.md](docs/ROADMAP.md) for the development plan.
 
@@ -244,7 +246,7 @@ npx eas build --platform ios --profile production
 ## Project Structure
 
 ```
-ai-motion-tracker/
+ai-sport-mobile/
 ├── App.tsx                    # 应用入口 + 路由 + 懒加载屏幕
 ├── app.json                   # Expo 配置
 ├── eas.json                   # EAS Build 配置
@@ -255,74 +257,116 @@ ai-motion-tracker/
 ├── src/
 │   ├── components/            # 可复用 UI 组件
 │   │   ├── CameraView.tsx         # WebView 壳（HTML 见 assets/mediapipe/pose.html）
-│   │   └── workout/               # WorkoutScreen 子组件（Setup / Active / …）
 │   │   ├── ErrorBoundary.tsx      # 全局错误边界
 │   │   ├── ExerciseIllustration.tsx # 运动 SVG 插画
 │   │   ├── BarChart.tsx           # 统计图表
-│   │   └── SkeletonOverlay.tsx    # 加载骨架屏
+│   │   ├── SkeletonOverlay.tsx    # 加载骨架屏
+│   │   └── workout/               # WorkoutScreen 子组件
+│   │       ├── WorkoutActivePanel.tsx
+│   │       ├── WorkoutControls.tsx
+│   │       ├── WorkoutHeader.tsx
+│   │       ├── WorkoutSetupPanel.tsx
+│   │       ├── WorkoutTargetModal.tsx
+│   │       ├── workoutFormat.ts
+│   │       └── workoutStyles.ts
 │   │
-│   ├── screens/               # 页面组件
-│   │   ├── LoginScreen.tsx
-│   │   ├── RegisterScreen.tsx
-│   │   ├── HomeScreen.tsx         # 运动选择首页
-│   │   ├── WorkoutScreen.tsx      # 训练主界面（核心）
-│   │   ├── HistoryScreen.tsx
+│   ├── screens/               # 页面组件（9 个）
 │   │   ├── AnalyticsScreen.tsx
-│   │   └── ProfileScreen.tsx
+│   │   ├── HistoryScreen.tsx
+│   │   ├── HomeScreen.tsx         # 运动选择首页
+│   │   ├── LoginScreen.tsx
+│   │   ├── PilotScreen.tsx        # 校园试点
+│   │   ├── PrivacyPolicyScreen.tsx
+│   │   ├── ProfileScreen.tsx
+│   │   ├── RegisterScreen.tsx
+│   │   └── WorkoutScreen.tsx      # 训练主界面（核心）
 │   │
-│   ├── services/              # 业务逻辑服务
+│   ├── services/              # 业务逻辑服务（13 个）
+│   │   ├── AuthService.ts
+│   │   ├── ErrorReporter.ts
 │   │   ├── ExerciseCounter.ts     # 抽象基类（策略模式）
-│   │   ├── counters/
-│   │   │   ├── JumpRopeCounter.ts
-│   │   │   ├── JumpingJacksCounter.ts
-│   │   │   ├── SquatsCounter.ts
-│   │   │   ├── StandingLongJumpCounter.ts
-│   │   │   ├── VerticalJumpCounter.ts
-│   │   │   └── SitUpCounter.ts
-│   │   ├── PoseDetectionService.ts
 │   │   ├── MediaPipeAssetService.ts  # 模型缓存管理
+│   │   ├── PerformanceMonitor.ts
+│   │   ├── PilotDataPackageService.ts
+│   │   ├── PoseDetectionService.ts
+│   │   ├── SecureStorageService.ts
 │   │   ├── StorageService.ts
-│   │   └── AuthService.ts
+│   │   ├── SyncService.ts
+│   │   ├── WorkoutExportService.ts
+│   │   ├── WorkoutRepository.ts
+│   │   ├── scoring.ts
+│   │   └── counters/
+│   │       ├── JumpRopeCounter.ts
+│   │       ├── JumpingJacksCounter.ts
+│   │       ├── SquatsCounter.ts
+│   │       ├── StandingLongJumpCounter.ts
+│   │       ├── VerticalJumpCounter.ts
+│   │       └── SitUpCounter.ts
 │   │
-│   ├── hooks/                 # 自定义 Hooks
-│   │   ├── useWorkout.ts
-│   │   ├── useWorkoutScreen.ts    # 训练页状态与副作用
+│   ├── hooks/                 # 自定义 Hooks（5 个）
 │   │   ├── useExerciseFeedback.ts
 │   │   ├── useSound.ts
-│   │   └── useWebViewMessageHandler.ts
+│   │   ├── useWebViewMessageHandler.ts
+│   │   ├── useWorkout.ts
+│   │   └── useWorkoutScreen.ts    # 训练页状态与副作用
 │   │
-│   ├── contexts/
-│   │   └── AuthContext.tsx
+│   ├── contexts/              # React Context
+│   │   ├── AuthContext.tsx
+│   │   └── LocaleContext.tsx
+│   │
+│   ├── i18n/                  # 国际化
+│   │   ├── en.ts
+│   │   ├── index.ts
+│   │   └── zh.ts
 │   │
 │   ├── mediapipe/             # WebView ↔ RN（协议 + HTML 加载）
-│   │   ├── mediapipeBridge.ts
-│   │   └── loadPoseHtml.ts
-│
-├── assets/mediapipe/
-│   └── pose.html              # MediaPipe WebView 页面（编辑后重启 Metro）
+│   │   ├── loadPoseHtml.ts
+│   │   └── mediapipeBridge.ts
 │   │
-│   ├── utils/                 # 工具函数
-│   │   ├── filters.ts             # Kalman 滤波 + 滑动窗口
-│   │   ├── poseQuality.ts         # 姿态质量分析
-│   │   ├── webViewAssetInjection.ts # Blob URL 注入
+│   ├── utils/                 # 工具函数（12 个）
 │   │   ├── adaptivePoseRuntime.ts # 自适应帧率
+│   │   ├── apiBaseUrl.ts
+│   │   ├── asyncPool.ts           # 并发下载控制
+│   │   ├── exerciseRuntime.ts     # 运动运行时配置
+│   │   ├── filters.ts             # Kalman 滤波 + 滑动窗口
+│   │   ├── getEnv.ts
+│   │   ├── guestUser.ts
 │   │   ├── mediaPipeCdnPolicy.ts  # CDN 优先级策略
 │   │   ├── mediaPipeManifest.ts   # 缓存清单验证
-│   │   ├── asyncPool.ts           # 并发下载控制
-│   │   └── exerciseRuntime.ts     # 运动运行时配置
+│   │   ├── poseQuality.ts         # 姿态质量分析
+│   │   ├── webViewAssetInjection.ts # Blob URL 注入
+│   │   └── withTimeout.ts
 │   │
-│   ├── constants/
-│   │   ├── exerciseRegistry.ts    # 运动元数据 + 运行时帧率（单一数据源）
+│   ├── constants/             # 常量（3 个）
+│   │   ├── e2eTestIds.ts
 │   │   ├── exerciseConfig.ts      # 兼容 re-export
-│   │   └── counterThresholds.ts   # 运动阈值常量
+│   │   └── exerciseRegistry.ts    # 运动元数据 + 运行时帧率（单一数据源）
 │   │
-│   ├── types/                 # TypeScript 类型定义
-│   │   └── index.ts
+│   ├── types/                 # TypeScript 类型定义（5 个）
+│   │   ├── auth.ts
+│   │   ├── html.d.ts
+│   │   ├── index.ts
+│   │   ├── navigation.ts
+│   │   └── pilot.ts
 │   │
 │   └── __tests__/             # Jest 测试
 │       ├── testHelpers.ts
 │       ├── *Counter.test.ts (×6)
-│       └── ... (×13 more)
+│       └── ... (×50 more)
+│
+├── __mocks__/                 # Jest mock（6 个）
+│   ├── expo-file-system-legacy.ts
+│   ├── expo-localization.ts
+│   ├── expo-sharing.ts
+│   ├── react-native.ts
+│   ├── react-native-svg.ts
+│   └── sentry-react-native.ts
+│
+├── assets/
+│   ├── mediapipe/
+│   │   └── pose.html          # MediaPipe WebView 页面（编辑后重启 Metro）
+│   ├── sounds/                # 音效文件
+│   └── *.png                  # 应用图标
 │
 ├── docs/                      # 项目文档
 │   ├── ROADMAP.md                 # 开发路线图
@@ -332,12 +376,8 @@ ai-motion-tracker/
 │
 ├── .github/workflows/ci.yml   # CI：lint + test:coverage
 │
-├── scripts/
-│   └── deployment/            # CDN 部署脚本
-│
-└── assets/                    # 静态资源
-    ├── sounds/                # 音效文件
-    └── *.png                  # 应用图标
+└── scripts/
+    └── deployment/            # CDN 部署脚本
 ```
 
 ---
@@ -439,7 +479,7 @@ npx eas build --platform android --profile production
 
 ## License
 
-MIT © 2024 gakiwoo1006
+MIT © 2024-2026 Gakiwoo
 
 ---
 

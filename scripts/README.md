@@ -14,10 +14,6 @@ Do not commit passwords or private keys in this directory. Use environment varia
 
 ## Validation
 
-- `validate-video-dataset.js` validates recorded, annotated, and approved dataset states.
-- `algorithm-regression-report.js --strict` reports MAE/MAPE, misses, false detections, and failure samples.
-- `validate-device-stability.js` enforces the 30-minute real-device stability report contract.
-
-- `validate-video-dataset.js` validates the 500-video manifest and strict release gate.
-- `algorithm-regression-report.js` summarizes approved algorithm evidence.
-- `validate-device-stability.js` validates a real 30-minute Android stability report.
+- `validate-video-dataset.js` validates the 500-video manifest (recorded, annotated, approved states) and strict release gate.
+- `algorithm-regression-report.js --strict` reports MAE/MAPE, misses, false detections, and failure samples from approved algorithm evidence.
+- `validate-device-stability.js` enforces the 30-minute real-device Android stability report contract.

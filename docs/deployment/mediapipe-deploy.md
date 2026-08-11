@@ -4,7 +4,7 @@
 
 ## 上传文件
 
-将 `mediapipe-upload/pose/` 目录下的 **9 个文件** 上传到服务器：
+将 `mediapipe-upload/pose/` 目录下的 **10 个文件** 上传到服务器：
 
 ```
 /var/www/gakiwoo/static/mediapipe/pose/
@@ -16,10 +16,11 @@
 ├── pose_solution_wasm_bin.js                  (276KB)
 ├── pose_solution_wasm_bin.wasm                (5.7MB)
 ├── pose_landmark_full.tflite                  (6.1MB)
+├── pose_landmark_lite.tflite                  (2.7MB)
 └── pose_web.binarypb                          (1KB)
 ```
 
-**总计约 21MB**
+**总计约 24MB**
 
 ## 上传命令（从本地执行）
 
@@ -80,4 +81,4 @@ sudo nginx -s reload
 
 - 这些是**公开的 npm 包文件**（@mediapipe/pose），不包含任何私有信息
 - 所有文件原始来源：https://www.npmjs.com/package/@mediapipe/pose
-- Cache-Control 设为 30 天可以大幅减少重复下载，用户只需首次加载约 21MB
+- Cache-Control 设为 30 天可以大幅减少重复下载，用户只需首次加载约 24MB

@@ -5,6 +5,7 @@
  * 上报到 AsyncStorage 以供分析。
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { DevicePerformanceTier } from '../types';
 
 const STORAGE_KEY = '@perf_logs';
 const MAX_STORED_SESSIONS = 50;
@@ -22,8 +23,6 @@ export interface PerfFrameRecord {
   /** 记录时的时间戳 */
   timestamp: number;
 }
-
-export type DevicePerformanceTier = 'high' | 'balanced' | 'constrained';
 
 export interface PerfSessionReport {
   sessionId: string;

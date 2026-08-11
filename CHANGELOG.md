@@ -5,38 +5,44 @@ All notable changes to AI Motion Tracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — 2026-07-13
+## [Unreleased]
 
-### Security
+### Security (2026-07-20)
 
-- 确认根目录 `scripts/{ssh-exec,upload,sftp-upload}.mjs` 仍含硬编码高权限凭据（P0 待轮换）。
+- 新增 `plugins/network_security_config.xml`：全局禁止明文 HTTP 流量，仅开发环境允许 10.0.2.2/localhost。
+- 新增 `plugins/withNetworkSecurityConfig.js`：Expo config plugin 注入 Android 网络安全配置。
+- `eas.json` preview + production 启用 R8 fullMode 代码混淆。
+- 根目录部署脚本凭据已移除（改为 `ssh-config.mjs` + 环境变量方案）。
+- 根目录 `scripts/{ssh-exec,upload,sftp-upload}.mjs` 硬编码高权限凭据已轮换修复（07-13 发现，07-20 修复）。
 
-### Status
+### Added (2026-07-11 to 07-20)
 
-- 2026-07-13 实测：tsc 0 错误，55 suites / 398 tests，ESLint 0 warning。
-- 线上复查：MediaPipe CDN 200，Auth 401（预期），Sync/Pilot GET 仍 404。
-
----
-
-## [Unreleased] — 2026-07-11
-
-### Added
-
+- `src/__tests__/AuthContext.test.tsx`：9 个测试覆盖 useAuth 守卫、AuthProvider 导出、游客用户创建、AuthError、渲染。
 - `pilot-v1` 跨端规范 fixture 与合同漂移校验。
 - 低端 Android 30 分钟稳定性报告门禁。
 - 算法回归 MAE/MAPE、漏检、误检与失败样例报告。
 
-### Changed
+### Changed (2026-07-11 to 07-20)
 
+- `app.json` 注册 `withNetworkSecurityConfig` 插件。
+- 测试总数：398 → **407**（+9）；测试套件：55 → **56**（+1）。
 - PerformanceMonitor 改为短窗口实时数据与全会话聚合并存。
-- ESLint 收敛为零 warning 门禁；当前 55 suites / 398 tests。
+- ESLint 收敛为零 warning 门禁。
 - EAS preview APK、Windows EXE/NSIS 与 macOS arm64 DMG 已形成候选产物。
 
-### Fixed
+### Fixed (2026-07-11 to 07-20)
 
 - 显式声明 Expo Babel preset，修复干净 EAS 环境 Metro 构建。
 - 收窄 `minimatch@3` 的安全 override，修复 React Native Codegen。
 - preview 构建在未配置 Sentry 项目时显式禁用 source map 上传。
+
+### Status (2026-07-24 baseline)
+
+- tsc 0 错误，56 suites / 407 tests / 14 snapshots 通过
+- ESLint 0 warning
+- Expo Doctor 19/19 通过
+- 线上复查：MediaPipe CDN 200，Auth 401（预期），Sync/Pilot GET 仍 404
+- 2026-07-20 安全加固：HTTPS 强制、R8 fullMode、AuthContext 测试、凭据移除
 
 ---
 

@@ -14,12 +14,13 @@
     "report:algorithm": "node scripts/algorithm-regression-report.js",
     "report:algorithm:strict": "node scripts/algorithm-regression-report.js --strict",
     "test:watch": "jest --watch",
-    "lint": "eslint src/ --ext .ts,.tsx --max-warnings 0",
-    "lint:fix": "eslint src/ --ext .ts,.tsx --fix",
+    "lint": "eslint src/ --max-warnings 0",
+    "lint:fix": "eslint src/ --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "e2e:maestro": "maestro test .maestro/flows"
   },
   "dependencies": {
+    "@ai-sport/core": "*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.1.2",
     "@react-navigation/native": "^6.1.18",

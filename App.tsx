@@ -16,6 +16,7 @@ import HistoryScreen from './src/screens/HistoryScreen';
 import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import PilotScreen from './src/screens/PilotScreen';
 import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
+import ServerSettingsScreen from './src/screens/ServerSettingsScreen';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { RootStackParamList } from './src/types/navigation';
 import { mediaPipeAssetService } from './src/services/MediaPipeAssetService';
@@ -119,6 +120,11 @@ function AuthGate() {
             name="Profile"
             component={ProfileScreen}
             options={{ headerShown: true, title: t('nav.profile'), headerTintColor: '#1C1C1E' }}
+          />
+          <Stack.Screen
+            name="ServerSettings"
+            component={ServerSettingsScreen}
+            options={{ headerShown: true, title: '服务器设置', headerTintColor: '#1C1C1E' }}
           />
         </>
       )}

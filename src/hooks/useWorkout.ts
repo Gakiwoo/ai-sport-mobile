@@ -159,12 +159,7 @@ export function useWorkout(exerciseType: ExerciseType) {
     }
 
     const duration = startTimeRef.current ? Math.round(getElapsedMs() / 1000) : targetDuration;
-    const performanceTier =
-      (
-        performanceMonitor as {
-          getCurrentTier?: () => WorkoutSession['performanceTier'];
-        }
-      ).getCurrentTier?.() || 'balanced';
+    const performanceTier = performanceMonitor.getCurrentTier() || 'balanced';
     const pilotSelection = await pilotDataPackageService.getActiveSelection(exerciseType);
     const device = pilotDataPackageService.getCurrentDevice(performanceTier);
     const log = exerciseResult.algorithmLog;
