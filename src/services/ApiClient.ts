@@ -47,12 +47,7 @@ export class ApiClient {
     return this.tokens;
   }
 
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-    retry = true,
-  ): Promise<T> {
+  private async request<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
     const url = `${this.config.baseUrl}${path}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -137,35 +132,54 @@ export class ApiClient {
 
   // Auth
   async login(username: string, password: string) {
-    const result = await this.request<{ accessToken: string; refreshToken: string; user: { id: number; username: string; role: string } }>(
-      'POST', '/auth/login', { username, password },
-    );
+    const result = await this.request<{
+      accessToken: string;
+      refreshToken: string;
+      user: { id: number; username: string; role: string };
+    }>('POST', '/auth/login', { username, password });
     this.tokens = { accessToken: result.accessToken, refreshToken: result.refreshToken };
     return result;
   }
 
   async register(username: string, password: string, role?: string, displayName?: string) {
-    return this.request<{ id: number; username: string; role: string }>(
-      'POST', '/auth/register', { username, password, role, displayName },
-    );
+    return this.request<{ id: number; username: string; role: string }>('POST', '/auth/register', {
+      username,
+      password,
+      role,
+      displayName,
+    });
   }
 
   async getProfile() {
-    return this.request<{ id: number; username: string; email: string; role: string; display_name: string }>('GET', '/auth/me');
+    return this.request<{
+      id: number;
+      username: string;
+      email: string;
+      role: string;
+      display_name: string;
+    }>('GET', '/auth/me');
   }
 
   // Workouts
   async syncWorkouts(workouts: Array<Record<string, unknown>>) {
-    return this.request<{ synced: string[]; conflicts: string[] }>('POST', '/workouts/sync', { workouts });
+    return this.request<{ synced: string[]; conflicts: string[] }>('POST', '/workouts/sync', {
+      workouts,
+    });
   }
 
   async pullWorkouts(since?: string) {
     const query = since ? `?since=${encodeURIComponent(since)}` : '';
-    return this.request<{ records: WorkoutSession[]; total: number }>('GET', `/workouts/sync${query}`);
+    return this.request<{ records: WorkoutSession[]; total: number }>(
+      'GET',
+      `/workouts/sync${query}`,
+    );
   }
 
   async getWorkoutStats() {
-    return this.request<{ total: number; byExercise: Array<Record<string, unknown>> }>('GET', '/workouts/stats');
+    return this.request<{ total: number; byExercise: Array<Record<string, unknown>> }>(
+      'GET',
+      '/workouts/stats',
+    );
   }
 
   // Pilot

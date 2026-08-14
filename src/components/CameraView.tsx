@@ -133,13 +133,14 @@ export default function CameraView({
 
   // 仅在 cameraState 或配置实际变化时才重新注入运行时控制
   // 配置值通过 runtimeConfigRef 读取，避免将 5 个配置项全部列为依赖
+  // webViewRef 为 useRef 稳定引用，列入依赖不会触发重复执行
   useEffect(() => {
     if (webViewRef.current && cameraState === 'ready') {
       const config = runtimeConfigRef.current;
       injectRuntimeControls(webViewRef.current, config);
       lastInjectedConfigRef.current = { ...config };
     }
-  }, [cameraState, injectRuntimeControls, runtimeConfigVersion]);
+  }, [cameraState, injectRuntimeControls, runtimeConfigVersion, webViewRef]);
 
   const handleLoadEnd = useCallback(() => {
     if (!webViewRef.current) return;

@@ -158,11 +158,9 @@ describe('AuthService.register', () => {
     jest.useRealTimers();
   });
 
-  it('registers successfully and stores user + tokens', async () => {
-    const user = { id: 'u1', email: 'new@test.com', nickname: 'New', createdAt: '2025-01-01' };
-    mockFetch(
-      mockResponse(true, 201, { message: '注册成功', user }, 'access_token=at; refresh_token=rt'),
-    );
+  it('registers successfully and stores user + tokens (NestJS JSON contract)', async () => {
+    // NestJS register 返回 { id, username, role }，随后客户端自动 login 获取 token
+    mockFetch(mockResponse(true, 201, { id: 42, username: 'new@test.com', role: 'student' }));
 
     const result = await AuthService.register({
       email: 'new@test.com',
@@ -170,8 +168,28 @@ describe('AuthService.register', () => {
       nickname: 'New',
     });
 
-    expect(result).toEqual({ message: '注册成功', user });
-    await expect(AsyncStorage.getItem(USER_KEY)).resolves.toEqual(JSON.stringify(user));
+    expect(result.user).toMatchObject({ id: '42', email: 'new@test.com', nickname: 'New' });
+    await expect(AsyncStorage.getItem(USER_KEY)).resolves.toContain('new@test.com');
+  });
+
+  it('registers with legacy backend (user + set-cookie tokens)', async () => {
+    const user = {
+      id: 'u1',
+      email: 'legacy@test.com',
+      nickname: 'Legacy',
+      createdAt: '2025-01-01',
+    };
+    mockFetch(
+      mockResponse(true, 201, { message: '注册成功', user }, 'access_token=at; refresh_token=rt'),
+    );
+
+    const result = await AuthService.register({
+      email: 'legacy@test.com',
+      password: 'pass123',
+      nickname: 'Legacy',
+    });
+
+    expect(result.user).toMatchObject({ id: 'u1', email: 'legacy@test.com' });
     expect(getSecureStore().get(TOKEN_KEY)).toEqual(
       JSON.stringify({ accessToken: 'at', refreshToken: 'rt' }),
     );
@@ -199,14 +217,38 @@ describe('AuthService.login', () => {
     jest.useRealTimers();
   });
 
-  it('logs in successfully and stores user + tokens', async () => {
+  it('logs in successfully and stores user + tokens (NestJS JSON contract)', async () => {
+    // NestJS login 返回 { accessToken, refreshToken, user: { id, username, email, display_name, role } }
+    mockFetch(
+      mockResponse(true, 200, {
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: {
+          id: 7,
+          username: 'u@test.com',
+          email: 'u@test.com',
+          display_name: 'U',
+          role: 'student',
+        },
+      }),
+    );
+
+    const result = await AuthService.login({ email: 'u@test.com', password: 'pass123' });
+
+    expect(result).toMatchObject({ id: '7', email: 'u@test.com', nickname: 'U' });
+    await expect(AsyncStorage.getItem(USER_KEY)).resolves.toContain('u@test.com');
+    expect(getSecureStore().get(TOKEN_KEY)).toEqual(
+      JSON.stringify({ accessToken: 'at', refreshToken: 'rt' }),
+    );
+  });
+
+  it('logs in with legacy backend (user + set-cookie tokens)', async () => {
     const user = { id: 'u1', email: 'u@test.com', nickname: 'U', createdAt: '2025-01-01' };
     mockFetch(mockResponse(true, 200, { user }, 'access_token=at; refresh_token=rt'));
 
     const result = await AuthService.login({ email: 'u@test.com', password: 'pass123' });
 
-    expect(result).toEqual(user);
-    await expect(AsyncStorage.getItem(USER_KEY)).resolves.toEqual(JSON.stringify(user));
+    expect(result).toMatchObject({ id: 'u1', email: 'u@test.com' });
     expect(getSecureStore().get(TOKEN_KEY)).toEqual(
       JSON.stringify({ accessToken: 'at', refreshToken: 'rt' }),
     );

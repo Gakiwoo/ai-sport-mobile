@@ -1,17 +1,17 @@
 /**
  * Compatibility layer for @ai-sport/core migration.
- * 
+ *
  * Migration guide for Mobile:
  * - Old: import { KalmanFilter1D } from '../utils/filters'
  *   New: import { KalmanFilter1D } from '@ai-sport/core'
  *   Note: Constructor changed from positional to options object:
  *     new KalmanFilter1D(0.01, 0.1) → new KalmanFilter1D({ processNoise: 0.01, measurementNoise: 0.1 })
  *   Note: Method renamed: .filter(v) → .update(v)
- * 
+ *
  * - Old: import { SlidingWindow } from '../utils/filters'
  *   New: import { SlidingWindow } from '@ai-sport/core'
  *   Note: Methods renamed: .mean() → .getMean(), .stddev() → .getStdDev(), .clear() → .reset()
- * 
+ *
  * - Old: PoseDetectionService.getKeypoint(pose, index)
  *   New: import { getKeypoint } from '@ai-sport/core'
  */

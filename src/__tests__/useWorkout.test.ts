@@ -50,6 +50,7 @@ jest.mock('../services/PerformanceMonitor', () => ({
   performanceMonitor: {
     start: jest.fn(),
     stop: jest.fn(),
+    getCurrentTier: jest.fn(() => 'balanced'),
   },
 }));
 

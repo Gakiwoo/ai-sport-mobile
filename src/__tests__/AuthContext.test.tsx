@@ -125,9 +125,7 @@ describe('AuthContext', () => {
       }
 
       act(() => {
-        create(
-          React.createElement(AuthProvider, null, React.createElement(Child)),
-        );
+        create(React.createElement(AuthProvider, null, React.createElement(Child)));
       });
 
       expect(rendered).toBe(true);

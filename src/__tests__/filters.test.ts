@@ -38,7 +38,9 @@ describe('KalmanFilter1D', () => {
     kf.filter(50);
     kf.filter(60);
     kf.reset(200);
-    expect(kf.state).toBe(200);
+    // 共享包 state 返回 { value, velocity }（旧版返回裸数字）
+    expect(kf.state.value).toBe(200);
+    expect(kf.state.velocity).toBe(0);
   });
 });
 
@@ -84,10 +86,10 @@ describe('SlidingWindow', () => {
     expect(sw.variance()).toBe(0);
   });
 
-  it('空窗口 mean=0 variance=Infinity', () => {
+  it('空窗口 mean=0 variance=0（共享包约定；旧版返回 Infinity）', () => {
     const sw = new SlidingWindow(5);
     expect(sw.mean()).toBe(0);
-    expect(sw.variance()).toBe(Infinity);
+    expect(sw.variance()).toBe(0);
   });
 
   it('clear 应清空窗口', () => {

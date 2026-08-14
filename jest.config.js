@@ -15,6 +15,10 @@ module.exports = {
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
+    // 与 metro.config.js 的 alias 对齐：@ai-sport/core 直接指向共享包 TS 源码，
+    // 避免 jest 解析到 dist 的 ESM（ts-jest 不转换 node_modules 中的 ESM）
+    '^@ai-sport/core$': '<rootDir>/../packages/ai-sport-core/src/index.ts',
+    '^@ai-sport/core/(.*)$': '<rootDir>/../packages/ai-sport-core/src/$1',
     '^react-native-svg$': '<rootDir>/src/__mocks__/react-native-svg.tsx',
     '^react-native$': '<rootDir>/src/__mocks__/react-native.tsx',
     '^@sentry/react-native$': '<rootDir>/src/__mocks__/sentry-react-native.ts',

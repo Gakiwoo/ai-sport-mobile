@@ -146,10 +146,8 @@ async function refreshToken(refreshTokenStr: string): Promise<AuthTokens | null>
   try {
     const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${refreshTokenStr}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: refreshTokenStr }),
       credentials: 'include',
     });
 
@@ -159,26 +157,35 @@ async function refreshToken(refreshTokenStr: string): Promise<AuthTokens | null>
       return null;
     }
 
-    // 从响应头提取新 token
+    // 优先从 JSON body 提取（NestJS 契约：{ accessToken, refreshToken, user }）
+    const data = await res.json().catch(() => null);
+
+    // 同时解析 user（NestJS 返回 { user: { id, username, email, role, display_name } }）
+    if (data?.user) {
+      await storeUser(mapServerUser(data.user));
+    }
+
+    if (data?.accessToken && data?.refreshToken) {
+      const tokens: AuthTokens = {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      };
+      await storeTokens(tokens);
+      return tokens;
+    }
+
+    // 回退：兼容旧后端从 Set-Cookie 提取
     const setCookie = res.headers.get('set-cookie') || '';
     const newAccessToken = extractCookie(setCookie, 'access_token');
     const newRefreshToken = extractCookie(setCookie, 'refresh_token');
 
-    const tokens =
-      newAccessToken && newRefreshToken
-        ? { accessToken: newAccessToken, refreshToken: newRefreshToken }
-        : null;
-    if (tokens) {
+    if (newAccessToken && newRefreshToken) {
+      const tokens = { accessToken: newAccessToken, refreshToken: newRefreshToken };
       await storeTokens(tokens);
+      return tokens;
     }
 
-    // 同时解析 user
-    const data = await res.json().catch(() => null);
-    if (data?.user) {
-      await storeUser(data.user);
-    }
-
-    return tokens;
+    return null;
   } catch (err) {
     ErrorReporter.captureWarning('Token 刷新请求失败', {
       source: 'AuthService.refreshToken',
@@ -188,7 +195,21 @@ async function refreshToken(refreshTokenStr: string): Promise<AuthTokens | null>
   }
 }
 
-// 从 Set-Cookie 头提取指定 cookie 值（支持多个 Set-Cookie 头拼接）
+/**
+ * 将后端 user（NestJS：id/username/email/display_name）映射为
+ * Mobile 端 User（id/email/nickname），保持 UI 层契约不变。
+ */
+function mapServerUser(serverUser: Record<string, unknown>): User {
+  return {
+    id: String(serverUser.id ?? ''),
+    email: (serverUser.email as string) ?? (serverUser.username as string) ?? '',
+    nickname: (serverUser.display_name as string) ?? (serverUser.username as string) ?? '',
+    isActive: serverUser.is_active !== 0,
+    createdAt: (serverUser.created_at as string) ?? new Date().toISOString(),
+  };
+}
+
+// 从 Set-Cookie 头提取指定 cookie 值（支持多个 Set-Cookie 头拼接；兼容旧后端）
 function extractCookie(setCookieHeaders: string | null, name: string): string | null {
   if (!setCookieHeaders) return null;
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -201,18 +222,40 @@ function extractCookie(setCookieHeaders: string | null, name: string): string | 
   return lastValue;
 }
 
+/** 从响应 body 中提取 tokens：优先 JSON body（NestJS），回退 Set-Cookie */
+function extractTokens(body: Record<string, unknown> | null, res: Response): AuthTokens | null {
+  if (body?.accessToken && body?.refreshToken) {
+    return { accessToken: body.accessToken as string, refreshToken: body.refreshToken as string };
+  }
+  // 回退 Set-Cookie（兼容旧后端）
+  const setCookie = res.headers.get('set-cookie') || '';
+  const accessToken = extractCookie(setCookie, 'access_token');
+  const refreshTokenVal = extractCookie(setCookie, 'refresh_token');
+  if (accessToken && refreshTokenVal) {
+    return { accessToken, refreshToken: refreshTokenVal };
+  }
+  return null;
+}
+
 // ── 公共 API ──
 const AuthService = {
   /**
    * 注册
-   * 后端响应格式: { message, user }
-   * 同时通过 Set-Cookie 返回 access_token + refresh_token
+   * 后端（NestJS）响应格式: { id, username, role } + JSON body tokens
+   * 兼容旧后端: { message, user } + Set-Cookie
    */
   async register(data: RegisterRequest): Promise<{ message: string; user: User }> {
+    // 契约对齐：NestJS 以 username 登录，Mobile 以 email 注册 → 映射
+    const payload = {
+      username: data.email,
+      email: data.email,
+      password: data.password,
+      displayName: data.nickname,
+    };
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
       credentials: 'include',
     });
 
@@ -222,30 +265,50 @@ const AuthService = {
       throw new AuthError(body.message || '注册失败', res.status);
     }
 
-    // 保存 user（token 通过 cookie 由后端管理，RN 需要从 header 提取）
-    await storeUser(body.user);
+    // NestJS：body 为 { id, username, role }，构造 User
+    const user: User =
+      body.id !== undefined
+        ? {
+            id: String(body.id),
+            email: data.email,
+            nickname: data.nickname,
+            createdAt: new Date().toISOString(),
+          }
+        : mapServerUser(body.user ?? body);
 
-    // 尝试从 Set-Cookie 提取 token（RN fetch 可能不返回 set-cookie）
-    const setCookie = res.headers.get('set-cookie') || '';
-    const accessToken = extractCookie(setCookie, 'access_token');
-    const refreshTokenVal = extractCookie(setCookie, 'refresh_token');
-    if (accessToken && refreshTokenVal) {
-      await storeTokens({ accessToken, refreshToken: refreshTokenVal });
+    await storeUser(user);
+
+    // 提取 tokens（NestJS JSON body 优先）
+    const tokens = extractTokens(body, res);
+    if (tokens) {
+      await storeTokens(tokens);
+    } else {
+      // NestJS register 不返回 token：注册成功后自动登录一次，获取会话
+      try {
+        const loginUser = await AuthService.login({ email: data.email, password: data.password });
+        // 保留注册时用户填写的昵称（login 返回的 user 可能只有 username）
+        const mergedUser: User = { ...loginUser, nickname: data.nickname || loginUser.nickname };
+        await storeUser(mergedUser);
+        return { message: '注册成功', user: mergedUser };
+      } catch {
+        // 自动登录失败不阻塞注册流程（用户可手动登录）
+      }
     }
 
-    return body;
+    return { message: '注册成功', user };
   },
 
   /**
    * 登录
-   * 后端响应: { user }
-   * Cookie: access_token (15min) + refresh_token (7d, httpOnly)
+   * 后端（NestJS）响应: { accessToken, refreshToken, user }
+   * 兼容旧后端: { user } + Set-Cookie
    */
   async login(data: LoginRequest): Promise<User> {
+    // 契约对齐：NestJS 以 username 登录（后端已兼容 username=email 查询）
     const res = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ username: data.email, password: data.password }),
       credentials: 'include',
     });
 
@@ -255,17 +318,18 @@ const AuthService = {
       throw new AuthError(body.message || '登录失败', res.status);
     }
 
-    await storeUser(body.user);
+    // NestJS：body.user 为 { id, username, email, role, display_name }
+    const user = body.user ? mapServerUser(body.user) : mapServerUser(body);
 
-    // 同上，尝试从 Set-Cookie 提取
-    const setCookie = res.headers.get('set-cookie') || '';
-    const accessToken = extractCookie(setCookie, 'access_token');
-    const refreshTokenVal = extractCookie(setCookie, 'refresh_token');
-    if (accessToken && refreshTokenVal) {
-      await storeTokens({ accessToken, refreshToken: refreshTokenVal });
+    await storeUser(user);
+
+    // 提取 tokens（NestJS JSON body 优先）
+    const tokens = extractTokens(body, res);
+    if (tokens) {
+      await storeTokens(tokens);
     }
 
-    return body.user;
+    return user;
   },
 
   /** 登出 */

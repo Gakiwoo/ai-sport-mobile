@@ -281,21 +281,34 @@ class SyncService {
     }
 
     try {
-      const { records, total } = await apiClient.pullWorkouts(
-        this.lastSyncTimestamp ?? undefined,
-      );
+      const { records, total } = await apiClient.pullWorkouts(this.lastSyncTimestamp ?? undefined);
 
       if (!records || records.length === 0) {
         return { pulled: 0, merged: 0, errors: [] };
       }
 
       let merged = 0;
+      // 修复 S-11：增量游标必须取服务端记录的最大 updated_at，
+      // 不能使用客户端当前时间（时钟偏移会导致漏拉/重复拉）
+      let maxServerUpdatedAt = this.lastSyncTimestamp;
 
       for (const record of records) {
         try {
           // Server version wins: upsert regardless of local state
           await workoutRepository.save(record);
           merged++;
+          // 追踪服务端时间戳（record.updatedAt / record.updated_at / _lastModified）
+          const serverTs =
+            (record as { updatedAt?: string }).updatedAt ??
+            (record as { updated_at?: string }).updated_at ??
+            (record as { _lastModified?: number })._lastModified;
+          if (serverTs !== undefined) {
+            const tsStr =
+              typeof serverTs === 'number' ? new Date(serverTs).toISOString() : serverTs;
+            if (!maxServerUpdatedAt || tsStr > maxServerUpdatedAt) {
+              maxServerUpdatedAt = tsStr;
+            }
+          }
         } catch (mergeErr) {
           ErrorReporter.captureWarning('Pull merge record failed', {
             source: 'SyncService.pull',
@@ -305,8 +318,11 @@ class SyncService {
         }
       }
 
-      // Update timestamp for next incremental pull
-      this.lastSyncTimestamp = new Date().toISOString();
+      // 游标推进到服务端记录的最大时间戳；若记录无时间戳则维持原值，
+      // 下次仍会拉取到这些记录，由 upsert 幂等兜底
+      if (maxServerUpdatedAt) {
+        this.lastSyncTimestamp = maxServerUpdatedAt;
+      }
 
       return { pulled: total, merged, errors: [] };
     } catch (error) {
