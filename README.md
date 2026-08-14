@@ -1,488 +1,402 @@
-# AI Motion Tracker
+<div align="center">
 
-[![Expo](https://img.shields.io/badge/Expo-55-blueviolet?logo=expo)](https://expo.dev)
-[![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react)](https://reactnative.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript)](https://www.typescriptlang.org)
-[![Test](https://img.shields.io/badge/tests-407_passing-brightgreen)](https://jestjs.io)
-[![CI](https://img.shields.io/badge/CI-GitHub_Actions-blue)](.github/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+# 🏋️ AI Sport (AI-Motion-Tracker)
 
-**AI Motion Tracker** — 基于 MediaPipe Pose 的实时运动追踪 App，支持 Android 和 iOS。通过手机摄像头实时检测人体姿态，自动计数跳绳、深蹲、仰卧起坐等 6 种运动项目，并提供动作质量反馈。
+**AI-Powered Fitness Tracking App** | **AI 驱动的健身追踪应用**
 
-> 当前状态（2026-07-24 更新）：TypeScript 0 错误，ESLint 0 warning，56 Jest suites / 407 tests / 14 snapshots 全部通过；Expo Doctor 19/19；EAS preview APK 已成功产出。2026-07-20 安全加固完成：HTTPS 强制、R8 fullMode 混淆、AuthContext 测试补充。校园试点仍以本地 `pilot-v1` 文件包为正式路径；真实视频 0/500、低端 Android 30 分钟和真机文件往返尚未验收。完整口径见[系统工程基线](../AI-Sport-System-当前工程基线-2026-07-24.md)。
+[![Expo](https://img.shields.io/badge/Expo-55-black?logo=expo)](https://expo.dev/)
+[![React Native](https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react)](https://reactnative.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![MediaPipe](https://img.shields.io/badge/MediaPipe-Pose-4285F4?logo=google)](https://google.github.io/mediapipe/)
+[![Tests](https://img.shields.io/badge/Tests-82%20passing-brightgreen)](./src/__tests__/)
 
----
+[English](#-english) · [中文](#-中文)
 
-## Table of Contents
-
-- [Features](#features)
-- [Supported Exercises](#supported-exercises)
-- [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Testing](#testing)
-- [Linting & Formatting](#linting--formatting)
-- [Building](#building)
-- [Project Structure](#project-structure)
-- [Configuration](#configuration)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
+</div>
 
 ---
 
-## Features
+## 🇬🇧 English
 
-- **🧠 Real-time AI Pose Detection** — MediaPipe Pose 运行于 WebView 内，通过 Blob URL 注入本地缓存文件，首次下载后零网络依赖
-- **🏋️ 6 Exercise Types** — 跳绳、开合跳、深蹲、立定跳远、纵跳摸高、仰卧起坐
-- **📊 Intelligent State Machine Counting** — 每种运动基于状态机 + Kalman 滤波算法精确计数
-- **🎯 Two Training Modes** — 定数模式（目标次数）和 定时模式（目标时长）
-- **⏸️ Pause & Resume** — 训练中途可暂停与继续，计时与姿态检测同步挂起/恢复
-- **🏅 Scoring & Rating** — 训练结束按同构 `scoreSession()` 评分：按「有效结果÷目标」比例评级（优秀/良好/及格/待提升），结合动作质量系数输出综合分与动作质量档（标准/一般/需改进）
-- **💬 Real-time Feedback** — 动作质量实时指导（"背部不要过度前倾"、"下蹲更深一些"）
-- **📈 Analytics & History** — 本地存储训练记录，数据统计和趋势分析
-- **📱 Offline First** — 模型文件本地缓存，完全离线可用
-- **⚡ Adaptive Frame Rate** — 根据设备性能动态调整姿态检测帧率
-- **🔐 Guest & Auth Mode** — 支持游客模式快速体验，也支持账号系统完整使用
-- **Campus Pilot File Flow** — 导入班级/学生/任务，选择训练对象，保存关联字段并导出/分享 `pilot-v1` 成绩包（含评级/达标/动作质量/综合分评分字段）
-- **Optional Cloud Push** — 云同步默认关闭；当前客户端只实现 pending 记录 push，不包含 pull 与冲突合并
-
----
-
-## Supported Exercises
-
-| Exercise                           | Detection Method                  | Key Metrics         |
-| ---------------------------------- | --------------------------------- | ------------------- |
-| 🏃 **Jump Rope** 跳绳              | 手腕旋转周期 + 髋部弹跳双信号融合 | 连续跳跃次数        |
-| 🤸 **Jumping Jacks** 开合跳        | 手臂角度 + 腿部张开比例双信号     | 完整开合次数        |
-| 🦵 **Squats** 深蹲                 | 膝盖角度 + 背部稳定性             | 深蹲次数 + 犯规类型 |
-| 🏃‍♂️ **Standing Long Jump** 立定跳远 | 脚踝水平位移                      | 跳远距离 (cm)       |
-| ⬆️ **Vertical Jump** 纵跳摸高      | 多信号融合（膝盖+脚踝+髋部）      | 腾空高度 (cm)       |
-| 🙇 **Sit-ups** 仰卧起坐            | 肩-髋-膝三点躯干角度              | 完整起坐次数        |
-
----
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────────┐
-│                   Screens                         │
-│  Home → Workout → History → Analytics → Profile  │
-└──────────────┬───────────────────────────────────┘
-               │ hooks
-┌──────────────▼───────────────────────────────────┐
-│                Hooks Layer                        │
-│  useWorkout  ·  useExerciseFeedback  ·  useSound  │
-│  useWebViewMessageHandler                         │
-└──────────────┬───────────────────────────────────┘
-               │ services
-┌──────────────▼───────────────────────────────────┐
-│              Services Layer                        │
-│  ┌─────────────────┐  ┌──────────────────────┐    │
-│  │  ExerciseCounter │  │  PoseDetectionService│    │
-│  │  (Abstract)      │  │                      │    │
-│  │  ├─JumpRope      │  │  MediaPipeAssetService│   │
-│  │  ├─JumpingJacks  │  │                      │    │
-│  │  ├─Squats        │  │  StorageService       │   │
-│  │  ├─LongJump      │  │                      │    │
-│  │  ├─VerticalJump  │  │  AuthService          │   │
-│  │  └─SitUp         │  │                      │    │
-│  └─────────────────┘  └──────────────────────┘    │
-└──────────────┬───────────────────────────────────┘
-               │ WebView
-┌──────────────▼───────────────────────────────────┐
-│              CameraView (WebView)                  │
-│  ┌──────────────────────────────────────────┐     │
-│  │  HTML5 Canvas + MediaPipe Pose            │     │
-│  │  ← Blob URL injected by RN                │     │
-│  │  ← getUserMedia @ https://localhost       │     │
-│  │  ← postMessage for pose data              │     │
-│  └──────────────────────────────────────────┘     │
-└──────────────────────────────────────────────────┘
-```
-
-### Key Design Decisions
-
-- **WebView + Blob URL** — MediaPipe 在原生 RN 环境中不可直接运行。通过 WebView 内嵌 HTML5 页面运行，模型文件通过 Blob URL 注入（非 CDN 加载），完美解决 CORS 和离线问题
-- **Strategy Pattern** — `ExerciseCounter` 抽象基类定义统一接口，6 种运动各自实现具体算法，新增运动类型只需继承基类
-- **State Machine** — 每种运动的核心检测算法基于有限状态机，配合 Kalman 滤波降噪和滑动窗口防抖
-
----
-
-## Prerequisites
-
-- **Node.js** >= 18
-- **npm** >= 9 (或 pnpm / yarn)
-- **Expo CLI** — `npm install -g expo-cli` (可选)
-- **EAS CLI** — `npm install -g eas-cli` (用于构建 APK)
-- **Android** — Android Studio (模拟器) 或 真机（安装 Expo Go）
-- **iOS** — Xcode (Mac) 或 真机（安装 Expo Go）
-- **Camera Permission** — 应用需要相机权限
-
----
-
-## Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/Gakiwoo/ai-sport-mobile.git
-cd ai-sport-mobile
-
-# 2. Install dependencies
-npm install
-
-# 3. Start the dev server
-npx expo start
-```
-
-> 💡 **首次启动时**，应用会自动从 `gakiwoo.com` 下载 MediaPipe 模型文件（约 22MB），下载后缓存到本地。后续启动零网络依赖。
-
----
-
-## Usage
-
-```bash
-# Start Expo development server
-npx expo start
-
-# Run on Android (需连接设备或模拟器)
-npx expo start --android
-
-# Run on iOS (Mac 专属)
-npx expo start --ios
-
-# Run in web browser (功能有限)
-npx expo start --web
-```
-
-### Quick Start Guide
-
-1. 扫描终端 QR 码打开 Expo Go，或预览 Android/iOS 模拟器
-2. 在首页选择运动项目
-3. 站到镜头前，等待系统自动标定
-4. 点击 **"开始"** 按钮，3 秒倒计时后开始训练
-5. 运动过程中实时显示次数和动作指导
-6. 点击 **"停止"** 保存训练记录
-7. 在"历史"和"分析"页面查看训练数据统计
-
----
-
-## Testing
-
-```bash
-# Run all tests (56 suites / 407 tests)
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Coverage report (enforces thresholds in jest.config.js)
-npm run test:coverage
-```
-
-**Test Coverage Areas:**
-
-| Domain            | Description                                                        |
-| ----------------- | ------------------------------------------------------------------ |
-| Exercise Counters | 所有 6 种运动计数逻辑                                              |
-| Services          | Auth、Storage、WorkoutRepository、Sync、Pilot、Scoring 等          |
-| Hooks             | useWorkout、useWebViewMessageHandler                               |
-| Screens           | 全部 9 个页面                                                      |
-| Components        | BarChart、ErrorBoundary、ExerciseIllustration、SkeletonOverlay、Workout 子组件 |
-| Utils             | filters、poseQuality、asyncPool、CDN policy、manifest、asset injection 等 |
-| Infrastructure    | mediapipeBridge、poseHtml、goldenPoseRegression、algorithmRegression 等 |
-| **Total**         | **56 suites / 407 tests / 14 snapshots**                           |
-
-CI runs `npm run lint` and `npm run test:coverage` on every push/PR to `main`/`master`. See [docs/ROADMAP.md](docs/ROADMAP.md) for the development plan.
-
-### E2E (Maestro, optional)
-
-```bash
-npm run e2e:maestro   # 需安装 Maestro + dev build，见 docs/e2e/README.md
-```
-
----
-
-## Linting & Formatting
-
-```bash
-# ESLint check
-npm run lint
-
-# Auto-fix ESLint issues
-npm run lint:fix
-
-# Prettier formatting
-npm run format
-```
-
----
-
-## Building
-
-### Android APK (Preview)
-
-```bash
-npx eas build --platform android --profile preview
-```
-
-2026-07-13 已验证 Build ID `70e5470b-b86c-4e31-b7b4-2ba274f6cc7a`。本地候选包位于 `../build-artifacts/AI运动助手-mobile-1.2.0-preview.apk`。preview 配置会禁用未配置的 Sentry source map 自动上传；production 必须配置正式 Sentry 项目后再启用。
-
-### Android App Bundle (Production)
-
-```bash
-npx eas build --platform android --profile production
-```
-
-### iOS (Production)
-
-```bash
-npx eas build --platform ios --profile production
-```
-
----
-
-## Project Structure
-
-```
-ai-sport-mobile/
-├── App.tsx                    # 应用入口 + 路由 + 懒加载屏幕
-├── app.json                   # Expo 配置
-├── eas.json                   # EAS Build 配置
-├── tsconfig.json              # TypeScript strict mode
-├── jest.config.js             # Jest 测试配置
-├── eslint.config.js           # ESLint + Prettier
-│
-├── src/
-│   ├── components/            # 可复用 UI 组件
-│   │   ├── CameraView.tsx         # WebView 壳（HTML 见 assets/mediapipe/pose.html）
-│   │   ├── ErrorBoundary.tsx      # 全局错误边界
-│   │   ├── ExerciseIllustration.tsx # 运动 SVG 插画
-│   │   ├── BarChart.tsx           # 统计图表
-│   │   ├── SkeletonOverlay.tsx    # 加载骨架屏
-│   │   └── workout/               # WorkoutScreen 子组件
-│   │       ├── WorkoutActivePanel.tsx
-│   │       ├── WorkoutControls.tsx
-│   │       ├── WorkoutHeader.tsx
-│   │       ├── WorkoutSetupPanel.tsx
-│   │       ├── WorkoutTargetModal.tsx
-│   │       ├── workoutFormat.ts
-│   │       └── workoutStyles.ts
-│   │
-│   ├── screens/               # 页面组件（9 个）
-│   │   ├── AnalyticsScreen.tsx
-│   │   ├── HistoryScreen.tsx
-│   │   ├── HomeScreen.tsx         # 运动选择首页
-│   │   ├── LoginScreen.tsx
-│   │   ├── PilotScreen.tsx        # 校园试点
-│   │   ├── PrivacyPolicyScreen.tsx
-│   │   ├── ProfileScreen.tsx
-│   │   ├── RegisterScreen.tsx
-│   │   └── WorkoutScreen.tsx      # 训练主界面（核心）
-│   │
-│   ├── services/              # 业务逻辑服务（13 个）
-│   │   ├── AuthService.ts
-│   │   ├── ErrorReporter.ts
-│   │   ├── ExerciseCounter.ts     # 抽象基类（策略模式）
-│   │   ├── MediaPipeAssetService.ts  # 模型缓存管理
-│   │   ├── PerformanceMonitor.ts
-│   │   ├── PilotDataPackageService.ts
-│   │   ├── PoseDetectionService.ts
-│   │   ├── SecureStorageService.ts
-│   │   ├── StorageService.ts
-│   │   ├── SyncService.ts
-│   │   ├── WorkoutExportService.ts
-│   │   ├── WorkoutRepository.ts
-│   │   ├── scoring.ts
-│   │   └── counters/
-│   │       ├── JumpRopeCounter.ts
-│   │       ├── JumpingJacksCounter.ts
-│   │       ├── SquatsCounter.ts
-│   │       ├── StandingLongJumpCounter.ts
-│   │       ├── VerticalJumpCounter.ts
-│   │       └── SitUpCounter.ts
-│   │
-│   ├── hooks/                 # 自定义 Hooks（5 个）
-│   │   ├── useExerciseFeedback.ts
-│   │   ├── useSound.ts
-│   │   ├── useWebViewMessageHandler.ts
-│   │   ├── useWorkout.ts
-│   │   └── useWorkoutScreen.ts    # 训练页状态与副作用
-│   │
-│   ├── contexts/              # React Context
-│   │   ├── AuthContext.tsx
-│   │   └── LocaleContext.tsx
-│   │
-│   ├── i18n/                  # 国际化
-│   │   ├── en.ts
-│   │   ├── index.ts
-│   │   └── zh.ts
-│   │
-│   ├── mediapipe/             # WebView ↔ RN（协议 + HTML 加载）
-│   │   ├── loadPoseHtml.ts
-│   │   └── mediapipeBridge.ts
-│   │
-│   ├── utils/                 # 工具函数（12 个）
-│   │   ├── adaptivePoseRuntime.ts # 自适应帧率
-│   │   ├── apiBaseUrl.ts
-│   │   ├── asyncPool.ts           # 并发下载控制
-│   │   ├── exerciseRuntime.ts     # 运动运行时配置
-│   │   ├── filters.ts             # Kalman 滤波 + 滑动窗口
-│   │   ├── getEnv.ts
-│   │   ├── guestUser.ts
-│   │   ├── mediaPipeCdnPolicy.ts  # CDN 优先级策略
-│   │   ├── mediaPipeManifest.ts   # 缓存清单验证
-│   │   ├── poseQuality.ts         # 姿态质量分析
-│   │   ├── webViewAssetInjection.ts # Blob URL 注入
-│   │   └── withTimeout.ts
-│   │
-│   ├── constants/             # 常量（3 个）
-│   │   ├── e2eTestIds.ts
-│   │   ├── exerciseConfig.ts      # 兼容 re-export
-│   │   └── exerciseRegistry.ts    # 运动元数据 + 运行时帧率（单一数据源）
-│   │
-│   ├── types/                 # TypeScript 类型定义（5 个）
-│   │   ├── auth.ts
-│   │   ├── html.d.ts
-│   │   ├── index.ts
-│   │   ├── navigation.ts
-│   │   └── pilot.ts
-│   │
-│   └── __tests__/             # Jest 测试
-│       ├── testHelpers.ts
-│       ├── *Counter.test.ts (×6)
-│       └── ... (×50 more)
-│
-├── __mocks__/                 # Jest mock（6 个）
-│   ├── expo-file-system-legacy.ts
-│   ├── expo-localization.ts
-│   ├── expo-sharing.ts
-│   ├── react-native.ts
-│   ├── react-native-svg.ts
-│   └── sentry-react-native.ts
-│
-├── assets/
-│   ├── mediapipe/
-│   │   └── pose.html          # MediaPipe WebView 页面（编辑后重启 Metro）
-│   ├── sounds/                # 音效文件
-│   └── *.png                  # 应用图标
-│
-├── docs/                      # 项目文档
-│   ├── ROADMAP.md                 # 开发路线图
-│   ├── architecture/
-│   ├── deployment/
-│   └── PROJECT_EVALUATION_REPORT.md
-│
-├── .github/workflows/ci.yml   # CI：lint + test:coverage
-│
-└── scripts/
-    └── deployment/            # CDN 部署脚本
-```
-
----
-
-## Configuration
-
-### MediaPipe CDN Sources
-
-可通过环境变量自定义 CDN 源列表（多源回退）：
-
-```bash
-EXPO_PUBLIC_MEDIAPIPE_CDN_BASES=https://your-cdn.com/pose/,https://backup-cdn.com/pose/
-```
-
-默认优先级：`gakiwoo.com` → `npmmirror.com` → `jsdelivr` → `unpkg`
-
-### Cloud Sync & Server API
-
-云同步是可选能力，不是当前校园试点的依赖。MediaPipe 模型 CDN 在线（2026-07-13 HTTP 200）；Sync/Pilot 的 GET 路由仍返回 404。当前 Mobile 只实现 POST push，未实现增量 pull 和冲突合并。
-
-| 服务     | 端点                                             | 说明                                      |
-| -------- | ------------------------------------------------ | ----------------------------------------- |
-| 用户认证 | `POST /api/auth/{register,login,refresh,logout}` | JWT 双 Token（access 15min / refresh 7d） |
-| 用户信息 | `GET/PUT /api/auth/me`                           | 获取/更新用户资料                         |
-| 训练同步 | `POST /api/workouts/sync`                        | 客户端 push 代码已实现；线上联调未验收    |
-| 增量拉取 | `GET /api/workouts/sync?since=ISO`               | 目标契约；客户端未实现，线上 GET 当前 404 |
-| 训练统计 | `GET /api/workouts/stats`                        | 服务端源码存在；线上未验收                |
-| 校园任务 | `GET /api/pilot/{tasks,assignments}`             | 服务端源码存在；线上 GET 当前 404         |
-
-启用云同步：
-
-```bash
-EXPO_PUBLIC_ENABLE_CLOUD_SYNC=true
-```
-
-只有在服务端路由和真实账号联调通过后才应启用。详细状态见 [云同步设计](./docs/architecture/cloud-sync-design.md)。
-
-### Runtime Profiles
-
-每种运动有不同的帧率配置，可根据设备性能自适应调整：
-
-| Exercise      | Active Interval | Preview Interval | Model Complexity |
-| ------------- | --------------- | ---------------- | ---------------- |
-| Jump Rope     | 80ms            | 200ms            | 0 (lite)         |
-| Jumping Jacks | 100ms           | 250ms            | 1 (full)         |
-| Squats        | 120ms           | 250ms            | 1 (full)         |
-| Long Jump     | 100ms           | 250ms            | 1 (full)         |
-| Vertical Jump | 100ms           | 250ms            | 1 (full)         |
-| Sit-ups       | 120ms           | 250ms            | 1 (full)         |
-
----
-
-## Deployment
-
-### CDN Deployment
-
-MediaPipe 模型文件通过 `scripts/deployment/` 中的脚本部署到 `gakiwoo.com` 服务器：
-
-```bash
-# 部署 MediaPipe 模型文件到 CDN
-bash scripts/deployment/deploy-mediapipe.sh
-
-# 配置 Nginx CDN 缓存
-bash scripts/deployment/nginx-mediapipe.sh
-```
-
-### EAS Build
-
-```bash
-# 登录 EAS
-npx eas login
-
-# 构建 Android APK（预览版）
-npx eas build --platform android --profile preview
-
-# 构建 Android App Bundle（生产版）
-npx eas build --platform android --profile production
-```
-
----
-
-## Contributing
-
-1. Fork 仓库
-2. 创建功能分支 (`git checkout -b feat/amazing-feature`)
-3. 提交修改 (`git commit -m 'feat: add amazing feature'`)
-4. 推送到分支 (`git push origin feat/amazing-feature`)
-5. 创建 Pull Request
-
-### Development Guidelines
-
-- **TypeScript**: 启用 strict 模式，类型安全优先
-- **Testing**: 核心逻辑必须有测试覆盖（Jest）
-- **State Machines**: 新增运动类型请继承 `ExerciseCounter` 基类
-- **Performance**: 姿态检测是性能敏感区域，注意帧率和内存
-- **Offline First**: 网络资源须有本地缓存降级策略
-
----
-
-## License
-
-MIT © 2024-2026 Gakiwoo
-
----
+AI Sport is a **mobile fitness tracking app** that uses **MediaPipe Pose** to detect and count exercises in real-time through your phone's camera — no wearables needed. Just face the camera and start working out.
 
 <p align="center">
-  <sub>Built with Expo + React Native + TypeScript + MediaPipe Pose</sub>
+  <img src="https://github.com/user-attachments/assets/152719fa-3bc6-4b12-860b-0b47b7759c5c" width="180" alt="1" />
+  <img src="https://github.com/user-attachments/assets/96fac4a5-7793-44ec-bb44-1335af6b62d7" width="180" alt="2" />
+  <img src="https://github.com/user-attachments/assets/371c9fa5-6828-42c0-8c43-643648c1ec0f" width="180" alt="3" />
 </p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/80e39e36-2637-45fd-8214-e8a424746b9a" width="180" alt="5" />
+  <img src="https://github.com/user-attachments/assets/e4d7a239-96ed-414d-a614-84695495b932" width="180" alt="6" />
+</p>
+
+
+### ✨ Key Features
+
+- **6 Exercise Types**: Sit-ups, Squats, Jump Rope, Jumping Jacks, Standing Long Jump, Vertical Jump
+- **Real-time Pose Detection**: MediaPipe Pose runs entirely on-device via WebView — no server, no latency
+- **Dual Training Modes**: Count mode (target reps) and Timed mode (target duration)
+- **Live Form Feedback**: Real-time posture correction — "back straight", "knees past toes", "hips off the mat"
+- **Smart Counting Algorithms**: State machine + Kalman filter + adaptive calibration for each exercise
+- **Measurement**: Standing long jump distance (cm) and vertical jump height (cm) via body-proportion calibration
+- **Offline-first**: MediaPipe model files cached locally after first download — zero network dependency
+- **Workout History**: Local persistence with analytics (total reps, duration, averages)
+- **Sound Effects**: Local audio feedback for rep counting
+
+### 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│                    Screens                       │
+│  HomeScreen · WorkoutScreen · HistoryScreen      │
+│  AnalyticsScreen · ProfileScreen · LoginScreen   │
+├─────────────────────────────────────────────────┤
+│                    Hooks                         │
+│  useWorkout · useExerciseFeedback · useSound     │
+├─────────────────────────────────────────────────┤
+│                   Services                       │
+│  ExerciseCounter ── 6 Subclasses                 │
+│  MediaPipeAssetService · PoseDetectionService    │
+│  StorageService · AuthService                    │
+├─────────────────────────────────────────────────┤
+│                    Utils                         │
+│  KalmanFilter1D · SlidingWindow · PeakDetector   │
+└─────────────────────────────────────────────────┘
+         ↕ postMessage
+┌─────────────────────────────────────────────────┐
+│              CameraView (WebView)                │
+│  MediaPipe Pose · getUserMedia · Canvas Overlay  │
+│  blob: URL injection from local cache            │
+└─────────────────────────────────────────────────┘
+```
+
+### 🧠 Algorithm Highlights
+
+Each exercise counter implements a **finite state machine** with:
+
+| Feature | Implementation |
+|---------|---------------|
+| Signal smoothing | 1D Kalman filter per keypoint signal |
+| Adaptive thresholds | Auto-calibrated from user's body proportions (shoulder width, hip width, torso length) |
+| Debounce | N-frame confirmation before state transition |
+| Foul detection | Back lean, shallow squat, hip lift, knee valgus |
+| Pixel→cm conversion | Body proportion calibration (torso ≈ height × 29%) |
+
+| Exercise | Algorithm | State Machine |
+|----------|-----------|---------------|
+| Sit-ups | Shoulder-Hip-Knee trunk angle | idle → lying → rising → up → returning → done |
+| Squats | Knee angle + back angle fusion | idle → standing → descending → bottom → ascending |
+| Jumping Jacks | Arm angle + leg spread ratio | idle → closed → opening → open → closing |
+| Jump Rope | Wrist rotation cycle + hip bounce | idle → detecting → jumping → resting |
+| Standing Long Jump | Knee angle + ankle X displacement | idle → ready → crouch → takeoff → airborne → landing → stable |
+| Vertical Jump | Knee angle + ankle/hip Y rise | idle → ready → crouch → takeoff → airborne → landing → stable |
+
+### 📱 Supported Platforms
+
+- **Android** (primary target, APK via EAS Build)
+- **iOS** (Expo managed workflow)
+- **Desktop** — separate [Tauri project](https://github.com/gakiwoo/ai-sport-desktop) (React + TypeScript + Vite)
+
+### 🚀 Getting Started
+
+#### Prerequisites
+
+- Node.js ≥ 18
+- Expo CLI (`npm install -g expo-cli`)
+- Android Studio / Xcode for device testing
+
+#### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/gakiwoo1006/ai-motion-tracker.git
+cd ai-motion-tracker
+
+# Install dependencies
+npm install
+
+# Start development server
+npx expo start
+```
+
+#### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm start` | Start Expo dev server |
+| `npm run android` | Run on Android device/emulator |
+| `npm run ios` | Run on iOS simulator |
+| `npm test` | Run unit tests (Jest) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run lint` | Lint with ESLint |
+| `npm run lint:fix` | Auto-fix lint issues |
+| `npm run format` | Format with Prettier |
+
+### 🧪 Testing
+
+82 unit tests across 8 test suites, covering all exercise counters and signal processing utilities:
+
+```bash
+npm test
+```
+
+Test fixtures use **pixel-coordinate** Pose objects (matching CameraView's `(1-lm.x)*W, lm.y*H` output) with pre-built pose presets (standing, lying, squatting, airborne, etc.).
+
+### 📂 Project Structure
+
+```
+src/
+├── components/
+│   ├── CameraView.tsx          # WebView + MediaPipe Pose + Camera
+│   ├── BarChart.tsx            # Workout analytics chart
+│   ├── SkeletonOverlay.tsx     # Pose skeleton rendering
+│   └── ExerciseIllustration.tsx # Exercise guide illustrations
+├── constants/
+│   └── exerciseConfig.ts       # Exercise names, targets, defaults
+├── contexts/
+│   └── AuthContext.tsx          # Authentication context
+├── hooks/
+│   ├── useWorkout.ts           # Training session lifecycle
+│   ├── useExerciseFeedback.ts  # Real-time form correction
+│   └── useSound.ts             # Audio feedback
+├── screens/
+│   ├── HomeScreen.tsx          # Exercise selection
+│   ├── WorkoutScreen.tsx       # Active training session
+│   ├── HistoryScreen.tsx       # Workout history
+│   ├── AnalyticsScreen.tsx     # Statistics dashboard
+│   ├── ProfileScreen.tsx       # User profile
+│   └── LoginScreen.tsx         # Authentication
+├── services/
+│   ├── ExerciseCounter.ts      # Base class for all counters
+│   ├── MediaPipeAssetService.ts # Local cache + blob: URL injection
+│   ├── PoseDetectionService.ts  # Angle & distance calculations
+│   ├── StorageService.ts       # AsyncStorage persistence
+│   ├── AuthService.ts          # Cookie-based auth (gakiwoo.com)
+│   └── counters/
+│       ├── SitUpCounter.ts
+│       ├── SquatsCounter.ts
+│       ├── JumpingJacksCounter.ts
+│       ├── JumpRopeCounter.ts
+│       ├── StandingLongJumpCounter.ts
+│       └── VerticalJumpCounter.ts
+├── types/
+│   ├── index.ts                # Core types (Pose, Keypoint, WorkoutSession)
+│   ├── auth.ts                 # Auth types
+│   └── navigation.ts           # Navigation types
+├── utils/
+│   └── filters.ts              # KalmanFilter1D, SlidingWindow
+└── __tests__/                  # 82 unit tests
+```
+
+### 🔧 MediaPipe Offline Cache
+
+For users in China where public CDNs (jsdelivr, unpkg, npmmirror) are unreliable, AI Sport implements a **3-tier asset loading strategy**:
+
+1. **Local cache** (`documentDirectory/mediapipe/`) — checked first, zero network needed
+2. **Self-hosted CDN** (gakiwoo.com) — primary download source
+3. **Public CDNs** (npmmirror → jsdelivr → unpkg) — fallback chain
+
+Downloaded files are injected into the WebView as **blob: URLs**, which are same-origin with `https://localhost` — the only way to load local data in a secure context required by `getUserMedia`.
+
+### 🗺️ Roadmap
+
+- [ ] Cloud sync for workout records ([design doc](./docs/cloud-sync-design.md))
+- [ ] Apple Watch / Wear OS companion
+- [ ] Exercise plan & reminder system
+- [ ] Social features (leaderboard, challenges)
+- [ ] More exercise types (push-ups, pull-ups, planks)
+
+### 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feat/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feat/amazing-feature`)
+5. Open a Pull Request
+
+### 📄 License
+
+This project is proprietary software. All rights reserved.
+
+---
+
+## 🇨🇳 中文
+
+AI Sport 是一款基于 **MediaPipe Pose** 的 **手机健身追踪应用**，通过手机摄像头实时检测和计数运动动作——无需穿戴设备，对准摄像头即可开始训练。
+
+### ✨ 核心特性
+
+- **6 种运动**：仰卧起坐、深蹲、跳绳、开合跳、立定跳远、纵跳摸高
+- **实时姿态检测**：MediaPipe Pose 完全在设备端运行（WebView），零延迟、无需服务器
+- **双训练模式**：定数模式（目标次数）和定时模式（目标时长）
+- **实时动作反馈**：姿态纠正——"背部挺直"、"膝盖不要超过脚尖"、"臀部不要离垫"
+- **智能计数算法**：状态机 + 卡尔曼滤波 + 自适应标定，每种运动独立优化
+- **距离/高度测量**：立定跳远距离(cm)和纵跳摸高高度(cm)，基于身体比例自动标定
+- **离线优先**：MediaPipe 模型文件首次下载后永久缓存，零网络依赖
+- **训练历史**：本地持久化存储 + 统计分析（总次数、总时长、平均值）
+- **音效反馈**：本地音频文件，计数时播放提示音
+
+### 🏗️ 架构
+
+```
+┌─────────────────────────────────────────────────┐
+│                    界面层                       │
+│  首页 · 训练页 · 历史页 · 统计页 · 个人页 · 登录 │
+├─────────────────────────────────────────────────┤
+│                    Hooks 层                     │
+│  useWorkout · useExerciseFeedback · useSound    │
+├─────────────────────────────────────────────────┤
+│                    服务层                       │
+│  ExerciseCounter ── 6 个子类                    │
+│  MediaPipeAssetService · PoseDetectionService   │
+│  StorageService · AuthService                   │
+├─────────────────────────────────────────────────┤
+│                    工具层                       │
+│  KalmanFilter1D · SlidingWindow · PeakDetector  │
+└─────────────────────────────────────────────────┘
+         ↕ postMessage
+┌─────────────────────────────────────────────────┐
+│              CameraView (WebView)               │
+│  MediaPipe Pose · getUserMedia · Canvas 骨骼绘制│
+│  blob: URL 注入本地缓存文件                      │
+└─────────────────────────────────────────────────┘
+```
+
+### 🧠 算法亮点
+
+每个运动计数器实现了**有限状态机**，核心机制：
+
+| 特性 | 实现方式 |
+|------|----------|
+| 信号平滑 | 每个关键点信号独立 1D 卡尔曼滤波 |
+| 自适应阈值 | 根据用户身体比例自动标定（肩宽、髋宽、躯干长度） |
+| 防抖 | 状态切换需连续 N 帧确认 |
+| 犯规检测 | 弓背、蹲深不够、臀部离垫、膝盖内扣 |
+| 像素→厘米换算 | 身体比例标定（躯干 ≈ 身高 × 29%） |
+
+| 运动 | 算法核心 | 状态机 |
+|------|---------|--------|
+| 仰卧起坐 | 肩-髋-膝躯干角度 | idle → lying → rising → up → returning → done |
+| 深蹲 | 膝盖角度 + 背部角度融合 | idle → standing → descending → bottom → ascending |
+| 开合跳 | 手臂角度 + 腿部张开比例 | idle → closed → opening → open → closing |
+| 跳绳 | 手腕旋转周期 + 髋部弹跳 | idle → detecting → jumping → resting |
+| 立定跳远 | 膝盖角度 + 脚踝水平位移 | idle → ready → crouch → takeoff → airborne → landing → stable |
+| 纵跳摸高 | 膝盖角度 + 脚踝/髋部上升 | idle → ready → crouch → takeoff → airborne → landing → stable |
+
+### 📱 支持平台
+
+- **Android**（主要目标，通过 EAS Build 构建 APK）
+- **iOS**（Expo 托管工作流）
+- **桌面端** — 独立的 [Tauri 项目](https://github.com/gakiwoo/ai-sport-desktop)（React + TypeScript + Vite）
+
+### 🚀 快速开始
+
+#### 前置条件
+
+- Node.js ≥ 18
+- Expo CLI (`npm install -g expo-cli`)
+- Android Studio / Xcode 用于真机调试
+
+#### 安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/gakiwoo1006/ai-motion-tracker.git
+cd ai-motion-tracker
+
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npx expo start
+```
+
+#### 可用命令
+
+| 命令 | 说明 |
+|------|------|
+| `npm start` | 启动 Expo 开发服务器 |
+| `npm run android` | 在 Android 设备/模拟器运行 |
+| `npm run ios` | 在 iOS 模拟器运行 |
+| `npm test` | 运行单元测试 (Jest) |
+| `npm run test:watch` | 监听模式运行测试 |
+| `npm run lint` | ESLint 检查 |
+| `npm run lint:fix` | 自动修复 lint 问题 |
+| `npm run format` | Prettier 格式化 |
+
+### 🧪 测试
+
+8 个测试套件共 82 个单元测试，覆盖所有运动计数器和信号处理工具：
+
+```bash
+npm test
+```
+
+测试用例使用**像素坐标** Pose 对象（与 CameraView 的 `(1-lm.x)*W, lm.y*H` 输出一致），内置预设姿态（站立、仰卧、深蹲、腾空等）。
+
+### 📂 项目结构
+
+```
+src/
+├── components/               # UI 组件
+│   ├── CameraView.tsx        # WebView + MediaPipe Pose + 摄像头
+│   ├── BarChart.tsx          # 训练统计图表
+│   ├── SkeletonOverlay.tsx   # 骨骼叠加层
+│   └── ExerciseIllustration.tsx # 运动图示
+├── constants/
+│   └── exerciseConfig.ts     # 运动名称、默认目标、配色
+├── contexts/
+│   └── AuthContext.tsx       # 认证上下文
+├── hooks/
+│   ├── useWorkout.ts         # 训练会话生命周期管理
+│   ├── useExerciseFeedback.ts # 实时动作反馈
+│   └── useSound.ts           # 音效播放
+├── screens/                  # 页面
+│   ├── HomeScreen.tsx        # 运动选择首页
+│   ├── WorkoutScreen.tsx     # 训练主界面
+│   ├── HistoryScreen.tsx     # 训练历史
+│   ├── AnalyticsScreen.tsx   # 统计仪表盘
+│   ├── ProfileScreen.tsx     # 个人中心
+│   └── LoginScreen.tsx       # 登录
+├── services/                 # 业务逻辑
+│   ├── ExerciseCounter.ts    # 计数器基类
+│   ├── MediaPipeAssetService.ts # 本地缓存 + blob: URL 注入
+│   ├── PoseDetectionService.ts  # 角度 & 距离计算
+│   ├── StorageService.ts     # AsyncStorage 持久化
+│   ├── AuthService.ts        # Cookie 认证 (gakiwoo.com)
+│   └── counters/             # 6 个运动计数器子类
+├── types/                    # 类型定义
+├── utils/
+│   └── filters.ts            # KalmanFilter1D、SlidingWindow
+└── __tests__/                # 82 个单元测试
+```
+
+### 🔧 MediaPipe 离线缓存
+
+针对国内公共 CDN（jsdelivr、unpkg、npmmirror）不稳定的问题，AI Sport 实现了**三级资源加载策略**：
+
+1. **本地缓存** (`documentDirectory/mediapipe/`) — 优先检查，零网络依赖
+2. **自有 CDN** (gakiwoo.com) — 首选下载源
+3. **公共 CDN**（npmmirror → jsdelivr → unpkg）— 回退链
+
+下载的文件以 **blob: URL** 注入 WebView，与 `https://localhost` 同源——这是在 `getUserMedia` 要求的安全上下文中加载本地数据的唯一方式。
+
+### 🗺️ 路线图
+
+- [ ] 训练记录云端同步（[设计方案](./docs/cloud-sync-design.md)）
+- [ ] Apple Watch / Wear OS 配套应用
+- [ ] 运动计划 & 提醒系统
+- [ ] 社交功能（排行榜、挑战赛）
+- [ ] 更多运动类型（俯卧撑、引体向上、平板支撑）
+
+### 🤝 贡献
+
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feat/amazing-feature`)
+3. 提交更改 (`git commit -m 'feat: add amazing feature'`)
+4. 推送到分支 (`git push origin feat/amazing-feature`)
+5. 发起 Pull Request
+
+### 📄 许可证
+
+本项目为专有软件，保留所有权利。
