@@ -207,6 +207,33 @@ export class LocalWorkoutRepository implements IWorkoutRepository {
     return all.filter((r) => r._syncStatus === 'local' || r._syncStatus === 'conflict');
   }
 
+  /**
+   * P1-8 修复：保存"从服务端拉取"的记录——保持 _syncStatus='synced' 且记录 _serverId。
+   * 此前 save() 无条件把记录标记为 'local'，导致拉取下来的记录下一轮又被当作
+   * 本地待同步推回服务端（循环重推），且 UI 侧状态错乱。
+   */
+  async saveSynced(record: LocalWorkoutRecord): Promise<boolean> {
+    try {
+      let index = await this.ensureIndex();
+      const stored: LocalWorkoutRecord = {
+        ...record,
+        _syncStatus: 'synced',
+        _serverId: record._serverId ?? record.id,
+        _lastModified: record._lastModified ?? Date.now(),
+      };
+      await AsyncStorage.setItem(`${this.storageKey}:${stored.id}`, JSON.stringify(stored));
+      if (!index.includes(stored.id)) {
+        index.push(stored.id);
+        index = await this.trimExcess(index, stored.id);
+      }
+      await AsyncStorage.setItem(this.indexKey, JSON.stringify(index));
+      return true;
+    } catch (error) {
+      ErrorReporter.captureError(error, { source: 'WorkoutRepository', action: 'saveSynced' });
+      return false;
+    }
+  }
+
   async markSynced(id: string, serverId?: string): Promise<boolean> {
     try {
       const raw = await AsyncStorage.getItem(`${this.storageKey}:${id}`);

@@ -89,8 +89,14 @@ export function useWorkout(exerciseType: ExerciseType) {
   useEffect(() => {
     if (!isActive || mode !== 'timed') return;
     const timer = setInterval(() => {
-      if (!startTimeRef.current) return;
-      const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
+      // 修复 M6：暂停期间不推进倒计时（此前用 Date.now()-startTime 计算，
+      // 暂停时间也被计入 → 暂停中倒计时仍走完并提前停止训练）。
+      // 与 getElapsedMs() 保持同一套"扣除暂停区间"的计算。
+      if (!startTimeRef.current || isPausedRef.current) return;
+      const end = pauseStartRef.current ?? Date.now();
+      const elapsed = Math.round(
+        Math.max(0, end - startTimeRef.current - pausedAccumRef.current) / 1000,
+      );
       if (elapsed >= targetDuration) {
         setTimeUp(true);
       }

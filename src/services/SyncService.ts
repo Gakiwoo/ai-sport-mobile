@@ -22,8 +22,9 @@ import { workoutRepository } from './WorkoutRepository';
 import AuthService from './AuthService';
 import ErrorReporter from './ErrorReporter';
 import { apiClient } from './ApiClient';
-import { LocalWorkoutRecord } from '../types';
+import { LocalWorkoutRecord, ExerciseType } from '../types';
 import { getEnvVar } from '../utils/getEnv';
+import { getEffectiveApiBaseUrl } from '../utils/serverConfig';
 import { AppState, type NativeEventSubscription } from 'react-native';
 
 // ── 配置 ──
@@ -34,16 +35,26 @@ const SYNC_RETRY_MAX_DELAY_MS = 300000; // 最大重试延迟 5min
 const SYNC_MAX_RETRIES = 5; // 最大重试次数
 const SYNC_FETCH_TIMEOUT_MS = 15000; // fetch 超时 15s
 
+/** 服务端 workout_sessions 行的合法运动类型集合（P1-8 字段映射用） */
+const VALID_EXERCISE_TYPES: ReadonlySet<string> = new Set([
+  'jump_rope',
+  'jumping_jacks',
+  'squats',
+  'standing_long_jump',
+  'vertical_jump',
+  'sit_ups',
+]);
+
 function isCloudSyncEnabled(): boolean {
   return getEnvVar('EXPO_PUBLIC_ENABLE_CLOUD_SYNC') === 'true';
 }
 
-function getSyncApiUrl(): string {
+/** 同步 API 地址：env 覆盖 → 与 AuthService/ApiClient 共用单一来源（M4 修复） */
+async function getSyncApiUrl(): Promise<string> {
   const syncUrl = getEnvVar('EXPO_PUBLIC_SYNC_API_URL');
   if (syncUrl) return syncUrl;
-  const baseUrl = getEnvVar('EXPO_PUBLIC_API_BASE_URL');
-  if (baseUrl) return `${baseUrl}${SYNC_API_PATH}`;
-  return SYNC_API_PATH;
+  const baseUrl = await getEffectiveApiBaseUrl();
+  return `${baseUrl}${SYNC_API_PATH}`;
 }
 
 interface SyncResult {
@@ -132,9 +143,12 @@ class SyncService {
 
       const serverIdsByLocalId = await this.pushToServer(pending);
 
-      // 批量标记已同步（一次性重写，避免串行 O(n²) 写放大）
-      const ids = pending.map((r) => r.id);
-      const syncedCount = await workoutRepository.batchMarkSynced(ids, serverIdsByLocalId);
+      // 修复 M3/M4：只标记服务端确认已入库的 id——
+      // ① 响应契约为 { synced: [id] }（NestJS），解析后得到已确认集合；
+      // ② 服务端单批上限 100，超出部分保持 pending，下一轮继续推送，
+      //    避免"全部标记 synced"导致超限/失败记录被静默丢弃。
+      const confirmedIds = pending.filter((r) => serverIdsByLocalId.has(r.id)).map((r) => r.id);
+      const syncedCount = await workoutRepository.batchMarkSynced(confirmedIds, serverIdsByLocalId);
 
       this.retryCount = 0;
       return { synced: syncedCount, failed: 0, skipped: 0, errors: [] };
@@ -160,7 +174,7 @@ class SyncService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(getSyncApiUrl(), {
+      const response = await fetch(await getSyncApiUrl(), {
         method: 'POST',
         headers,
         body: JSON.stringify({ workouts: records }),
@@ -172,16 +186,21 @@ class SyncService {
       }
 
       const body = await response.json().catch(() => null);
-      const synced: unknown[] = Array.isArray(body?.synced) ? body.synced : [];
-      return new Map(
-        synced
-          .filter((item: unknown): item is { localId: string; serverId: string } => {
-            if (!item || typeof item !== 'object') return false;
-            const candidate = item as { localId?: unknown; serverId?: unknown };
-            return typeof candidate.localId === 'string' && typeof candidate.serverId === 'string';
-          })
-          .map((item) => [item.localId, item.serverId]),
-      );
+      const syncedRaw: unknown[] = Array.isArray(body?.synced) ? body.synced : [];
+      // 修复 M4：NestJS 契约 synced 为 id 字符串数组（如 ["w1","w2"]）；
+      // 兼容旧后端（Express gakiwoo-api）的 [{ localId, serverId }] 对象格式。
+      const serverIdsByLocalId = new Map<string, string>();
+      for (const item of syncedRaw) {
+        if (typeof item === 'string' && item.length > 0) {
+          serverIdsByLocalId.set(item, item);
+        } else if (item !== null && typeof item === 'object') {
+          const candidate = item as { localId?: unknown; serverId?: unknown };
+          if (typeof candidate.localId === 'string' && typeof candidate.serverId === 'string') {
+            serverIdsByLocalId.set(candidate.localId, candidate.serverId);
+          }
+        }
+      }
+      return serverIdsByLocalId;
     } finally {
       clearTimeout(timeoutId);
     }
@@ -268,11 +287,68 @@ class SyncService {
   }
 
   /**
+   * P1-8 修复：将服务端 workout_sessions 行（snake_case）映射为本地
+   * LocalWorkoutRecord（camelCase + _syncStatus:'synced'）。
+   * 此前直接把服务端记录 save() 落库：字段名不匹配（exerciseType 变 undefined，
+   * UI 显示 "undefined" 项目名）且被标记为 local 导致循环重推。
+   */
+  private mapServerRecord(raw: Record<string, unknown>): LocalWorkoutRecord | null {
+    const id = typeof raw.id === 'string' ? raw.id : '';
+    if (!id) return null;
+    const exerciseTypeRaw = raw.exercise_type;
+    if (typeof exerciseTypeRaw !== 'string' || !VALID_EXERCISE_TYPES.has(exerciseTypeRaw)) {
+      return null;
+    }
+    const toNum = (v: unknown, fallback = 0): number => {
+      const n = typeof v === 'number' ? v : Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    const toStr = (v: unknown): string | undefined =>
+      typeof v === 'string' && v.length > 0 ? v : undefined;
+
+    const record: LocalWorkoutRecord = {
+      id,
+      exerciseType: exerciseTypeRaw as ExerciseType,
+      mode: raw.mode === 'timed' ? 'timed' : 'count',
+      count: toNum(raw.count),
+      duration: toNum(raw.duration),
+      timestamp: toNum(raw.timestamp, Date.now()),
+      _syncStatus: 'synced',
+      _lastModified: Date.now(),
+      _serverId: id,
+    };
+    const schoolId = toStr(raw.school_id);
+    if (schoolId) record.schoolId = schoolId;
+    const classId = toStr(raw.class_id);
+    if (classId) record.classId = classId;
+    const studentId = toStr(raw.student_id);
+    if (studentId) record.studentId = studentId;
+    const taskId = toStr(raw.task_id);
+    if (taskId) record.taskId = taskId;
+    const deviceId = toStr(raw.device_id);
+    if (deviceId) record.deviceId = deviceId;
+    const deviceInfo = toStr(raw.device_info);
+    if (deviceInfo) record.deviceInfo = deviceInfo;
+    const tier = toStr(raw.performance_tier);
+    if (tier === 'high' || tier === 'balanced' || tier === 'constrained') {
+      record.performanceTier = tier;
+    }
+    const algorithmVersion = toStr(raw.algorithm_version);
+    if (algorithmVersion) record.algorithmVersion = algorithmVersion;
+    const algorithmLogSummary = toStr(raw.algorithm_log_summary);
+    if (algorithmLogSummary) record.algorithmLogSummary = algorithmLogSummary;
+    const accuracy = raw.accuracy;
+    if (typeof accuracy === 'number' && Number.isFinite(accuracy)) record.accuracy = accuracy;
+    return record;
+  }
+
+  /**
    * 从服务端拉取训练记录（双向同步 — pull 方向）。
    *
    * 策略：
    * - 增量拉取：仅拉取 lastSyncTimestamp 之后的记录
-   * - 冲突处理：服务端版本优先（server wins）
+   * - 冲突处理：服务端版本优先（server wins），但本地含富数据
+   *   （exerciseResult/algorithmLog，服务端只存汇总字段）时保留本地
    * - 离线安全：拉取失败不影响本地数据
    */
   async pull(): Promise<{ pulled: number; merged: number; errors: string[] }> {
@@ -294,14 +370,28 @@ class SyncService {
 
       for (const record of records) {
         try {
-          // Server version wins: upsert regardless of local state
-          await workoutRepository.save(record);
+          const raw = record as unknown as Record<string, unknown>;
+          const id = typeof raw.id === 'string' ? raw.id : '';
+          if (!id) continue;
+
+          // P1-8：本地已有 synced 记录且含富数据（exerciseResult，服务端只存汇总
+          // 字段，覆盖会丢本地富数据）时保留本地；否则以服务端为准
+          const local = await workoutRepository.getById(id);
+          if (local && local.exerciseResult && local._syncStatus === 'synced') {
+            merged++;
+            continue;
+          }
+
+          const mapped = this.mapServerRecord(raw);
+          if (!mapped) continue;
+          await workoutRepository.saveSynced(mapped);
           merged++;
+
           // 追踪服务端时间戳（record.updatedAt / record.updated_at / _lastModified）
           const serverTs =
-            (record as { updatedAt?: string }).updatedAt ??
-            (record as { updated_at?: string }).updated_at ??
-            (record as { _lastModified?: number })._lastModified;
+            (raw.updatedAt as string | undefined) ??
+            (raw.updated_at as string | undefined) ??
+            (raw._lastModified as number | undefined);
           if (serverTs !== undefined) {
             const tsStr =
               typeof serverTs === 'number' ? new Date(serverTs).toISOString() : serverTs;
@@ -312,7 +402,7 @@ class SyncService {
         } catch (mergeErr) {
           ErrorReporter.captureWarning('Pull merge record failed', {
             source: 'SyncService.pull',
-            recordId: record.id ?? 'unknown',
+            recordId: (record as { id?: unknown }).id ?? 'unknown',
             error: mergeErr instanceof Error ? mergeErr.message : String(mergeErr),
           });
         }

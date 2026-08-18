@@ -19,7 +19,7 @@ import {
   type TrainingTask,
 } from '../types/pilot';
 import { workoutRepository } from './WorkoutRepository';
-import { scoreSession, type ScoringResult } from './scoring';
+import { scoreSession, type ScoringResult } from '@ai-sport/core';
 
 const PILOT_SELECTION_KEY = '@pilot_selection_v1';
 const PILOT_ENTITIES_KEY = '@pilot_entities_v1';

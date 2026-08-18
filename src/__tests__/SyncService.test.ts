@@ -8,6 +8,8 @@ jest.mock('../services/WorkoutRepository', () => ({
     markSynced: jest.fn(),
     batchMarkSynced: jest.fn(() => Promise.resolve(1)),
     getAll: jest.fn(),
+    getById: jest.fn(),
+    saveSynced: jest.fn(() => Promise.resolve(true)),
   },
   LocalWorkoutRepository: jest.fn(),
 }));
@@ -141,6 +143,135 @@ describe('SyncService', () => {
         ['r1'],
         new Map([['r1', 'server-r1']]),
       );
+    });
+
+    it('NestJS 契约：synced 为 id 字符串数组时也能正确标记（M4 回归）', async () => {
+      process.env.EXPO_PUBLIC_ENABLE_CLOUD_SYNC = 'true';
+      const records = [makeRecord('w1'), makeRecord('w2')];
+      (workoutRepository.getPendingSync as jest.Mock).mockResolvedValue(records);
+      (workoutRepository.batchMarkSynced as jest.Mock).mockResolvedValue(2);
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ synced: ['w1', 'w2'], conflicts: [] }),
+      }) as typeof fetch;
+
+      const result = await syncService.sync();
+
+      expect(result.synced).toBe(2);
+      // 服务端 id 同时作为 _serverId 写入
+      expect(workoutRepository.batchMarkSynced).toHaveBeenCalledWith(
+        ['w1', 'w2'],
+        new Map([
+          ['w1', 'w1'],
+          ['w2', 'w2'],
+        ]),
+      );
+    });
+
+    it('服务端只确认部分 id 时，仅标记已确认记录，其余保持 pending（M3 回归）', async () => {
+      process.env.EXPO_PUBLIC_ENABLE_CLOUD_SYNC = 'true';
+      const records = [makeRecord('ok-1'), makeRecord('drop-1')];
+      (workoutRepository.getPendingSync as jest.Mock).mockResolvedValue(records);
+      (workoutRepository.batchMarkSynced as jest.Mock).mockResolvedValue(1);
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ synced: ['ok-1'], conflicts: ['drop-1'] }),
+      }) as typeof fetch;
+
+      const result = await syncService.sync();
+
+      // 只标记 ok-1；drop-1 保持 pending，下一轮重推（不静默丢失）
+      expect(workoutRepository.batchMarkSynced).toHaveBeenCalledWith(
+        ['ok-1'],
+        new Map([['ok-1', 'ok-1']]),
+      );
+      expect(result.synced).toBe(1);
+      expect(result.errors).toEqual([]);
+    });
+  });
+
+  describe('pull（P1-8 回归：字段映射 + 保持 synced + 富字段保护）', () => {
+    const originalEnableCloudSync = process.env.EXPO_PUBLIC_ENABLE_CLOUD_SYNC;
+    const originalFetch = global.fetch;
+
+    beforeEach(() => {
+      process.env.EXPO_PUBLIC_ENABLE_CLOUD_SYNC = 'true';
+      (workoutRepository.getById as jest.Mock).mockResolvedValue(null);
+    });
+
+    afterEach(() => {
+      process.env.EXPO_PUBLIC_ENABLE_CLOUD_SYNC = originalEnableCloudSync;
+      global.fetch = originalFetch;
+      jest.clearAllMocks();
+    });
+
+    it('服务端 snake_case 记录被映射为 camelCase 并以 synced 状态落库（不再循环重推）', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          records: [
+            {
+              id: 'srv-1',
+              exercise_type: 'jump_rope',
+              mode: 'count',
+              count: 120,
+              duration: 60,
+              timestamp: 1780000000000,
+              school_id: 'school-a',
+              task_id: 'task-1',
+              updated_at: '2026-08-14 06:00:00',
+            },
+          ],
+          total: 1,
+        }),
+      }) as typeof fetch;
+
+      const result = await syncService.pull();
+
+      expect(result.merged).toBe(1);
+      expect(workoutRepository.saveSynced).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'srv-1',
+          exerciseType: 'jump_rope',
+          count: 120,
+          schoolId: 'school-a',
+          taskId: 'task-1',
+          _syncStatus: 'synced',
+          _serverId: 'srv-1',
+        }),
+      );
+      // 游标推进到服务端最大 updated_at
+      expect((syncService as unknown as { lastSyncTimestamp: string }).lastSyncTimestamp).toBe(
+        '2026-08-14 06:00:00',
+      );
+    });
+
+    it('本地已有 synced 且含 exerciseResult 富数据时保留本地，不覆盖', async () => {
+      (workoutRepository.getById as jest.Mock).mockResolvedValue({
+        id: 'srv-1',
+        exerciseType: 'jump_rope',
+        _syncStatus: 'synced',
+        exerciseResult: { sessionId: 's1', reps: 120 },
+      });
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          records: [
+            {
+              id: 'srv-1',
+              exercise_type: 'jump_rope',
+              count: 999,
+              updated_at: '2026-08-14 06:00:00',
+            },
+          ],
+          total: 1,
+        }),
+      }) as typeof fetch;
+
+      const result = await syncService.pull();
+
+      expect(result.merged).toBe(1);
+      expect(workoutRepository.saveSynced).not.toHaveBeenCalled();
     });
   });
 

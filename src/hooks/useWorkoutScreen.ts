@@ -4,7 +4,7 @@ import { ExerciseType, Pose, WorkoutMode } from '../types';
 import { useExerciseFeedback, FormFeedback } from './useExerciseFeedback';
 import { useSound } from './useSound';
 import { useWorkout } from './useWorkout';
-import { scoreSession, extractScoringInput } from '../services/scoring';
+import { scoreSession, extractScoringInput } from '@ai-sport/core';
 import {
   EXERCISE_NAMES,
   DEFAULT_TARGETS,

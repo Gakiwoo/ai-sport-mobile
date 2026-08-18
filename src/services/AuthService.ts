@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import ErrorReporter from './ErrorReporter';
 import {
   User,
@@ -10,23 +9,19 @@ import {
   ChangePasswordRequest,
   UsageLog,
 } from '../types/auth';
-import { resolveApiBaseUrl } from '../utils/apiBaseUrl';
 import { withTimeout } from '../utils/withTimeout';
-import { getEnvVar, isDevMode } from '../utils/getEnv';
+import { getEffectiveApiBaseUrl } from '../utils/serverConfig';
 import SecureStorageService from './SecureStorageService';
 
 // ── 常量 ──
-const isDev = isDevMode();
-const envBaseUrl = getEnvVar('EXPO_PUBLIC_API_BASE_URL');
-
-const BASE_URL = resolveApiBaseUrl({
-  isDev,
-  platformOS: Platform.OS,
-  envUrl: envBaseUrl,
-});
-
 const TOKEN_KEY = '@auth_tokens';
 const USER_KEY = '@auth_user';
+
+// M4 修复：服务器地址单一来源（用户配置 → env → 平台默认），
+// 与 ApiClient/SyncService 共用 getEffectiveApiBaseUrl，不再各自解析。
+async function getBaseUrl(): Promise<string> {
+  return getEffectiveApiBaseUrl();
+}
 
 // ── 错误类型 ──
 export class AuthError extends Error {
@@ -73,7 +68,7 @@ async function authFetchWithTokens(
     headers['Authorization'] = `Bearer ${tokens.accessToken}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${await getBaseUrl()}${path}`, {
     ...options,
     headers,
     credentials: 'include',
@@ -144,7 +139,7 @@ async function clearSession(): Promise<void> {
 // ── Refresh Token ──
 async function refreshToken(refreshTokenStr: string): Promise<AuthTokens | null> {
   try {
-    const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
+    const res = await fetch(`${await getBaseUrl()}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: refreshTokenStr }),
@@ -203,7 +198,11 @@ function mapServerUser(serverUser: Record<string, unknown>): User {
   return {
     id: String(serverUser.id ?? ''),
     email: (serverUser.email as string) ?? (serverUser.username as string) ?? '',
-    nickname: (serverUser.display_name as string) ?? (serverUser.username as string) ?? '',
+    nickname:
+      (serverUser.display_name as string) ??
+      (serverUser.nickname as string) ?? // 兼容旧后端 { user: { nickname } } 包装
+      (serverUser.username as string) ??
+      '',
     isActive: serverUser.is_active !== 0,
     createdAt: (serverUser.created_at as string) ?? new Date().toISOString(),
   };
@@ -252,7 +251,7 @@ const AuthService = {
       password: data.password,
       displayName: data.nickname,
     };
-    const res = await fetch(`${BASE_URL}/api/auth/register`, {
+    const res = await fetch(`${await getBaseUrl()}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -305,7 +304,7 @@ const AuthService = {
    */
   async login(data: LoginRequest): Promise<User> {
     // 契约对齐：NestJS 以 username 登录（后端已兼容 username=email 查询）
-    const res = await fetch(`${BASE_URL}/api/auth/login`, {
+    const res = await fetch(`${await getBaseUrl()}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: data.email, password: data.password }),
@@ -332,7 +331,7 @@ const AuthService = {
     return user;
   },
 
-  /** 登出 */
+  /** 登出：Bearer 头携带 access token，refreshToken 放请求体（与 NestJS 契约一致） */
   async logout(): Promise<void> {
     try {
       const tokens = await getStoredTokens();
@@ -340,14 +339,19 @@ const AuthService = {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      // 通过 Authorization Header 传递 token 用于后端注销
-      if (tokens?.refreshToken) {
-        headers['Authorization'] = `Bearer ${tokens.refreshToken}`;
+      // 修复 P0-5/M5：此前把 refreshToken 放进 Authorization: Bearer——
+      // refresh token 不是合法 JWT，JwtAuthGuard 直接 401，服务端会话永不撤销。
+      // 正确姿势：Bearer 放 access token；refreshToken 放 body（@Body('refreshToken')）。
+      if (tokens?.accessToken) {
+        headers['Authorization'] = `Bearer ${tokens.accessToken}`;
       }
 
-      await fetch(`${BASE_URL}/api/auth/logout`, {
+      await fetch(`${await getBaseUrl()}/api/auth/logout`, {
         method: 'POST',
         headers,
+        body: tokens?.refreshToken
+          ? JSON.stringify({ refreshToken: tokens.refreshToken })
+          : undefined,
         credentials: 'include',
       });
     } finally {
@@ -365,15 +369,21 @@ const AuthService = {
       throw new AuthError(body.message || '获取用户信息失败', res.status);
     }
 
-    await storeUser(body.user);
-    return body.user;
+    // 修复 P0-5/B1：NestJS GET /me 返回裸 user 对象
+    // （{ id, username, email, role, display_name, created_at }），并非 { user } 包装。
+    // 兼容旧后端的 { user } 包装格式。
+    const user = body?.user ? mapServerUser(body.user) : mapServerUser(body);
+    await storeUser(user);
+    return user;
   },
 
   /** 更新昵称 */
   async updateNickname(data: UpdateNicknameRequest): Promise<User> {
+    // 修复 P0-5/B2：NestJS PUT /me 读取 @Body('displayName')，客户端必须发 displayName
+    // 而非 nickname，否则服务端抛 'displayName is required'（400）。
     const res = await authFetch('/api/auth/me', {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ displayName: data.nickname }),
     });
     const body = await res.json();
 
@@ -381,8 +391,10 @@ const AuthService = {
       throw new AuthError(body.message || '更新失败', res.status);
     }
 
-    await storeUser(body.user);
-    return body.user;
+    // 与 getMe 相同：NestJS 返回裸 user 对象
+    const user = body?.user ? mapServerUser(body.user) : mapServerUser(body);
+    await storeUser(user);
+    return user;
   },
 
   /** 修改密码（成功后自动登出） */
@@ -439,6 +451,22 @@ const AuthService = {
   async getAccessToken(): Promise<string | null> {
     const tokens = await getStoredTokens();
     return tokens?.accessToken ?? null;
+  },
+
+  /** 获取当前 refresh token（供 ApiClient 等复用同一会话使用） */
+  async getRefreshToken(): Promise<string | null> {
+    const tokens = await getStoredTokens();
+    return tokens?.refreshToken ?? null;
+  },
+
+  /** 持久化 token 到安全存储（P1-11：与 ApiClient 内存 token 双向同步） */
+  async persistTokens(tokens: AuthTokens): Promise<void> {
+    await storeTokens(tokens);
+  },
+
+  /** 刷新 token（供 ApiClient 复用同一刷新链路；失败时清除本地会话） */
+  async refreshSession(refreshTokenStr: string): Promise<AuthTokens | null> {
+    return refreshToken(refreshTokenStr);
   },
 };
 

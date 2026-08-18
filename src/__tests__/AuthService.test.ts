@@ -289,8 +289,12 @@ describe('AuthService.logout', () => {
 
     const fetchMock = testGlobal.fetch;
     expect(fetchMock).toHaveBeenCalled();
-    const fetchUrl = fetchMock.mock.calls[0][0] as string;
+    const [fetchUrl, options] = fetchMock.mock.calls[0];
     expect(fetchUrl).toContain('/api/auth/logout');
+    // 契约：Bearer 头携带 access token（refresh token 不是合法 JWT，会被守卫 401）
+    expect(options.headers.Authorization).toBe('Bearer at');
+    // 契约：refreshToken 放请求体（服务端 @Body('refreshToken') 撤销会话）
+    expect(options.body).toBe(JSON.stringify({ refreshToken: 'rt' }));
 
     expect(getSecureStore().get(TOKEN_KEY)).toBeUndefined();
     await expect(AsyncStorage.getItem(USER_KEY)).resolves.toBeNull();
@@ -322,15 +326,50 @@ describe('AuthService.getMe', () => {
     jest.useRealTimers();
   });
 
-  it('returns user on successful getMe', async () => {
+  it('returns user on successful getMe (NestJS 裸对象契约)', async () => {
     storeTokens();
-    const user = { id: 'u1', email: 'u@test.com', nickname: 'Updated', createdAt: '2025-01-01' };
-    mockFetch(mockResponse(true, 200, { user }));
+    // NestJS GET /me 返回裸 user 对象（非 { user } 包装）
+    const serverUser = {
+      id: 1,
+      username: 'u@test.com',
+      email: 'u@test.com',
+      role: 'student',
+      display_name: 'Updated',
+      created_at: '2025-01-01T00:00:00.000Z',
+    };
+    mockFetch(mockResponse(true, 200, serverUser));
 
     const result = await AuthService.getMe();
 
-    expect(result).toEqual(user);
-    await expect(AsyncStorage.getItem(USER_KEY)).resolves.toEqual(JSON.stringify(user));
+    expect(result).toEqual({
+      id: '1',
+      email: 'u@test.com',
+      nickname: 'Updated',
+      isActive: true,
+      createdAt: '2025-01-01T00:00:00.000Z',
+    });
+    await expect(AsyncStorage.getItem(USER_KEY)).resolves.toEqual(
+      JSON.stringify({
+        id: '1',
+        email: 'u@test.com',
+        nickname: 'Updated',
+        isActive: true,
+        createdAt: '2025-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+
+  it('getMe 兼容旧后端 { user } 包装格式', async () => {
+    storeTokens();
+    mockFetch(
+      mockResponse(true, 200, {
+        user: { id: 'u1', email: 'u@test.com', nickname: 'Wrapped', createdAt: '2025-01-01' },
+      }),
+    );
+
+    const result = await AuthService.getMe();
+
+    expect(result.nickname).toBe('Wrapped');
   });
 
   it('throws AuthError on 401', async () => {
@@ -352,26 +391,29 @@ describe('AuthService.updateNickname', () => {
     jest.useRealTimers();
   });
 
-  it('updates nickname and stores updated user', async () => {
+  it('updates nickname and stores updated user (NestJS displayName 契约)', async () => {
     storeTokens();
-    const user = {
-      id: 'u1',
+    // NestJS PUT /me 返回裸 user 对象
+    const serverUser = {
+      id: 1,
+      username: 'u@test.com',
       email: 'u@test.com',
-      nickname: 'NewName',
-      createdAt: '2025-01-01',
+      role: 'student',
+      display_name: 'NewName',
+      created_at: '2025-01-01T00:00:00.000Z',
     };
-    mockFetch(mockResponse(true, 200, { user }));
+    mockFetch(mockResponse(true, 200, serverUser));
 
     const result = await AuthService.updateNickname({ nickname: 'NewName' });
 
-    expect(result).toEqual(user);
-    await expect(AsyncStorage.getItem(USER_KEY)).resolves.toEqual(JSON.stringify(user));
+    expect(result.nickname).toBe('NewName');
 
     const fetchMock = testGlobal.fetch;
     expect(fetchMock).toHaveBeenCalled();
     const [, options] = fetchMock.mock.calls[0];
     expect(options.method).toBe('PUT');
-    expect(options.body).toBe(JSON.stringify({ nickname: 'NewName' }));
+    // 关键契约：请求体必须是 { displayName }（服务端 @Body('displayName')）
+    expect(options.body).toBe(JSON.stringify({ displayName: 'NewName' }));
   });
 });
 

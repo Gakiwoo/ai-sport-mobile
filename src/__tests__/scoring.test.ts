@@ -1,5 +1,5 @@
-import { scoreSession, RATING_LABELS, QUALITY_LABELS } from '../services/scoring';
-import type { ScoringInput } from '../services/scoring';
+import { scoreSession, RATING_LABELS, QUALITY_LABELS } from '@ai-sport/core';
+import type { ScoringInput } from '@ai-sport/core';
 
 function base(input: Partial<ScoringInput>): ScoringInput {
   return {

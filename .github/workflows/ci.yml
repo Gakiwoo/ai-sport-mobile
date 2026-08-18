@@ -15,6 +15,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # @ai-sport/core 为 file:../packages/ai-sport-core 依赖，且 jest moduleNameMapper /
+      # metro watchFolders 直接引用 ../packages/ai-sport-core——独立 checkout 本仓库时
+      # 该目录不存在，npm ci 必然失败。从父仓库（ai-sport-system）拉取 core 源码。
+      - name: Fetch @ai-sport/core source from parent repo
+        uses: actions/checkout@v4
+        with:
+          repository: Gakiwoo/ai-sport-system
+          path: parent
+          sparse-checkout: packages/ai-sport-core
+
+      - name: Place @ai-sport/core source
+        run: |
+          mkdir -p ../packages
+          cp -r parent/packages/ai-sport-core ../packages/
+          rm -rf parent
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

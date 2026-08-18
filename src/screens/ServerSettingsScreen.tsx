@@ -13,6 +13,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiClient, ApiRequestError } from '../services/ApiClient';
+import AuthService from '../services/AuthService';
 import { syncService } from '../services/SyncService';
 import ErrorReporter from '../services/ErrorReporter';
 import { ServerSettingsScreenProps } from '../types/navigation';
@@ -162,7 +163,15 @@ export default function ServerSettingsScreen({ navigation }: ServerSettingsScree
       {
         text: '退出',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
+          // P1-11 补漏：此页登录会经 ApiClient.persistTokens 写入 SecureStore，
+          // 退出时必须同时清 SecureStore（AuthService.logout 撤销服务端会话并清本地），
+          // 否则 refresh token 残留、AuthService 侧会话仍有效。
+          await AuthService.logout().catch(() => {
+            ErrorReporter.captureWarning('服务器设置页登出时撤销会话失败', {
+              source: 'ServerSettingsScreen.handleLogout',
+            });
+          });
           apiClient.setTokens(null);
           setServerUser(null);
           setSyncFeedback('');

@@ -1,8 +1,15 @@
 /**
  * API Client for AI Sport System NestJS backend.
- * React Native compatible — uses fetch API and in-memory token storage.
+ * React Native compatible — uses fetch API.
+ *
+ * P1-11 修复：token 与 AuthService（SecureStore）统一——
+ * 此前 ApiClient 只持有内存 token，正常登录（AuthService 写 SecureStore）后
+ * apiClient 仍无 token，pullWorkouts 必 401。现在内存缺失时回退读取 SecureStore，
+ * 刷新走 AuthService.refreshToken 并写回，login 成功也同步持久化。
  */
 
+import AuthService from './AuthService';
+import { getEffectiveApiBaseUrl, saveConfiguredBaseUrl } from '../utils/serverConfig';
 import type { WorkoutSession } from '../types';
 
 interface ApiConfig {
@@ -22,14 +29,14 @@ interface ApiError {
 }
 
 const DEFAULT_CONFIG: ApiConfig = {
-  baseUrl: 'http://localhost:3000/api',
+  baseUrl: '', // 空 = 使用单一来源（getEffectiveApiBaseUrl：用户配置 → env → 平台默认）
   timeout: 15000,
 };
 
 export class ApiClient {
   private config: ApiConfig;
   private tokens: AuthTokens | null = null;
-  private refreshPromise: Promise<AuthTokens> | null = null;
+  private refreshPromise: Promise<AuthTokens | null> | null = null;
 
   constructor(config?: Partial<ApiConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -37,6 +44,8 @@ export class ApiClient {
 
   setBaseUrl(url: string) {
     this.config.baseUrl = url;
+    // M4：持久化到单一来源（AuthService/SyncService 同步生效）
+    void saveConfiguredBaseUrl(url).catch(() => {});
   }
 
   setTokens(tokens: AuthTokens | null) {
@@ -48,13 +57,19 @@ export class ApiClient {
   }
 
   private async request<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
-    const url = `${this.config.baseUrl}${path}`;
+    // M4：请求地址与 AuthService/SyncService 共用单一来源（用户配置 → env → 平台默认）
+    const baseUrl =
+      this.config.baseUrl && this.config.baseUrl.startsWith('http')
+        ? this.config.baseUrl
+        : await getEffectiveApiBaseUrl();
+    const url = `${baseUrl}${path}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    if (this.tokens?.accessToken) {
-      headers['Authorization'] = `Bearer ${this.tokens.accessToken}`;
+    const tokens = await this.ensureTokens();
+    if (tokens?.accessToken) {
+      headers['Authorization'] = `Bearer ${tokens.accessToken}`;
     }
 
     const controller = new AbortController();
@@ -68,7 +83,7 @@ export class ApiClient {
         signal: controller.signal,
       });
 
-      if (response.status === 401 && retry && this.tokens?.refreshToken) {
+      if (response.status === 401 && retry && tokens?.refreshToken) {
         const newTokens = await this.refreshTokens();
         if (newTokens) {
           return this.request<T>(method, path, body, false);
@@ -93,41 +108,45 @@ export class ApiClient {
     }
   }
 
-  private async refreshTokens(): Promise<AuthTokens | null> {
-    if (!this.tokens?.refreshToken) return null;
+  /**
+   * P1-11：内存 token 缺失时从 SecureStore（AuthService）恢复，
+   * 使 ApiClient 与主登录链路共享同一会话。
+   */
+  private async ensureTokens(): Promise<AuthTokens | null> {
+    if (this.tokens?.accessToken && this.tokens.refreshToken) return this.tokens;
+    const accessToken = await AuthService.getAccessToken();
+    const refreshToken = await AuthService.getRefreshToken();
+    if (accessToken && refreshToken) {
+      this.tokens = { accessToken, refreshToken };
+      return this.tokens;
+    }
+    return this.tokens;
+  }
 
+  private async refreshTokens(): Promise<AuthTokens | null> {
+    const tokens = await this.ensureTokens();
+    if (!tokens?.refreshToken) return null;
+
+    // 与 AuthService 共享刷新链路（旋转后写回 SecureStore），并发去重
     if (!this.refreshPromise) {
-      this.refreshPromise = this.doRefresh();
+      this.refreshPromise = AuthService.refreshSession(tokens.refreshToken).then(
+        (result: AuthTokens | null) => {
+          if (result) {
+            this.tokens = result;
+          }
+          return result;
+        },
+      );
     }
 
     try {
-      const tokens = await this.refreshPromise;
-      this.tokens = tokens;
-      return tokens;
+      return await this.refreshPromise;
     } catch {
       this.tokens = null;
       return null;
     } finally {
       this.refreshPromise = null;
     }
-  }
-
-  private async doRefresh(): Promise<AuthTokens> {
-    const response = await fetch(`${this.config.baseUrl}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: this.tokens!.refreshToken }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Token refresh failed');
-    }
-
-    const data = await response.json();
-    return {
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-    };
   }
 
   // Auth
@@ -138,6 +157,8 @@ export class ApiClient {
       user: { id: number; username: string; role: string };
     }>('POST', '/auth/login', { username, password });
     this.tokens = { accessToken: result.accessToken, refreshToken: result.refreshToken };
+    // P1-11：登录成功后同步写入 SecureStore，与 AuthService 共享会话
+    await AuthService.persistTokens(this.tokens);
     return result;
   }
 
