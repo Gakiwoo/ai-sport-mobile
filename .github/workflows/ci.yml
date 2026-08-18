@@ -53,3 +53,62 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 14
+
+  android-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # @ai-sport/core 为 file:../packages/ai-sport-core 依赖，且 metro watchFolders
+      # 直接引用 ../packages/ai-sport-core——独立 checkout 本仓库时该目录不存在，
+      # expo export 必然失败。从父仓库（ai-sport-system）拉取 core 源码。
+      - name: Fetch @ai-sport/core source from parent repo
+        uses: actions/checkout@v4
+        with:
+          repository: Gakiwoo/ai-sport-system
+          path: parent
+          sparse-checkout: packages/ai-sport-core
+
+      - name: Place @ai-sport/core source
+        run: |
+          mkdir -p ../packages
+          cp -r parent/packages/ai-sport-core ../packages/
+          rm -rf parent
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prebuild Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Apply R8 hardening (full mode)
+        run: |
+          echo "android.enableR8=true" >> android/gradle.properties
+          echo "android.enableR8.fullMode=true" >> android/gradle.properties
+
+      - name: Build release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-sport-mobile-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 14
