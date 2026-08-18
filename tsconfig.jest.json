@@ -3,6 +3,11 @@
   "compilerOptions": {
     "strict": true,
     "jsx": "react-jsx",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ai-sport/core": ["../packages/ai-sport-core/src"],
+      "@ai-sport/core/*": ["../packages/ai-sport-core/src/*"]
+    }
   }
 }
