@@ -53,7 +53,8 @@
         {
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn expo.modules.core.interfaces.services.KeepAwakeManager\n-dontwarn expo.modules.av.**"
           }
         }
       ]
