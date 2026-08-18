@@ -97,6 +97,8 @@ jobs:
         run: npx expo prebuild --platform android --no-install
 
       - name: Build release APK
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
         run: |
           cd android
           ./gradlew assembleRelease --no-daemon
