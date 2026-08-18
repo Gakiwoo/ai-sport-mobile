@@ -96,11 +96,6 @@ jobs:
       - name: Prebuild Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Apply R8 hardening (full mode)
-        run: |
-          echo "android.enableR8=true" >> android/gradle.properties
-          echo "android.enableR8.fullMode=true" >> android/gradle.properties
-
       - name: Build release APK
         run: |
           cd android

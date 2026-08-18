@@ -73,7 +73,8 @@ class ErrorBoundary extends Component<Props, State> {
         stack: error.stack,
       },
       componentStack: errorInfo.componentStack ?? undefined,
-      userAgent: Platform.OS === 'web' ? navigator.userAgent : undefined,
+      userAgent:
+        Platform.OS === 'web' && typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
     };
   }
 
